@@ -24,6 +24,7 @@ return {
   "catalogue_spec",
   "craftwise_spec",
   "goal_completion_spec",
+  "goal_types_spec",
   "bootstrap_spec",
   "ui_spec",
 }

@@ -156,7 +156,12 @@ local function createHero(screen)
   local quantityLabel = Widgets.Text(body, "label", "Quantity", { caps = true, justify = "CENTER" })
   quantityLabel:SetPoint("TOP", divider, "TOP", -70, 0)
   local stepper = Widgets.Stepper(body, function(value)
-    if screen.goal then ns.GoalService.SetQuantity(screen.goal.id, value) end
+    if not screen.goal then return end
+    if screen.goal.type == "REACH_SKILL" then
+      ns.GoalService.SetRank(screen.goal.id, value)
+    elseif screen.goal.target.itemID then
+      ns.GoalService.SetQuantity(screen.goal.id, value)
+    end
   end)
   stepper:SetPoint("TOP", quantityLabel, "BOTTOM", 0, -8)
   -- Keep the name block clear of the quantity stepper at small window sizes.
@@ -416,16 +421,53 @@ local function Create(parent)
     local view = ns.UI.MainFrame.views[goal.id] or ns.Planner.Evaluate(goal)
     self.view = view
     local item = view.item or {}
-    local itemName = item.name or ("Item " .. goal.target.itemID)
+    local itemName = item.name or (goal.target.itemID and ("Item " .. goal.target.itemID)) or ns.GoalService.Name(goal)
+    local learn, skill = view.learn, view.skill
+    if skill then itemName = ns.GoalService.Name(goal) end
     crumbRest:SetText(string.format("  >  Crafting  >  %s%s|r", Theme.Hex.text, itemName))
     tracked:SetChecked(goal.tracked)
     alts:SetChecked(ns.db and ns.db.settings.includeAlts == true)
 
     hero.icon:SetItem(item.icon, item.quality)
-    hero.name:SetText(Theme.QualityText(itemName, item.quality) .. (goal.target.quantity > 1 and (Theme.Hex.text2 .. "  x" .. goal.target.quantity .. "|r") or ""))
-    hero.meta:SetText(describeItem(goal.target.itemID))
+    local quantity = goal.target.itemID and goal.target.quantity or 1
+    hero.name:SetText(Theme.QualityText(itemName, item.quality) .. (quantity > 1 and (Theme.Hex.text2 .. "  x" .. quantity .. "|r") or ""))
+    if learn then
+      local recipe = learn.recipe
+      hero.meta:SetText(string.format("%s recipe%s - %s", recipe.professionName or "Profession",
+        learn.need > 1 and (" - needs " .. learn.need) or "",
+        learn.kind == "plans" and "taught by " .. ns.ItemProvider.GetName(learn.teachItemID) or (learn.kind == "combine" and "item-use combine" or "taught by a trainer")))
+    elseif skill then
+      hero.meta:SetText(string.format("Profession skill - you are at %d%s", skill.current, skill.max > 0 and (", cap " .. skill.max) or ""))
+    else
+      hero.meta:SetText(describeItem(goal.target.itemID))
+    end
     local chips = {}
-    if view.recipe then
+    if learn then
+      if learn.learned then
+        chips[#chips + 1] = { "ok", "Learned" }
+      elseif learn.blocked == "profession" then
+        chips[#chips + 1] = { "missing", "No " .. (learn.recipe.professionName or "profession") }
+      elseif learn.blocked == "skill" then
+        chips[#chips + 1] = { "partial", string.format("Needs %s %d - you have %d", learn.recipe.professionName or "skill", learn.need, learn.have or 0) }
+      else
+        chips[#chips + 1] = { "ok", string.format("%s %d", learn.recipe.professionName or "Profession", learn.have or 0) }
+      end
+      if learn.kind == "plans" then
+        chips[#chips + 1] = { "info", view.plan and view.plan.isComplete and "Plans in bags" or "Needs the plans" }
+      elseif learn.kind == "trainer" then
+        chips[#chips + 1] = { "info", learn.trainer and learn.trainer.name and ("Trainer: " .. learn.trainer.name) or "Trainer (not recorded yet)" }
+      end
+      if #learn.knownBy > 0 then chips[#chips + 1] = { "info", Util.Join(learn.knownBy) .. " know" .. (#learn.knownBy == 1 and "s" or "") .. " it" } end
+    elseif skill then
+      chips[#chips + 1] = { skill.reached and "ok" or "info", string.format("%s %d / %d", skill.professionName, skill.current, skill.target) }
+      if skill.reached then
+        chips[#chips + 1] = { "ok", "Reached" }
+      elseif view.skillPlan then
+        chips[#chips + 1] = { view.skillPlan.covered and "ok" or "partial", string.format("%d craft%s over %d recipe%s", view.skillPlan.total, view.skillPlan.total == 1 and "" or "s", #view.skillPlan.list, #view.skillPlan.list == 1 and "" or "s") }
+        if not view.skillPlan.covered then chips[#chips + 1] = { "missing", string.format("No recipe for %d-%d", view.skillPlan.gaps[1].from, view.skillPlan.gaps[1].to) } end
+      end
+      if skill.capBlocked then chips[#chips + 1] = { "partial", "Cap " .. skill.max .. " - train the next rank" } end
+    elseif view.recipe then
       local skill
       for _, p in ipairs(ns.ProfessionProvider.GetCharacterProfessions()) do
         if p.name == view.recipe.professionName then skill = p end
@@ -476,13 +518,19 @@ local function Create(parent)
       end
     end
     if not hero.stepper.box:HasFocus() then
-      hero.stepper:SetValue(goal.target.quantity)
+      hero.stepper:SetValue(skill and goal.target.rank or goal.target.quantity or 1)
     end
+    hero.stepper:SetEnabledState(skill ~= nil or goal.target.itemID ~= nil)
     local percent = ns.Overview.Percent(view)
     hero.percent:SetText(percent and (percent .. "%") or "-")
     hero.bar:SetKind(percent == 100 and "ok" or "gold")
     hero.bar:SetValue((percent or 0) / 100)
-    if view.progress and view.plan.obtain then
+    if skill then
+      hero.reagents:SetText(skill.reached and view.message or string.format("%d of %d skill points - %d craft%s planned", math.max(0, skill.current - skill.start), math.max(0, skill.target - skill.start),
+        view.plan and view.plan.craftsNeeded or 0, view.plan and view.plan.craftsNeeded == 1 and "" or "s"))
+    elseif learn and view.plan and view.plan.step then
+      hero.reagents:SetText(view.nextStep or view.message or "")
+    elseif view.progress and view.plan.obtain then
       hero.reagents:SetText(string.format("%d of %d in your bags%s", view.progress.ownedUnits, view.progress.requiredUnits, view.sourceText and (" - " .. view.sourceText) or ""))
     elseif view.progress then
       hero.reagents:SetText(string.format("%d of %d reagents in your bags - %d craft%s needed", view.progress.ownedUnits, view.progress.requiredUnits, view.plan.craftsNeeded, view.plan.craftsNeeded == 1 and "" or "s"))
@@ -524,6 +572,17 @@ local function Create(parent)
       scroll:SetContentHeight(1)
       self.tableMessage:Set(ns.StatusLabel[view.status] or "Unavailable", view.message or "")
       self.tableMessage:Show()
+      return
+    end
+    if #view.plan.materials == 0 and (learn or skill) then
+      -- Nothing to gather: a trainer visit, a recipe already known, a skill reached.
+      self.pool:HideFrom(1)
+      scroll:SetContentHeight(1)
+      self.tableMessage:Set(view.nextStep or "Nothing to gather", view.message or "")
+      self.tableMessage:Show()
+      buyValue:SetText("-")
+      Widgets.SetTextColor(buyValue, C.text3)
+      routeText:SetText("")
       return
     end
     self.tableMessage:Hide()

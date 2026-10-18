@@ -31,16 +31,24 @@ local function createNewGoalBar(screen)
   local stepper = Widgets.Stepper(body, nil)
   stepper:SetPoint("RIGHT", add, "LEFT", -10, 0)
   local input
+  local PLACEHOLDERS = {
+    item = "Shift-click an item link, or type an item ID or name",
+    recipe = "Type a recipe name (Bolt of Woolen Cloth, Sulfuron Hammer...)",
+    skill = "Type a profession and the skill to reach (Tailoring 225)",
+    attunement = "Type an attunement name (Onyxia, Molten Core...)",
+  }
   local segment = Widgets.Segment(body, {
     { key = "item", label = "Item" },
+    { key = "recipe", label = "Recipe" },
+    { key = "skill", label = "Skill" },
+    { key = "attunement", label = "Attunement" },
     { key = "quest", label = "Quest", disabled = true },
     { key = "reputation", label = "Reputation", disabled = true },
-    { key = "attunement", label = "Attunement" },
   }, function(key)
     if input and input.placeholder then
-      input.placeholder:SetText(key == "attunement" and "Type an attunement name (Onyxia, Molten Core...)" or "Shift-click an item link, or type an item ID or name")
+      input.placeholder:SetText(PLACEHOLDERS[key] or PLACEHOLDERS.item)
     end
-    if stepper.SetEnabledState then stepper:SetEnabledState(key ~= "attunement") end
+    if stepper.SetEnabledState then stepper:SetEnabledState(key == "item") end
   end)
   segment:SetPoint("RIGHT", stepper, "LEFT", -10, 0)
   input = Widgets.SearchField(body, {
@@ -138,7 +146,12 @@ local function createSettings(screen)
   end
   local quantityLabel = field("Quantity", icon, -18)
   local stepper = Widgets.Stepper(body, function(value)
-    if panel.goalID then ns.GoalService.SetQuantity(panel.goalID, value) end
+    if not panel.goalID then return end
+    if panel.goal and panel.goal.type == "REACH_SKILL" then
+      ns.GoalService.SetRank(panel.goalID, value)
+    elseif panel.goal and GoalModel.Types[panel.goal.type] and GoalModel.Types[panel.goal.type].targetKind == "item" then
+      ns.GoalService.SetQuantity(panel.goalID, value)
+    end
   end)
   stepper:SetPoint("TOPLEFT", quantityLabel, "BOTTOMLEFT", 0, -6)
 
@@ -259,12 +272,21 @@ local function createSettings(screen)
       return
     end
     self.empty:Hide()
-    local item = view and view.item or ns.ItemProvider.GetItem(goal.target.itemID)
+    local item = view and view.item or (goal.target.itemID and ns.ItemProvider.GetItem(goal.target.itemID)) or { icon = goal.target.icon, quality = 1 }
     icon:SetItem(item.icon, item.quality)
     name:SetText(Theme.QualityText(ns.GoalService.Name(goal), item.quality))
     local added = type(date) == "function" and goal.createdAt and date("%d %b", goal.createdAt) or ""
     meta:SetText(string.format("%s - added %s", GoalModel.Types[goal.type].badge, added))
-    stepper:SetValue(goal.target.quantity)
+    local kind = GoalModel.Types[goal.type].targetKind
+    if goal.type == "REACH_SKILL" then
+      quantityLabel:SetText(Theme.Upper("Target skill"))
+      stepper:SetValue(goal.target.rank or 1)
+      stepper:SetEnabledState(true)
+    else
+      quantityLabel:SetText(Theme.Upper("Quantity"))
+      stepper:SetValue(goal.target.quantity or 1)
+      stepper:SetEnabledState(kind == "item")
+    end
     priority:SetLabel(string.format("%d%s", goal.priority or 1, (goal.priority or 1) == 1 and " - Highest" or ""))
     local isOpen = GoalModel.IsOpen(goal)
     priority:SetEnabledState(isOpen)
@@ -375,6 +397,10 @@ local function Create(parent)
     local ok, message
     if kind == "attunement" then
       ok, message = ns.GoalService.AddAttunementFromInput(text)
+    elseif kind == "recipe" then
+      ok, message = ns.GoalService.AddRecipeFromInput(text)
+    elseif kind == "skill" then
+      ok, message = ns.GoalService.AddSkillFromInput(text)
     else
       ok, message = ns.GoalService.AddFromInput(text, newGoal.stepper:GetValue())
     end
@@ -447,12 +473,17 @@ local function Create(parent)
         row.itemID = goal.target.itemID
         row.number:SetText(goal.priority and tostring(goal.priority) or "")
         row.icon:SetItem(item.icon, item.quality)
-        local quantity = goal.target.quantity or 1
+        local quantity = goal.target.itemID and goal.target.quantity or 1
         row.name:SetText(Theme.QualityText(ns.GoalService.Name(goal), item.quality) .. (quantity > 1 and (Theme.Hex.text2 .. " x" .. quantity .. "|r") or ""))
         row.badge:SetBadge(view and view.obtain and "Item" or GoalModel.Types[goal.type].badge, "text")
         if view and view.attunement then
           local a = view.attunement
           row.sub:SetText(a.complete and "Attuned" or string.format("%d of %d steps%s", a.done, a.total, a.next and (" - next: " .. a.next.name) or ""))
+        elseif view and view.skill then
+          local s = view.skill
+          row.sub:SetText(s.reached and "Reached" or string.format("%d of %d - %s", s.current, s.target, view.nextStep or ""))
+        elseif view and view.learn then
+          row.sub:SetText(view.learn.learned and "Learned" or ((view.learn.recipe.professionName or "") .. (view.nextStep and (" - " .. view.nextStep) or "")))
         elseif view and view.plan then
           row.sub:SetText(view.plan.isComplete and "Ready to craft" or string.format("%d of %d materials missing - %s", view.plan.totals.materialsMissing, #view.plan.materials, view.recipe and view.recipe.professionName or ""))
         else

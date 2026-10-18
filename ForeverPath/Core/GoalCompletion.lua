@@ -75,23 +75,43 @@ function GoalCompletion.Progress(goal)
   return { count = count, gained = gained, peak = peak, needed = quantity, done = peak >= quantity }
 end
 
--- Checks every open item goal; completes and celebrates the finished ones.
+-- This character's current skill in a profession, or nil without it.
+function GoalCompletion.SkillLevel(target)
+  local planner = ns.Planner
+  if not planner or not planner.CurrentSkill then return nil end
+  local standing = planner.CurrentSkill(planner.DefaultDeps(), target.professionName, target.professionID)
+  return standing and standing.skillLevel or nil
+end
+
+-- Checks every open goal; completes and celebrates the finished ones.
 -- Returns the list of goals completed by this call.
 function GoalCompletion.Check(reason)
   local completed = {}
   if not setting("autoComplete", true) then return completed end
   local store = ns.GoalService and ns.GoalService.Store()
   if not store then return completed end
+  local function finish(goal, info)
+    local ok = ns.GoalService.SetStatus(goal.id, GoalModel.Statuses.COMPLETED)
+    if ok then
+      goal.target.completedBy = "auto"
+      completed[#completed + 1] = goal
+      GoalCompletion.Celebrate(goal, info)
+    end
+  end
   for _, goal in ipairs(ns.GoalService.List({ open = true })) do
     if goal.type == "COMPLETE_ATTUNEMENT" and ns.AttuneProvider and ns.AttuneProvider.IsAvailable() then
       local progress = ns.AttuneProvider.Progress(goal.target.attuneID)
       if progress and progress.complete then
-        local ok = ns.GoalService.SetStatus(goal.id, GoalModel.Statuses.COMPLETED)
-        if ok then
-          goal.target.completedBy = "auto"
-          completed[#completed + 1] = goal
-          GoalCompletion.Celebrate(goal, progress)
-        end
+        finish(goal, progress)
+      end
+    elseif goal.type == "LEARN_RECIPE" then
+      if ns.ProfessionProvider and ns.ProfessionProvider.IsLearned(goal.target.spellID) then
+        finish(goal, { learned = true })
+      end
+    elseif goal.type == "REACH_SKILL" then
+      local level = GoalCompletion.SkillLevel(goal.target)
+      if level and level >= (goal.target.rank or 0) then
+        finish(goal, { skillLevel = level })
       end
     elseif itemGoal(goal) then
       if goal.target.baseline == nil and goal.type ~= "OBTAIN_ITEM" then
@@ -99,12 +119,7 @@ function GoalCompletion.Check(reason)
       else
         local progress = GoalCompletion.Progress(goal)
         if progress and progress.done then
-          local ok = ns.GoalService.SetStatus(goal.id, GoalModel.Statuses.COMPLETED)
-          if ok then
-            goal.target.completedBy = "auto"
-            completed[#completed + 1] = goal
-            GoalCompletion.Celebrate(goal, progress)
-          end
+          finish(goal, progress)
         end
       end
     end
@@ -121,7 +136,17 @@ function GoalCompletion.Celebrate(goal, info)
   local quantity = goal.target and goal.target.quantity or 1
   local verb = goal.type == "OBTAIN_ITEM" and "Obtained" or "Crafted"
   local doneCount = ns.GoalService.Count({ status = GoalModel.Statuses.COMPLETED })
-  local detail = goal.type == "COMPLETE_ATTUNEMENT" and ("Attuned: " .. name) or string.format("%s %dx %s", verb, quantity, name)
+  local detail
+  if goal.type == "COMPLETE_ATTUNEMENT" then
+    detail = "Attuned: " .. name
+  elseif goal.type == "LEARN_RECIPE" then
+    detail = "Learned: " .. name
+  elseif goal.type == "REACH_SKILL" then
+    detail = name .. " reached"
+  else
+    detail = string.format("%s %dx %s", verb, quantity, name)
+  end
+  local TITLES = { COMPLETE_ATTUNEMENT = "Attunement complete", LEARN_RECIPE = "Recipe learned", REACH_SKILL = "Skill reached" }
   Log.Print("Goal complete: %s. %d goal%s done.", detail, doneCount, doneCount == 1 and "" or "s")
   if setting("completeSound", true) and type(PlaySound) == "function" then
     local kit = (type(SOUNDKIT) == "table" and SOUNDKIT.LEVELUP) or GoalCompletion.SOUND
@@ -130,7 +155,7 @@ function GoalCompletion.Celebrate(goal, info)
   if setting("toasts", true) and ns.UI and ns.UI.Toast then
     local item = goal.target.itemID and ns.ItemProvider and ns.ItemProvider.GetItem(goal.target.itemID) or { icon = goal.target.icon, quality = 1 }
     ns.UI.Toast.Show({
-      title = goal.type == "COMPLETE_ATTUNEMENT" and "Attunement complete" or "Goal complete",
+      title = TITLES[goal.type] or "Goal complete",
       name = name,
       quality = item.quality,
       icon = item.icon,
@@ -157,6 +182,16 @@ function GoalCompletion.Init()
   end)
   Events.On("FP_INVENTORY_UPDATED", function()
     GoalCompletion.Check("inventory")
+  end)
+  -- Recipes learned and skill-ups complete learn-recipe and reach-skill goals.
+  Events.On("FP_RECIPES_UPDATED", function()
+    Events.Debounce("recipe-goal-check", 0.5, function() GoalCompletion.Check("recipes") end)
+  end)
+  Events.RegisterWoW("SKILL_LINES_CHANGED", function()
+    Events.Debounce("skill-goal-check", 1, function()
+      GoalCompletion.Check("skill")
+      if ns.UI and ns.UI.MainFrame then ns.UI.MainFrame.RequestRefresh() end
+    end)
   end)
   -- Attunement steps move on quests and levels.
   for _, event in ipairs({ "QUEST_TURNED_IN", "QUEST_LOG_UPDATE", "PLAYER_LEVEL_UP", "QUEST_ACCEPTED" }) do

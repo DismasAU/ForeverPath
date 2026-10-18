@@ -205,16 +205,78 @@ local function expand(node, opts, ledger, path, tree)
   path[node.itemID] = nil
 end
 
+-- A craft done for the skill points, not for its output: nothing is owned
+-- or bought, the craft count is fixed by the skill plan, and the recipe's
+-- requirements (plans, a trainer visit, reagents) hang below it as usual.
+local function resolveSkillCraft(node, opts, ledger, path, tree)
+  local spec = node.forSkill
+  local recipe = spec.recipe
+  node.claims = false
+  node.owned, node.ownedBags, node.reserved, node.available = 0, 0, 0, 0
+  node.missing = node.quantity
+  node.status = "missing"
+  node.options, node.soulbound = {}, nil
+  node.route, node.routeSource = "craft", "skill"
+  local yield = recipe.quantityMin or 1
+  node.craft = {
+    recipe = recipe,
+    recipeID = recipe.recipeID,
+    professionName = recipe.professionName,
+    learned = spec.learned and true or false,
+    static = recipe.static and true or false,
+    combine = recipe.combine,
+    skill = recipe.skill,
+    teachItemID = (not spec.learned) and recipe.teachItemID or nil,
+    tools = recipe.tools,
+    crafts = spec.crafts,
+    yield = yield,
+    expectedOutput = spec.crafts * yield,
+    forSkill = true,
+  }
+  node.craft.surplus = 0
+  node.craftOption = nil
+  if node.depth >= (opts.maxDepth or DependencyResolver.MAX_DEPTH) then
+    node.blocked = "depth"
+  else
+    expand(node, opts, ledger, path, tree)
+  end
+  return node
+end
+
 -- Fills in inventory, options, route and (when crafting) children for a node.
 function DependencyResolver.ResolveNode(node, opts, ledger, path, tree)
   tree.byKey[node.key] = node
+  if node.forSkill then
+    return resolveSkillCraft(node, opts, ledger, path, tree)
+  end
   -- A step (train a recipe) is not an item: nothing to count, buy or expand.
+  -- A skill plan root is a step too, with one craft child per recipe.
   if node.step then
     node.claims = false
     node.owned, node.ownedBags, node.reserved, node.available = 0, 0, 0, 0
     node.missing = node.quantity
     node.status = "missing"
     node.options = {}
+    if node.step.kind == "skill" then
+      node.route, node.routeSource = "craft", "skill"
+      for index, spec in ipairs(node.step.crafts or {}) do
+        local recipe = spec.recipe
+        local child = {
+          key = node.key .. ">" .. tostring(recipe.recipeID),
+          itemID = recipe.outputItemID,
+          depth = node.depth + 1,
+          parentKey = node.key,
+          index = index,
+          perCraft = 0,
+          quantity = (spec.crafts or 1) * (recipe.quantityMin or 1),
+          forSkill = { recipe = recipe, crafts = spec.crafts or 1, learned = spec.learned, from = spec.from, to = spec.to },
+          children = {},
+        }
+        DependencyResolver.ResolveNode(child, opts, ledger, path, tree)
+        node.children[#node.children + 1] = child
+      end
+      return node
+    end
     node.route, node.routeSource = "train", "default"
     return node
   end
@@ -339,15 +401,39 @@ end
 -- root = { recipe, quantity } crafts the recipe's output (the root never
 -- claims inventory: the goal is to make it). root = { itemID, quantity } is
 -- an "obtain" tree: the root is the item itself, claims inventory like any
--- other node, and expands into a craft only through a learned recipe.
+-- other node, and expands into a craft only through a learned recipe;
+-- `learn` / `learnFor` on such a root mark it as the plans for a recipe.
+-- root = { step = { kind = "train", ... } } is a one-node tree whose root is
+-- the step itself. root = { step = { kind = "skill", ... }, crafts = { {
+-- recipe, crafts, learned, from, to } } } is a skill plan: the root is a
+-- step, each craft a child done for the skill points (never owned or bought).
 function DependencyResolver.Resolve(root, opts)
   opts = opts or {}
-  if type(root) ~= "table" or (type(root.recipe) ~= "table" and type(root.itemID) ~= "number") then
-    return nil, "recipe or itemID required"
+  if type(root) ~= "table" or (type(root.recipe) ~= "table" and type(root.itemID) ~= "number" and type(root.step) ~= "table") then
+    return nil, "recipe, itemID or step required"
   end
   local quantity = tonumber(root.quantity) or 1
   if quantity < 1 then quantity = 1 end
   local ledger = opts.ledger or Allocation.New()
+  if type(root.step) == "table" then
+    local step = root.step
+    local tree = { byKey = {}, ledger = ledger, obtain = true, step = true }
+    opts.rootRecipe = nil
+    local node
+    if type(root.crafts) == "table" then
+      step.crafts = root.crafts
+      local total = 0
+      for _, spec in ipairs(root.crafts) do total = total + (spec.crafts or 1) end
+      node = { key = root.key or ("skill:" .. tostring(step.professionID or step.professionName or "?")), step = step, depth = 0, index = 1,
+        quantity = math.max(1, total), children = {}, skillRoot = true }
+    else
+      node = { key = root.key or ("train:" .. tostring(step.spellID or step.name or "?")), step = step, depth = 0, index = 1, quantity = 1, children = {} }
+    end
+    DependencyResolver.ResolveNode(node, opts, ledger, {}, tree)
+    tree.root = node
+    tree.summary = DependencyResolver.Summarize(tree)
+    return tree
+  end
   local obtain = type(root.recipe) ~= "table"
   local tree = { byKey = {}, ledger = ledger, obtain = obtain }
   opts.rootRecipe = (not obtain) and root.recipe or nil
@@ -360,6 +446,8 @@ function DependencyResolver.Resolve(root, opts)
     quantity = quantity,
     children = {},
     obtain = obtain or nil,
+    learn = root.learn or nil,
+    learnFor = root.learnFor,
   }
   DependencyResolver.ResolveNode(node, opts, ledger, {}, tree)
   tree.root = node
@@ -377,7 +465,7 @@ function DependencyResolver.Summarize(tree)
       walk(child)
       if child.missing > 0 then allChildrenResolved = false end
     end
-    if node.claims or node.step then
+    if (node.claims or node.step) and not node.skillRoot then
       summary.nodes = summary.nodes + 1
       if node.missing <= 0 then summary.resolved = summary.resolved + 1 end
       if node.depth > summary.maxDepth then summary.maxDepth = node.depth end
@@ -401,10 +489,11 @@ function DependencyResolver.Summarize(tree)
         entry.nodes[#entry.nodes + 1] = node
       end
     end
-    if node.craft and node.claims and node.missing > 0 then
+    if node.craft and (node.claims or node.forSkill) and node.missing > 0 then
       summary.crafts[#summary.crafts + 1] = {
         key = node.key,
         itemID = node.itemID,
+        forSkill = node.forSkill,
         crafts = node.craft.crafts,
         units = node.missing,
         expectedOutput = node.craft.expectedOutput,
@@ -502,10 +591,16 @@ function DependencyResolver.Describe(tree, nameOf)
     local node = row.node
     local indent = string.rep("  ", node.depth)
     local text
-    if node.step then
+    if node.step and node.step.kind == "skill" then
+      text = string.format("%s%s: %d craft%s over %d recipe%s", indent, node.step.name or "skill plan", node.quantity, node.quantity == 1 and "" or "s",
+        #node.children, #node.children == 1 and "" or "s")
+    elseif node.step then
       local trainer = node.step.trainer
       text = string.format("%strain: %s%s", indent, node.step.name,
         trainer and trainer.name and (" at " .. trainer.name .. (trainer.zone and (" (" .. trainer.zone .. ")") or "")) or (" (" .. (node.step.professionName or "profession") .. " trainer)"))
+    elseif node.forSkill then
+      text = string.format("%s%s x%d for skill %d-%d (%d craft%s%s)", indent, nameOf(node.itemID), node.quantity, node.forSkill.from or 0, node.forSkill.to or 0,
+        node.craft.crafts, node.craft.crafts == 1 and "" or "s", node.craft.learned and "" or ", not learned")
     elseif node.depth == 0 and not node.claims then
       text = string.format("%s%s x%d (%d craft%s)", indent, nameOf(node.itemID), node.quantity, node.craft and node.craft.crafts or 0, node.craft and node.craft.crafts == 1 and "" or "s")
     else

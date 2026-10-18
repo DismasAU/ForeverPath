@@ -171,6 +171,19 @@ function GoalStore:SetQuantity(id, quantity)
   return true
 end
 
+function GoalStore:SetRank(id, rank)
+  local goal = self.storage.goals[id]
+  if not goal then
+    return false, "no such goal"
+  end
+  local ok, err = GoalModel.SetRank(goal, rank, self.now())
+  if not ok then
+    return false, err
+  end
+  notify(self, "updated", goal)
+  return true
+end
+
 function GoalStore:SetStatus(id, status)
   local goal = self.storage.goals[id]
   if not goal then

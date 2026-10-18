@@ -139,7 +139,8 @@ function ShoppingList.Build(entries, opts)
     local tree = view and view.tree
     if tree and tree.byKey then
       for _, node in pairs(tree.byKey) do
-        if node.claims or node.depth > 0 then
+        -- A craft done for skill points is not something to get; its reagents are.
+        if (node.claims or node.depth > 0 or (node.step and node.step.kind == "train")) and not node.forSkill then
           local key = node.itemID or ("train:" .. tostring(node.step and node.step.spellID or node.key))
           if node.itemID then
             local full = (node.available or 0) + (node.reserved or 0)

@@ -241,10 +241,46 @@ both into resolver hints; `BestCoverage(needs)` drives the Characters banner.
 The ledger draws bags, then bank, then alts, and only touches alts when
 `settings.includeAlts` is true.
 
-`GoalModel.Types` registers CRAFT_ITEM, OBTAIN_ITEM and COMPLETE_ATTUNEMENT
-(supported; attunement targets are `{ attuneID, name, icon }`) plus
-COMPLETE_QUEST, REACH_REPUTATION, LEARN_RECIPE and REACH_SKILL (represented,
-not yet planned). `target` is type specific.
+`GoalModel.Types` registers CRAFT_ITEM, OBTAIN_ITEM, COMPLETE_ATTUNEMENT
+(targets `{ attuneID, name, icon }`), LEARN_RECIPE (`{ spellID, name,
+professionName, professionID, icon }`) and REACH_SKILL (`{ professionID,
+professionName, rank, startRank, icon }`) as supported, plus COMPLETE_QUEST
+and REACH_REPUTATION (represented, not yet planned). `target` is type
+specific.
+
+**Learn-recipe planning.** `Planner.EvaluateLearn` looks the recipe up
+(`Planner.RecipeByID`: catalogue, then a recorded window), checks
+`ProfessionProvider.IsLearned`, this character's standing in the profession
+(`Planner.CurrentSkill`: the live profession list, else a recorded window)
+and `CharacterProvider.WhoKnows` for alts. A pattern recipe resolves an
+obtain tree of the teaching item (`Resolve({ itemID, quantity = 1, learn =
+true, learnFor })`); a trainer recipe resolves a one-node tree whose root is
+the step (`Resolve({ step = { kind = "train", ... } })`) and a `StepPlan`
+with no materials. The view carries `learn = { recipe, learned, knownBy,
+profession, need, have, skillOK, blocked ("profession" | "skill"), kind
+("plans" | "trainer" | "combine"), teachItemID, trainer }` and `nextStep`.
+`GoalCompletion` completes it on `FP_RECIPES_UPDATED`.
+
+**Reach-skill planning.** `Planner.EvaluateSkill` reads the standing, builds
+candidates (`Planner.SkillCandidates`: every catalogue recipe of the
+profession with thresholds, learned flag, `learnable` when the requirement
+is known from a recorded trainer rank or a pattern whose item carries it,
+reagent cost from `PriceProvider` when every reagent is priced, reagent
+count) and hands them to `SkillPlanner.Plan(current, target, candidates)`:
+per point the best recipe (learned first; by expected cost when priced,
+else by expected crafts `1 / chance` then reagent count), merged into
+segments with crafts rounded up, gaps where nothing applies. The resolver
+lays it out from `Resolve({ step = { kind = "skill" }, crafts = { { recipe,
+crafts, learned, from, to } } })`: the root is a step (`skillRoot`, not
+counted as a dependency), each craft a `forSkill` node (claims nothing,
+route `craft`, fixed craft count, no options) that expands like any craft,
+so unlearned recipes get their pattern child or train step. The flat plan
+is `Planner.SkillMaterials` (depth-2 reagents merged by item). The view
+carries `skill = { professionName, current, target, start, max, percent,
+reached, scanned, capBlocked }`, `skillPlan`, `nextStep`; `Overview.Percent`
+reads `skill.percent`. The shopping list skips `forSkill` nodes and lists a
+train step that is a tree root; CraftWise never prices buying a `forSkill`
+output. `GoalCompletion` completes it on `SKILL_LINES_CHANGED`.
 `GoalService.TypeForItem` picks between the two item types when a goal is
 added without one: crafting when a recipe is recorded (or nothing has been
 scanned yet), obtain otherwise; `GoalStore:SetType` switches them.

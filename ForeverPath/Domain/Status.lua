@@ -12,6 +12,7 @@ local Status = {
   RECIPE_NOT_FOUND = "RECIPE_NOT_FOUND",         -- scanned data has no recipe for the item
   RECIPE_NOT_LEARNED = "RECIPE_NOT_LEARNED",     -- a recipe exists, this character lacks it
   RECIPE_DATA_INVALID = "RECIPE_DATA_INVALID",   -- cached recipe failed validation
+  PROFESSION_MISSING = "PROFESSION_MISSING",     -- a skill goal for a profession this character lacks
 }
 ns.Status = Status
 
@@ -26,6 +27,7 @@ ns.StatusLabel = {
   [Status.RECIPE_NOT_FOUND] = "No known recipe",
   [Status.RECIPE_NOT_LEARNED] = "Recipe not learned",
   [Status.RECIPE_DATA_INVALID] = "Recipe data invalid",
+  [Status.PROFESSION_MISSING] = "Profession not known",
 }
 
 -- Colors as hex strings for chat / font colouring.

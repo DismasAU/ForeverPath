@@ -286,6 +286,19 @@ function CharacterProvider.WithProfession(name, skillLine)
   return out
 end
 
+-- Names of the alts whose snapshot says they know a recipe spell.
+function CharacterProvider.WhoKnows(spellID)
+  local out = {}
+  for _, entry in ipairs(CharacterProvider.List()) do
+    local record = entry.record
+    if not entry.isCurrent and type(record) == "table" and record.knownRecipes and record.knownRecipes[spellID] then
+      out[#out + 1] = record.name
+    end
+  end
+  table.sort(out)
+  return out
+end
+
 -- Alts that have learned a recipe producing itemID.
 -- Returns { { record, name, recipe, professionName, skillLevel } }.
 function CharacterProvider.CanCraft(itemID)

@@ -140,6 +140,12 @@ function Planner.Evaluate(goal, deps)
   if goal.type == "COMPLETE_ATTUNEMENT" then
     return Planner.EvaluateAttunement(view, goal, deps)
   end
+  if goal.type == "LEARN_RECIPE" then
+    return Planner.EvaluateLearn(view, goal, deps)
+  end
+  if goal.type == "REACH_SKILL" then
+    return Planner.EvaluateSkill(view, goal, deps)
+  end
 
   local itemID = goal.target.itemID
   local quantity = goal.target.quantity
@@ -295,6 +301,357 @@ function Planner.EvaluateAttunement(view, goal, deps)
     view.message = string.format("%d of %d steps done. Next: %s", progress.done, progress.total, attune.StepText(progress.next))
   else
     view.message = string.format("%d of %d steps done.", progress.done, progress.total)
+  end
+  return view
+end
+
+---------------------------------------------------------------------------
+-- Learn-recipe and reach-skill goals
+---------------------------------------------------------------------------
+
+-- A recipe by spell id: the catalogue first, then a recorded profession window.
+function Planner.RecipeByID(spellID, deps)
+  if deps.data and deps.data.Get then
+    local ok, recipe = pcall(deps.data.Get, spellID)
+    if ok and type(recipe) == "table" then return recipe end
+  end
+  if deps.data and deps.data.GetCombine then
+    local ok, recipe = pcall(deps.data.GetCombine, spellID)
+    if ok and type(recipe) == "table" then return recipe end
+  end
+  if deps.profession and deps.profession.GetRecipe then
+    local ok, recipe = pcall(deps.profession.GetRecipe, spellID, false)
+    if ok and type(recipe) == "table" then return recipe end
+  end
+  return nil
+end
+
+-- This character's standing in a profession: { name, skillLevel, maxSkillLevel, icon, source }
+-- from the live profession list, else from a recorded window; nil without either.
+function Planner.CurrentSkill(deps, professionName, professionID)
+  local profession = deps.profession
+  if not profession then return nil end
+  local function matches(p)
+    return (professionName and p.name == professionName) or (professionID and professionID ~= 0 and (p.skillLine == professionID or p.professionID == professionID))
+  end
+  if profession.GetCharacterProfessions then
+    local ok, list = pcall(profession.GetCharacterProfessions)
+    for _, p in ipairs(ok and list or {}) do
+      if matches(p) then
+        return { name = p.name, skillLevel = p.skillLevel or 0, maxSkillLevel = p.maxSkillLevel or 0, icon = (p.icon ~= 0) and p.icon or nil, source = "live" }
+      end
+    end
+  end
+  if profession.GetScannedProfessions then
+    local ok, list = pcall(profession.GetScannedProfessions)
+    for _, p in ipairs(ok and list or {}) do
+      if matches(p) then
+        return { name = p.name, skillLevel = p.skillLevel or 0, maxSkillLevel = p.maxSkillLevel or 0, source = "recorded" }
+      end
+    end
+  end
+  return nil
+end
+
+-- A plan shaped like an obtain plan for a goal with a single step (train a
+-- recipe) or nothing left to get; every screen reading plan.materials works.
+function Planner.StepPlan(complete)
+  local missing = complete and 0 or 1
+  return {
+    obtain = true, step = true, craftsNeeded = 0, outputPerCraft = 1, outputPerCraftMax = 1, expectedOutput = 0, quantityWanted = 1,
+    materials = {},
+    totals = { required = 1, owned = 1 - missing, missing = missing, materialsMissing = missing },
+    isComplete = complete and true or false,
+  }
+end
+
+-- Learn-recipe goals: done when this character knows the recipe; until then
+-- the tree is the plans item to get (an obtain tree marked `learn`) or the
+-- trainer visit as a single step, and the view says what blocks it (no
+-- profession, skill too low) and who else on the account knows it.
+function Planner.EvaluateLearn(view, goal, deps)
+  local target = goal.target
+  local recipe = Planner.RecipeByID(target.spellID, deps)
+  view.item = { name = (recipe and recipe.name) or target.name or ("Recipe " .. tostring(target.spellID)), icon = (recipe and recipe.icon) or target.icon, quality = 1, loaded = true, exists = true }
+  if not recipe then
+    view.status = Status.ITEM_INVALID
+    view.message = string.format("No recipe with spell id %s is in the catalogue or your recorded professions.", tostring(target.spellID))
+    return view
+  end
+  local learned = false
+  if deps.profession and deps.profession.IsLearned then
+    local ok, known = pcall(deps.profession.IsLearned, target.spellID)
+    learned = ok and known == true
+  end
+  local profession = Planner.CurrentSkill(deps, recipe.professionName, recipe.professionID)
+  local need = recipe.skill and recipe.skill.min or 0
+  local knownBy = {}
+  if deps.characters and deps.characters.WhoKnows then
+    local ok, names = pcall(deps.characters.WhoKnows, target.spellID)
+    if ok and type(names) == "table" then knownBy = names end
+  end
+  local learn = {
+    recipe = recipe, spellID = target.spellID, learned = learned, knownBy = knownBy,
+    profession = profession, hasProfession = profession ~= nil, need = need,
+    have = profession and profession.skillLevel or nil,
+    skillOK = profession ~= nil and (profession.skillLevel or 0) >= need,
+    kind = recipe.combine and "combine" or (recipe.teachItemID and "plans" or "trainer"),
+    teachItemID = recipe.teachItemID, trainer = recipe.trainer,
+  }
+  view.learn = learn
+  local name = recipe.name or "the recipe"
+  if learned or learn.kind == "combine" then
+    view.plan = Planner.StepPlan(true)
+    view.progress = Planner.Progress(view.plan)
+    view.message = learned and string.format("%s is already learned.", name) or string.format("%s is an item-use combine: there is nothing to learn.", name)
+    view.nextStep = "Mark the goal complete"
+    return view
+  end
+
+  local ctx = inventoryContext(deps)
+  local tree
+  if recipe.teachItemID then
+    local root = { itemID = recipe.teachItemID, quantity = 1, learn = true, learnFor = recipe.name }
+    tree = DependencyResolver.Resolve(root, ctx.resolverOpts(goal.routes))
+    view.fullTree = Planner.FullTree(root, goal, ctx)
+    view.obtain = true
+    view.sources = Planner.Sources(recipe.teachItemID, deps)
+    view.hint = tree.root.hint or view.sources[1]
+    view.sourceText = Planner.SourceText(view.hint)
+    view.plan = Planner.ObtainPlan(tree.root)
+  else
+    local step = { kind = "train", spellID = target.spellID, name = recipe.name, professionName = recipe.professionName, icon = recipe.icon,
+      rank = need > 1 and need or nil, trainer = recipe.trainer }
+    tree = DependencyResolver.Resolve({ step = step }, ctx.resolverOpts(goal.routes))
+    view.plan = Planner.StepPlan(false)
+  end
+  view.tree = tree
+  view.progress = Planner.Progress(view.plan)
+  view.inventoryNote = Planner.DescribeInventory(ctx.bankNote, ctx.includeBank, ctx.includeAlts)
+
+  local parts = {}
+  local plansName
+  if recipe.teachItemID then
+    local info = deps.item and deps.item.GetItem and deps.item.GetItem(recipe.teachItemID) or nil
+    plansName = (type(info) == "table" and info.name) or ("item " .. recipe.teachItemID)
+  end
+  if not profession then
+    parts[#parts + 1] = string.format("You do not have %s on this character.", recipe.professionName or "the profession")
+    learn.blocked = "profession"
+  elseif not learn.skillOK then
+    parts[#parts + 1] = string.format("Needs %s %d; you have %d.", recipe.professionName or "skill", need, profession.skillLevel or 0)
+    learn.blocked = "skill"
+  end
+  if recipe.teachItemID then
+    if tree.root.missing <= 0 then
+      parts[#parts + 1] = string.format("%s is in your bags: read it to learn %s.", plansName, name)
+      view.nextStep = "Read " .. plansName
+    else
+      parts[#parts + 1] = string.format("Get %s%s.", plansName, view.sourceText and (" - " .. view.sourceText) or (tree.root.noRoute and " (soulbound, no source recorded yet)" or ""))
+      view.nextStep = "Get " .. plansName
+    end
+  else
+    local trainer = recipe.trainer
+    if trainer and trainer.name then
+      parts[#parts + 1] = string.format("Train at %s%s%s.", trainer.name, trainer.zone and (", " .. trainer.zone) or "",
+        trainer.cost and trainer.cost > 0 and (" for " .. Util.FormatMoney(trainer.cost)) or "")
+      view.nextStep = "Train at " .. trainer.name
+    else
+      parts[#parts + 1] = string.format("Train at any %s trainer (the requirement is recorded on your next trainer visit).", recipe.professionName or "profession")
+      view.nextStep = "Visit a " .. (recipe.professionName or "profession") .. " trainer"
+    end
+  end
+  if learn.blocked == "skill" then
+    view.nextStep = string.format("Reach %s %d", recipe.professionName or "skill", need)
+  elseif learn.blocked == "profession" then
+    view.nextStep = "Learn " .. (recipe.professionName or "the profession")
+  end
+  if #knownBy > 0 then
+    parts[#parts + 1] = string.format("%s already know%s it.", Util.Join(knownBy), #knownBy == 1 and "s" or "")
+  end
+  view.message = table.concat(parts, " ")
+  return view
+end
+
+-- Candidate recipes for a skill plan: every catalogue recipe of the
+-- profession with its thresholds, learned flag, whether its requirement is
+-- known (trainer recorded or plans), reagent cost (nil when any price is
+-- unknown) and reagent count.
+function Planner.SkillCandidates(deps, professionID)
+  local Recipes = deps.data
+  local out = {}
+  if not Recipes or not Recipes.ForProfession or not Recipes.Get then return out end
+  local priceOf = deps.price and deps.price.GetPrice or nil
+  for _, spellID in ipairs(Recipes.ForProfession(professionID)) do
+    local recipe = Recipes.Get(spellID)
+    if recipe and recipe.skill then
+      local learned = false
+      if deps.profession and deps.profession.IsLearned then
+        local ok, known = pcall(deps.profession.IsLearned, spellID)
+        learned = ok and known == true
+      end
+      local cost, weight, known = 0, 0, true
+      for _, reagent in ipairs(recipe.reagents or {}) do
+        weight = weight + reagent.quantity
+        local info = priceOf and priceOf(reagent.itemID) or nil
+        if info and tonumber(info.copper) then
+          cost = cost + info.copper * reagent.quantity
+        else
+          known = false
+        end
+      end
+      -- The requirement is only known from a recorded trainer visit or from
+      -- a pattern whose item data carries it; a pattern at "1" is unknown
+      -- (the item table is partial) and must not be planned as learnable.
+      local learnable = recipe.skill.source == "trainer" or (recipe.teachItemID ~= nil and (recipe.skill.min or 0) > 1)
+      out[#out + 1] = {
+        spellID = spellID, recipe = recipe, learned = learned, skill = recipe.skill,
+        learnable = learnable,
+        cost = known and cost or nil, weight = weight,
+      }
+    end
+  end
+  return out
+end
+
+-- Flat requirements of a skill tree: the reagents (and plans) directly under
+-- every craft node, merged by item, in the shape of a crafting plan.
+function Planner.SkillMaterials(tree, plan)
+  local materials, byItem = {}, {}
+  for _, craft in ipairs(tree.root.children) do
+    for _, child in ipairs(craft.children) do
+      if child.itemID then
+        local m = byItem[child.itemID]
+        if not m then
+          m = { itemID = child.itemID, perCraft = 0, required = 0, owned = 0, ownedBags = 0, ownedBank = nil, ownedAlts = nil, missing = 0, reserved = 0, learn = child.learn or nil }
+          byItem[child.itemID] = m
+          materials[#materials + 1] = m
+        end
+        m.required = m.required + child.quantity
+        m.owned = m.owned + (child.owned or 0)
+        m.ownedBags = m.ownedBags + (child.ownedBags or 0)
+        if child.ownedBank then m.ownedBank = (m.ownedBank or 0) + child.ownedBank end
+        if child.ownedAlts then m.ownedAlts = (m.ownedAlts or 0) + child.ownedAlts end
+        m.altSources = m.altSources or child.altSources
+        m.bankSource = m.bankSource or child.bankSource
+        m.reserved = m.reserved + (child.reserved or 0)
+        m.missing = m.missing + (child.missing or 0)
+      end
+    end
+  end
+  table.sort(materials, function(a, b)
+    if a.missing ~= b.missing then return a.missing > b.missing end
+    return a.itemID < b.itemID
+  end)
+  local totals = { required = 0, owned = 0, missing = 0, materialsMissing = 0 }
+  for _, m in ipairs(materials) do
+    totals.required = totals.required + m.required
+    totals.owned = totals.owned + math.min(m.owned, m.required)
+    totals.missing = totals.missing + m.missing
+    if m.missing > 0 then totals.materialsMissing = totals.materialsMissing + 1 end
+  end
+  local stepsMissing = 0
+  for _, node in pairs(tree.byKey) do
+    if node.step and node.depth > 0 and node.missing > 0 then stepsMissing = stepsMissing + 1 end
+  end
+  return {
+    skill = true, craftsNeeded = plan.total or 0, outputPerCraft = 1, outputPerCraftMax = 1, expectedOutput = 0, quantityWanted = plan.to,
+    materials = materials, totals = totals, stepsMissing = stepsMissing,
+    isComplete = totals.missing == 0 and stepsMissing == 0 and #materials > 0,
+  }
+end
+
+-- Reach-skill goals: progress is the skill itself; the plan is which learned
+-- recipes to craft how many times (SkillPlanner), laid out as a tree whose
+-- craft nodes are done for the points, so only their reagents are needed.
+function Planner.EvaluateSkill(view, goal, deps)
+  local target = goal.target
+  local Recipes = deps.data
+  local professionID = target.professionID
+  if (not professionID or professionID == 0) and Recipes and Recipes.ProfessionID then
+    professionID = Recipes.ProfessionID(target.professionName)
+  end
+  local profession = Planner.CurrentSkill(deps, target.professionName, professionID)
+  view.item = { name = target.professionName, icon = (profession and profession.icon) or target.icon, quality = 1, loaded = true, exists = true }
+  if not profession then
+    view.status = Status.PROFESSION_MISSING
+    view.message = string.format("%s is not one of this character's professions.", target.professionName or "That profession")
+    return view
+  end
+  local current = profession.skillLevel or 0
+  local start = tonumber(target.startRank) or current
+  if start > current then start = current end
+  local rank = target.rank
+  local percent
+  if current >= rank then percent = 100
+  elseif rank > start then percent = math.floor(math.max(0, current - start) * 100 / (rank - start) + 0.5)
+  else percent = 0 end
+  local skill = {
+    professionName = profession.name or target.professionName, professionID = professionID, current = current, target = rank, start = start,
+    max = profession.maxSkillLevel or 0, percent = percent, reached = current >= rank, icon = profession.icon,
+    capBlocked = (profession.maxSkillLevel or 0) > 0 and rank > profession.maxSkillLevel,
+  }
+  view.skill = skill
+  view.progress = { percent = percent, ownedUnits = math.min(current, rank), requiredUnits = rank, materialsHave = 0, materialsTotal = 0 }
+  if skill.reached then
+    view.plan = Planner.StepPlan(true)
+    view.message = string.format("%s %d reached (you are at %d).", skill.professionName, rank, current)
+    view.nextStep = "Mark the goal complete"
+    return view
+  end
+  local scanned = false
+  if deps.profession and deps.profession.GetScannedProfessions then
+    local ok, list = pcall(deps.profession.GetScannedProfessions)
+    for _, p in ipairs(ok and list or {}) do
+      if p.name == skill.professionName or (professionID and p.professionID == professionID) then scanned = true end
+    end
+  end
+  skill.scanned = scanned
+
+  local candidates = Planner.SkillCandidates(deps, professionID)
+  local plan = ns.SkillPlanner.Plan(current, rank, candidates)
+  view.skillPlan = plan
+  local crafts = {}
+  for _, entry in ipairs(plan.list) do
+    crafts[#crafts + 1] = { recipe = entry.recipe, crafts = entry.crafts, learned = entry.learned, from = entry.from, to = entry.to }
+  end
+  local ctx = inventoryContext(deps)
+  local step = { kind = "skill", name = string.format("%s %d", skill.professionName, rank), professionName = skill.professionName, professionID = professionID, icon = profession.icon }
+  local tree = DependencyResolver.Resolve({ step = step, crafts = crafts, key = "skill:" .. tostring(professionID or skill.professionName) }, ctx.resolverOpts(goal.routes))
+  view.tree = tree
+  view.fullTree = Planner.FullTree({ step = step, crafts = crafts, key = tree.root.key }, goal, ctx)
+  view.plan = Planner.SkillMaterials(tree, plan)
+  view.progress.materialsHave = #view.plan.materials - view.plan.totals.materialsMissing
+  view.progress.materialsTotal = #view.plan.materials
+  view.inventoryNote = Planner.DescribeInventory(ctx.bankNote, ctx.includeBank, ctx.includeAlts)
+
+  local parts = {}
+  if skill.capBlocked then
+    parts[#parts + 1] = string.format("Your %s cap is %d: a trainer has to raise it before %d is reachable.", skill.professionName, profession.maxSkillLevel, rank)
+  end
+  if #plan.list > 0 then
+    local names = {}
+    for _, entry in ipairs(plan.list) do
+      names[#names + 1] = string.format("%d x %s (%d-%d%s)", entry.crafts, entry.recipe.name or "?", entry.from, entry.to, entry.learned and "" or ", learn it first")
+    end
+    parts[#parts + 1] = string.format("%d to %d: about %d craft%s - %s.", current, plan.covered and rank or plan.list[#plan.list].to, plan.total, plan.total == 1 and "" or "s", Util.Join(names))
+  end
+  if not plan.covered then
+    local gap = plan.gaps[1]
+    parts[#parts + 1] = string.format("No recipe you know%s covers %d-%d%s.", scanned and " (or could learn with a recorded requirement)" or "", gap.from, gap.to,
+      scanned and "; visit a trainer or find a pattern for that range" or "")
+  end
+  if not scanned then
+    parts[#parts + 1] = string.format("Open your %s window once so ForeverPath knows which recipes you have.", skill.professionName)
+  end
+  view.message = table.concat(parts, " ")
+  local first = plan.list[1]
+  if first then
+    view.nextStep = string.format("Craft %d x %s", first.crafts, first.recipe.name or "?")
+  elseif not scanned then
+    view.nextStep = "Open the " .. skill.professionName .. " window"
+  else
+    view.nextStep = "Find a recipe for " .. current .. "+"
   end
   return view
 end

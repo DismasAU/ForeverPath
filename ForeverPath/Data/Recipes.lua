@@ -279,6 +279,77 @@ function Recipes.IsCraftable(itemID)
   return Recipes.Index()[itemID] ~= nil
 end
 
+-- Every catalogue recipe (spell ids, ascending) of a profession skill line.
+function Recipes.ForProfession(professionID)
+  if not Recipes.byProfession then
+    local index = {}
+    local c = catalogue()
+    for spellID, row in pairs(c and c.recipes or {}) do
+      local list = index[row[2]]
+      if not list then list = {} index[row[2]] = list end
+      list[#list + 1] = spellID
+    end
+    for _, list in pairs(index) do table.sort(list) end
+    Recipes.byProfession = index
+  end
+  return Recipes.byProfession[professionID] or {}
+end
+
+-- { { id, name, category } } for every profession in the catalogue, by name.
+function Recipes.Professions()
+  local c = catalogue()
+  local out = {}
+  for id, p in pairs(c and c.professions or {}) do
+    out[#out + 1] = { id = id, name = p[1], category = p[2] }
+  end
+  table.sort(out, function(a, b) return tostring(a.name) < tostring(b.name) end)
+  return out
+end
+
+-- Profession id and name from free text (case-insensitive, prefix allowed).
+function Recipes.FindProfession(text)
+  if type(text) ~= "string" then return nil end
+  local wanted = string.lower(text:gsub("^%s+", ""):gsub("%s+$", ""))
+  if wanted == "" then return nil end
+  local prefix
+  for _, p in ipairs(Recipes.Professions()) do
+    local name = string.lower(p.name or "")
+    if name == wanted then return p.id, p.name end
+    if not prefix and name:sub(1, #wanted) == wanted then prefix = p end
+  end
+  if prefix then return prefix.id, prefix.name end
+  return nil
+end
+
+-- Recipes whose name contains text: { { spellID, name, professionName, professionID } },
+-- exact matches first, then prefix matches, then the rest, each by name.
+function Recipes.Search(text, limit, professionName)
+  local c = catalogue()
+  if not c or type(text) ~= "string" then return {} end
+  local needle = string.lower(text:gsub("^%s+", ""):gsub("%s+$", ""))
+  if needle == "" then return {} end
+  local wantedProfession = professionName and Recipes.ProfessionID(professionName) or nil
+  local hits = {}
+  for spellID, row in pairs(c.recipes) do
+    local name = row[1] or ""
+    local lower = string.lower(name)
+    local position = lower:find(needle, 1, true)
+    if position and (not wantedProfession or row[2] == wantedProfession) then
+      local rank = lower == needle and 0 or (position == 1 and 1 or 2)
+      hits[#hits + 1] = { spellID = spellID, name = name, professionID = row[2], professionName = Recipes.ProfessionName(row[2]), rank = rank }
+    end
+  end
+  table.sort(hits, function(a, b)
+    if a.rank ~= b.rank then return a.rank < b.rank end
+    if a.name ~= b.name then return a.name < b.name end
+    return a.spellID < b.spellID
+  end)
+  if limit and #hits > limit then
+    for i = #hits, limit + 1, -1 do hits[i] = nil end
+  end
+  return hits
+end
+
 -- Recipe spell id by recipe name (case-insensitive), preferring the given
 -- profession when several professions share a name. Used when a trainer
 -- line carries no spell link.

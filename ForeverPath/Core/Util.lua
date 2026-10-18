@@ -145,6 +145,17 @@ function Util.IsPlainData(value, seen)
   return true
 end
 
+-- "12g 34s 56c" without textures (chat and messages; the UI has Widgets.Money).
+function Util.FormatMoney(copper)
+  copper = tonumber(copper) or 0
+  local gold = math.floor(copper / 10000)
+  local silver = math.floor((copper % 10000) / 100)
+  local bronze = copper % 100
+  if gold > 0 then return string.format("%dg %ds", gold, silver) end
+  if silver > 0 then return string.format("%ds %dc", silver, bronze) end
+  return string.format("%dc", bronze)
+end
+
 function Util.Join(list, separator)
   local parts = {}
   for i = 1, #list do

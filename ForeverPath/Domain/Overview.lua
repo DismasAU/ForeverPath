@@ -70,7 +70,24 @@ function Overview.Build(entries, opts)
 
       if #result.nextSteps < (opts.maxSteps or 3) then
         local step
-        if plan and plan.isComplete and plan.obtain then
+        local learn, skill = view and view.learn, view and view.skill
+        if learn and learn.learned then
+          step = { title = string.format("Learned: %s", goalName), detail = "Mark the goal complete", badge = "Ready", badgeKind = "ok" }
+        elseif learn and learn.kind == "combine" then
+          step = { title = string.format("%s needs no recipe", goalName), detail = "Combine the items whenever you have them", badge = "Combine", badgeKind = "ok" }
+        elseif learn and learn.blocked == "profession" then
+          step = { title = string.format("Learn %s", learn.recipe.professionName or "the profession"), detail = string.format("Needed before %s can be learned", goalName), badge = "Profession", badgeKind = "partial" }
+        elseif learn and learn.blocked == "skill" then
+          step = { title = string.format("Reach %s %d", learn.recipe.professionName or "skill", learn.need), detail = string.format("You have %d - needed for %s", learn.have or 0, goalName), badge = "Skill", badgeKind = "partial" }
+        elseif learn and plan and plan.isComplete and learn.kind == "plans" then
+          step = { title = string.format("Read %s", nameOf(learn.teachItemID)), detail = string.format("Teaches %s - it is in your bags", goalName), badge = "Recipe", badgeKind = "ok" }
+        elseif skill and skill.reached then
+          step = { title = string.format("%s reached", goalName), detail = "Mark the goal complete", badge = "Ready", badgeKind = "ok" }
+        elseif skill and not skill.scanned then
+          step = { title = string.format("Open your %s window", skill.professionName), detail = string.format("ForeverPath needs your recipe list to plan %s", goalName), badge = "Scan", badgeKind = "partial" }
+        elseif skill and view.skillPlan and #view.skillPlan.list == 0 then
+          step = { title = string.format("Find a recipe for %s %d+", skill.professionName, skill.current), detail = string.format("Nothing you know gives points - visit a trainer or find a pattern"), badge = "Recipe", badgeKind = "partial" }
+        elseif plan and plan.isComplete and plan.obtain then
           step = {
             title = string.format("%d x %s on hand", plan.quantityWanted or 0, goalName),
             detail = "Mark the goal complete",
@@ -92,9 +109,10 @@ function Overview.Build(entries, opts)
           if craftStep then
             local who = craftStep.crafter and not craftStep.crafter.isCurrent and (" on " .. craftStep.crafter.name) or ""
             local verb = craftStep.combine and "Combine" or "Craft"
+            local range = craftStep.forSkill and string.format(" (skill %d-%d)", craftStep.forSkill.from or 0, craftStep.forSkill.to or 0) or ""
             step = {
-              title = string.format("%s %d x %s%s", verb, craftStep.expectedOutput, nameOf(craftStep.itemID), who),
-              detail = string.format("%s - for %s", craftStep.professionName or "Profession", goalName),
+              title = string.format("%s %d x %s%s", verb, craftStep.forSkill and craftStep.crafts or craftStep.expectedOutput, nameOf(craftStep.itemID), who),
+              detail = string.format("%s%s - for %s", craftStep.professionName or "Profession", range, goalName),
               badge = craftStep.combine and "Combine" or (craftStep.professionName and ("Craft - " .. craftStep.professionName) or "Craft"), badgeKind = "ok",
             }
           else
@@ -176,6 +194,7 @@ end
 -- Percent complete (0..100) for a view, or nil when no plan exists.
 function Overview.Percent(view)
   if view and view.attunement then return view.attunement.percent end
+  if view and view.skill then return view.skill.percent end
   local plan = view and view.plan
   if not plan then return nil end
   if plan.totals.required <= 0 then return 100 end

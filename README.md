@@ -38,6 +38,7 @@ is built to take them without a rewrite (see `ARCHITECTURE.md`).
 | 0.10.3 gathering materials (leather tiers, essences) are planned as their own items; refining from the tier below is an opt-in route per node | Verified in game by the author (2026-10-18) |
 | 0.10.4 the ForeverPath mark as addon icon, window header and tracker emblem (`Media/ForeverPath-Mark.png`) | Verified in game by the author (2026-10-18) |
 | 0.10.5 optional dependencies declared, MIT licence file | Housekeeping |
+| 0.11.0 learn-recipe goals (the pattern to get or the trainer to visit, blockers, auto-complete on learning) and reach-skill goals (which recipes to craft how many times from your skill to the target, their materials, auto-complete on the skill-up) | Implemented, offline-tested against the catalogue, **not yet verified in game** |
 | Equipment, Quests, Reputations | Preview modules with "coming later" states |
 
 `TESTING.md` has the in-game checklist for 0.2.0. `API_COMPATIBILITY.md`
@@ -75,8 +76,10 @@ and says so in the UI.
    yet, and keeps recording whenever a window is open.
 2. **Add a goal.** Type an item ID or name in the header search, Shift-click
    an item from your bags, or use the New Goal bar on My Goals (quantity,
-   Add goal). Name search only knows items ForeverPath has seen (recipe outputs
-   and items you have looked at); the client has no searchable item database.
+   Add goal). Name search knows the catalogue's items plus items you have
+   looked at; the client has no searchable item database. The New Goal bar
+   also takes a **recipe** to learn ("Bolt of Woolen Cloth"), a
+   **profession skill** to reach ("Tailoring 225") and an attunement.
 3. **Read the plan.**
    - **Dashboard** shows active goals with progress, the materials missing
      across all of them, and a recommended next step per goal.
@@ -102,6 +105,8 @@ and says so in the UI.
 | `/fp help` | List commands |
 | `/fp add <item> [qty]` | Add a goal by item ID or link (crafting when a recipe is known, otherwise obtain) |
 | `/fp obtain <item> [qty]` | Add an obtain-item goal (boss drop, quest reward, vendor stock) even if a recipe exists |
+| `/fp learn <recipe>` | Add a learn-recipe goal by recipe name or spell id: the pattern to get, or the trainer to visit |
+| `/fp skill <profession> [rank]` | Add a reach-skill goal (default: the next cap): which recipes to craft, how often, and their materials |
 | `/fp sources <item>` / `/fp vendors` | Where an item comes from; how much vendor and loot-table data is available |
 | `/fp recipe <item>` / `/fp catalogue` | How an item is made (every catalogue recipe and combine, with skill, plans and reagents); catalogue build and counts |
 | `/fp trainers` | Profession trainers visited and the recipe requirements recorded from them |
@@ -139,6 +144,16 @@ the account has the recipe: the planner shows who could learn it (or why
 nobody can), adds the plans as something to get, treats combines such as
 Sulfuras as something anyone can do, and keeps soulbound items off the Auction
 House. Details in `tools/DbExtract/README.md`.
+
+Two goal types build on it. A **learn-recipe goal** plans the pattern to
+get (with its sources) or the trainer to visit, says when your skill is too
+low or you lack the profession, and completes itself when you learn the
+recipe. A **reach-skill goal** works out which recipes to craft, how many
+times, from your current skill to the target: learned recipes first, orange
+before yellow before green, cheapest by reagent prices when those are known,
+with unlearned recipes filling in where a trainer visit or a pattern has
+recorded their requirement. Its materials go on the shopping list like any
+other goal, and it completes on the skill-up.
 
 One thing the client's tables do not hold is the skill a trainer requires
 for a recipe, so ForeverPath records it from trainer windows: open any

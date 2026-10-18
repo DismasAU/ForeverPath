@@ -31,12 +31,23 @@ local function isCraftRoot(node)
   return node.depth == 0 and not node.claims and not node.step
 end
 
+-- A node that is only ever crafted: the goal item of a crafting tree, or a
+-- craft done for skill points. No inventory, no routes, children are reagents.
+local function isCraftOnly(node)
+  return isCraftRoot(node) or node.forSkill ~= nil
+end
+
+local function isSkillRoot(node)
+  return node.step ~= nil and node.step.kind == "skill"
+end
+
 local STEP_ICON = "Interface\\Icons\\INV_Misc_Book_09"
+local SKILL_ICON = "Interface\\Icons\\INV_Misc_Note_01"
 
 -- Name, icon and quality for a row: an item, or a step such as "train this recipe".
 local function displayOf(node)
   if node.step then
-    return { name = node.step.name, icon = node.step.icon or STEP_ICON, quality = 1, loaded = true }
+    return { name = node.step.name, icon = node.step.icon or (isSkillRoot(node) and SKILL_ICON or STEP_ICON), quality = 1, loaded = true }
   end
   return ns.ItemProvider.GetItem(node.itemID)
 end
@@ -50,7 +61,13 @@ local function stepVia(step)
 end
 
 local function viaText(node)
+  if isSkillRoot(node) then return "Craft for skill" end
   if node.step then return stepVia(node.step) end
+  if node.forSkill then
+    local text = node.craft and node.craft.professionName and ("Craft - " .. node.craft.professionName) or "Craft"
+    if node.craft and not node.craft.learned then text = text .. " (learn first)" end
+    return text
+  end
   if isCraftRoot(node) then
     return node.craft and node.craft.professionName and ("Craft - " .. node.craft.professionName) or "Craft"
   end
@@ -98,6 +115,12 @@ local function viaText(node)
 end
 
 local function noteText(node)
+  if isSkillRoot(node) then
+    return string.format("%d craft%s over %d recipe%s", node.quantity, node.quantity == 1 and "" or "s", #node.children, #node.children == 1 and "" or "s")
+  end
+  if node.forSkill then
+    return string.format("%d craft%s - skill %d to %d", node.craft and node.craft.crafts or 0, node.craft and node.craft.crafts == 1 and "" or "s", node.forSkill.from or 0, node.forSkill.to or 0)
+  end
   if node.step then
     if node.step.rank and node.step.rank > 1 then
       return string.format("needs %s %d", node.step.professionName or "skill", node.step.rank)
@@ -176,7 +199,7 @@ local function createRow(content, index, tree)
   end)
   Widgets.SetItemTooltip(row, function(self) return self.node and self.node.itemID end, function(self)
     local node = self.node
-    if not node or isCraftRoot(node) then return nil end
+    if not node or isCraftOnly(node) or node.step then return nil end
     local lines = {
       node.depth == 0 and string.format("Needed: %d (goal target)", node.quantity)
         or string.format("Needed: %d (%d per craft of %s)", node.quantity, node.perCraft or 0, nameOf(tree.byKey and tree.byKey[node.parentKey] and tree.byKey[node.parentKey].itemID or 0)),
@@ -357,10 +380,24 @@ local function createSide(view, tree)
     empty:Hide()
     for _, w in ipairs(self.content) do w:Show() end
     local item = displayOf(node)
-    self:SetTitle(node.depth == 0 and "Goal item" or (node.step and "Step" or "Selected node"))
+    self:SetTitle(isSkillRoot(node) and "Skill plan" or (node.depth == 0 and "Goal item" or (node.step and "Step" or (node.forSkill and "Craft for skill" or "Selected node"))))
     icon:SetItem(item.icon, item.quality)
     name:SetText(Theme.QualityText(item.name or ("Item " .. tostring(node.itemID)), item.quality))
-    if node.step then
+    if isSkillRoot(node) then
+      sub:SetText(string.format("%d craft%s over %d recipe%s", node.quantity, node.quantity == 1 and "" or "s", #node.children, #node.children == 1 and "" or "s"))
+      count:SetText(string.format("%d|r %s crafts", node.quantity, Theme.Hex.text3))
+      missing:SetText("")
+      bar:SetKind("gold")
+      bar:SetValue(node.childrenResolved and 1 or 0)
+      waysLabel:SetText(Theme.Upper("Recipes"))
+    elseif node.forSkill then
+      sub:SetText(string.format("Skill %d to %d - %s", node.forSkill.from or 0, node.forSkill.to or 0, viaText(node)))
+      count:SetText(string.format("%d|r %s crafts", node.craft and node.craft.crafts or 0, Theme.Hex.text3))
+      missing:SetText(node.craft and not node.craft.learned and "not learned" or "")
+      bar:SetKind("gold")
+      bar:SetValue(node.childrenResolved and 1 or 0)
+      waysLabel:SetText(Theme.Upper("Reagents"))
+    elseif node.step then
       local trainer = node.step.trainer
       sub:SetText(trainer and trainer.name
         and string.format("Train at %s%s%s", trainer.name, trainer.zone and (" - " .. trainer.zone) or "", trainer.subzone and (" (" .. trainer.subzone .. ")") or "")
@@ -389,7 +426,7 @@ local function createSide(view, tree)
 
     -- Option cards: craft (best when learned), buy, static hints.
     local options = {}
-    if not isCraftRoot(node) then
+    if not isCraftOnly(node) and not isSkillRoot(node) then
       for _, option in ipairs(node.options or {}) do
         if #options < MAX_OPTIONS then options[#options + 1] = option end
       end
@@ -434,8 +471,15 @@ local function createSide(view, tree)
           card.title:SetText("Buy on the Auction House")
           card.detail:SetText("No price source yet - CraftWise arrives later")
         elseif option.kind == "reagent" then
-          card.title:SetText(string.format("%d x %s", option.node.quantity, nameOf(option.node.itemID)))
-          card.detail:SetText(viaText(option.node))
+          local child = option.node
+          if child.step then
+            card.title:SetText("Train " .. (child.step.name or "the recipe"))
+          elseif child.forSkill then
+            card.title:SetText(string.format("%d x %s", child.craft and child.craft.crafts or 0, nameOf(child.itemID)))
+          else
+            card.title:SetText(string.format("%d x %s", child.quantity, nameOf(child.itemID)))
+          end
+          card.detail:SetText(child.forSkill and noteText(child) or viaText(child))
           best = false
         else
           card.title:SetText(option.label or R.RouteLabels[option.kind] or "Obtain")
@@ -480,13 +524,13 @@ local function createSide(view, tree)
       alsoUsed:SetText(node.depth == 0 and "" or Theme.ColorText("text3", "Not used by other goals"))
     end
 
-    if isCraftRoot(node) or not self.alternative then
+    if isCraftOnly(node) or node.step or not self.alternative then
       use:Hide()
     else
       use:Show()
       use:SetLabel(self.alternative.kind == "craft" and "Use crafting route" or "Use buying route")
     end
-    if not isCraftRoot(node) and node.routeSource == "override" then reset:Show() else reset:Hide() end
+    if not isCraftOnly(node) and node.routeSource == "override" then reset:Show() else reset:Hide() end
     link:SetEnabledState(item.link ~= nil)
   end
   return side
@@ -607,7 +651,7 @@ function CraftingTree.Create(screen)
   end
 
   function view:ApplyRoute(node, option)
-    if not self.goal or not node or isCraftRoot(node) then return end
+    if not self.goal or not node or isCraftOnly(node) or node.step then return end
     if option.kind ~= "craft" and option.kind ~= "buy" then
       ns.UI.MainFrame.SetStatus("That source is informational; routes can only be craft or buy.", "info")
       return
@@ -657,11 +701,19 @@ function CraftingTree.Create(screen)
       row.icon:SetItem(item.icon, item.quality)
       row.name:SetText(Theme.QualityText(item.name or ("Item " .. tostring(node.itemID)), item.quality) .. (node.step and "" or Theme.ColorText("text2", "  x" .. node.quantity)))
       row.note:SetText(noteText(node))
-      if node.step then
+      if isSkillRoot(node) then
+        row.have:SetText(Theme.ColorText("text3", "-"))
+        row.badge:SetBadge((goalPercent or 0) .. "%", "gold")
+        row.cost:SetText(Theme.ColorText("text3", "-"))
+      elseif node.step then
         row.have:SetText(Theme.ColorText("text3", "-"))
         row.badge:SetBadge("Train", "gold")
         local cost = node.step.trainer and node.step.trainer.cost
         row.cost:SetText(cost and cost > 0 and Widgets.Money(cost, true) or Theme.ColorText("text3", "?"))
+      elseif node.forSkill then
+        row.have:SetText(Theme.ColorText("text3", "-"))
+        row.badge:SetBadge(node.childrenResolved and "Ready" or "Craft", node.childrenResolved and "ok" or "gold")
+        row.cost:SetText(Theme.ColorText("text3", "-"))
       elseif isCraftRoot(node) then
         row.have:SetText(Theme.ColorText("text3", "-"))
         row.badge:SetBadge((goalPercent or 0) .. "%", "gold")

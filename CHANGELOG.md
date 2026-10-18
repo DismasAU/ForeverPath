@@ -1,5 +1,59 @@
 # Changelog
 
+## 0.11.0 (2026-10-18) - learn-recipe and reach-skill goals
+
+Two goal types that the catalogue and the trainer recorder made cheap.
+
+### Added
+- **Learn-recipe goals** (`/fp learn <recipe name or spell id>`, the Recipe
+  segment on My Goals). The goal is done when this character knows the
+  recipe (auto-completes on `NEW_RECIPE_LEARNED` / a profession scan, toast
+  "Recipe learned"). Until then the plan is the pattern to get (an obtain
+  tree of the teaching item, marked as a recipe, with its sources) or the
+  trainer to visit (a one-node train-step tree with the trainer, zone and
+  cost once recorded). The view says what blocks it: no such profession on
+  this character, or skill below the requirement ("Reach Tailoring 75" as
+  the next step), and names alts whose snapshot already knows it. Combines
+  are refused: there is nothing to learn.
+- **Reach-skill goals** (`/fp skill <profession> [rank]`, the Skill segment;
+  rank defaults to the current cap, or the next 75 above it). Progress is
+  the skill itself (`startRank` is remembered at creation). The new
+  `Domain/SkillPlanner.lua` picks, for every point from the current skill
+  to the target, the best recipe: learned recipes first, orange before
+  yellow before green (classic chance: full below the yellow threshold,
+  then falling linearly to zero at grey), cheapest expected cost when
+  reagent prices are known, fewest reagents otherwise. Consecutive points
+  with the same recipe form segments; expected crafts are rounded up. Where
+  nothing learned gives a point, an unlearned recipe with a known
+  requirement (a recorded trainer rank, or a pattern whose item carries it)
+  fills in and brings its own "learn it" step or pattern; otherwise the
+  range is reported as a gap. The plan becomes a tree: a skill root with one
+  craft node per recipe, done for the points (`node.forSkill`: never owned,
+  never bought, not on the shopping list), whose reagents are what the
+  shopping list, the requirements table, the Overview and CraftWise see.
+  Auto-completes on `SKILL_LINES_CHANGED` with the toast "Skill reached".
+  Says when the profession window has not been recorded yet, and when the
+  target is above the cap a trainer has to raise.
+- `GoalModel.SetRank`, `GoalStore:SetRank`, `GoalService.SetRank`: the
+  stepper on My Goals and the Crafting hero edits a skill goal's target.
+- Catalogue helpers: `Recipes.ForProfession`, `Recipes.Professions`,
+  `Recipes.FindProfession` (prefix match), `Recipes.Search` (recipe names,
+  exact and prefix first). `CharacterProvider.WhoKnows(spellID)`.
+  `Util.FormatMoney`. `Status.PROFESSION_MISSING`.
+- Resolver roots: `{ step = {...} }` (a single step) and `{ step = { kind =
+  "skill" }, crafts = { { recipe, crafts, learned, from, to } } }` (a skill
+  plan); obtain roots accept `learn` / `learnFor`.
+
+### Changed
+- My Goals: the New Goal segments are Item, Recipe, Skill, Attunement (Quest
+  and Reputation still disabled); the quantity stepper only applies to item
+  goals and becomes the target skill for skill goals. The Crafting screen,
+  Dependency Tree, CraftWise, Dashboard, tracker and shopping list render
+  the new goal kinds (skill root rows, "Craft for skill" nodes, trainer
+  steps as the whole plan).
+- The shopping list lists a train step that is the root of a tree (it only
+  listed steps below a craft before).
+
 ## 0.10.5 (2026-10-18) - housekeeping before release
 
 ### Added

@@ -281,9 +281,15 @@ function CraftWiseView.Create(screen)
     self.empty:Hide()
     for _, w in ipairs(self.content) do w:Show() end
 
-    local item = ns.ItemProvider.GetItem(result.itemID)
+    local item
+    if tree.root.step then
+      item = { name = tree.root.step.name, icon = tree.root.step.icon or "Interface\\Icons\\INV_Misc_Note_01", quality = 1 }
+    else
+      item = ns.ItemProvider.GetItem(result.itemID)
+    end
     self.icon:SetItem(item.icon, item.quality)
-    self.title:SetText(Theme.QualityText(item.name or ("Item " .. result.itemID), item.quality) .. Theme.ColorText("text2", "  x" .. tostring(result.quantity)))
+    self.title:SetText(Theme.QualityText(item.name or ("Item " .. tostring(result.itemID)), item.quality)
+      .. Theme.ColorText("text2", tree.root.step and (tree.root.step.kind == "skill" and ("  " .. tostring(result.quantity) .. " crafts") or "") or ("  x" .. tostring(result.quantity))))
     if status.lastScan then
       self.badge:SetBadge("Cached", status.freshness and status.freshness.kind or "info")
       self.scanText:SetText("AH scan " .. (status.freshness and status.freshness.label or "?"))

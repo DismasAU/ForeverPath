@@ -35,7 +35,7 @@ local function evaluate(node, ctx, rows, depth)
     return row
   end
   -- A train step costs what the trainer charges, in every strategy.
-  if node.step then
+  if node.step and node.step.kind ~= "skill" then
     local cost = node.step.trainer and tonumber(node.step.trainer.cost) or nil
     row.buy = nil
     row.craft, row.craftPath, row.hybrid = cost, cost, cost
@@ -44,11 +44,12 @@ local function evaluate(node, ctx, rows, depth)
     row.choice = "train"
     return row
   end
-  local info = ctx.priceOf(node.itemID)
+  local info = node.itemID and ctx.priceOf(node.itemID) or nil
   row.price = info
   row.freshness = info and ns.PriceProvider and ns.PriceProvider.Freshness(info, ctx.now) or nil
-  -- A soulbound item has no market, whatever a price source says.
-  row.buy = (info and not node.soulbound) and info.copper * node.missing or nil
+  -- A soulbound item has no market, whatever a price source says; a craft
+  -- done for skill points cannot be bought at all.
+  row.buy = (info and not node.soulbound and not node.forSkill) and info.copper * node.missing or nil
 
   if #node.children > 0 then
     local craft, craftPath, unknown, pathUnknown = 0, 0, 0, 0
@@ -117,7 +118,7 @@ function CraftWise.Compare(tree, opts)
 
   -- Buy finished: the AH price of the goal item times what is still needed.
   local wanted = root.claims and (root.missing or 0) or root.quantity
-  local market = marketOf(root.itemID)
+  local market = root.itemID and marketOf(root.itemID) or nil
   result.buy.price = market
   result.buy.cost = market and market.copper * wanted or nil
   result.buy.freshness = market and ns.PriceProvider and ns.PriceProvider.Freshness(market, ctx.now) or nil

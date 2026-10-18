@@ -59,6 +59,17 @@ client. Behaviour (return values, timing) is only verified where stated.
 | `GameTooltip:SetItemByID` | Widgets | Retail API | Guarded with pcall; falls back to a plain name tooltip |
 | `Enum.CraftingReagentType.Basic` (=1), `Enum.BankType.Character` (=0), `Enum.BagIndex.ReagentBag` (=5) | Compat | `Enum.BagIndex` in dump; the other two from Retail 12.x docs | Fallback constants used when the enum is missing |
 
+## 0.11.0
+
+No new API calls. Learn-recipe goals complete through the existing
+`NEW_RECIPE_LEARNED` handling and profession scans; reach-skill goals read
+the skill from `GetProfessionInfo` (skill level, max skill level and the
+icon, now kept for the goal) and re-check on `SKILL_LINES_CHANGED`, which
+the client fires on every skill-up. Recipe thresholds come from the
+catalogue (`TrivialSkillLineRankLow` / `High`); the skill-up chance uses the
+classic rule (certain below the yellow threshold, linear to zero at grey),
+which is not verifiable from the client and may differ from the server's.
+
 ## 0.10.1
 
 | API | Use | Status |

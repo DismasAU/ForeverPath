@@ -12,6 +12,8 @@ Commands.help = {
   { "/fp help", "Show this list." },
   { "/fp add <item> [qty]", "Add a goal by item ID or link (crafting when a recipe is known, otherwise obtain)." },
   { "/fp obtain <item> [qty]", "Add an obtain-item goal (drops, vendors, quests) even if a recipe exists." },
+  { "/fp learn <recipe>", "Add a learn-recipe goal by recipe name (catalogue) or spell id: plans to get, or the trainer to visit." },
+  { "/fp skill <profession> [rank]", "Add a reach-skill goal (default: the next cap): which recipes to craft, how often, and their materials." },
   { "/fp goals", "List open goals." },
   { "/fp select <n>", "Select goal number n (opens it in Crafting)." },
   { "/fp remove <n>", "Remove goal number n." },
@@ -131,6 +133,24 @@ end
 
 function handlers.obtain(rest)
   addGoal(rest, "OBTAIN_ITEM")
+end
+
+local function addTypedGoal(ok, message)
+  Log.Print("%s", message)
+  if ok and ns.UI.MainFrame.IsShown() then
+    ns.UI.MainFrame.SetStatus(message, "ok")
+    ns.UI.MainFrame.ShowScreen("crafting")
+  end
+end
+
+function handlers.learn(rest)
+  if not requireLoaded() then return end
+  addTypedGoal(ns.GoalService.AddRecipeFromInput(rest))
+end
+
+function handlers.skill(rest)
+  if not requireLoaded() then return end
+  addTypedGoal(ns.GoalService.AddSkillFromInput(rest))
 end
 
 local function resolveOrComplain(rest)

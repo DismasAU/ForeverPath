@@ -286,7 +286,12 @@ function Tracker.Refresh()
       frame.more:SetHeight(1)
     end
     height = height + (frame.more:GetHeight() or 0) + 4
-    if view.plan.isComplete and view.plan.obtain then
+    if view.skill then
+      frame.sub:SetText(string.format("%d%% - %s %d of %d", percent or 0, view.skill.professionName, view.skill.current, view.skill.target))
+    end
+    if view.nextStep and (view.learn or view.skill) and (view.plan.isComplete or #view.plan.materials == 0) then
+      frame.nextText:SetText(view.nextStep)
+    elseif view.plan.isComplete and view.plan.obtain then
       frame.nextText:SetText(string.format("All %d x %s on hand", view.plan.quantityWanted or 0, ns.GoalService.Name(goal)))
     elseif view.plan.isComplete then
       frame.nextText:SetText(string.format("Craft %d x %s", view.plan.craftsNeeded, ns.GoalService.Name(goal)))
@@ -296,7 +301,7 @@ function Tracker.Refresh()
         if m.missing > 0 and (not top or m.missing > top.missing) then top = m end
       end
       local hint = view.plan.obtain and view.hint and view.hint.label or nil
-      frame.nextText:SetText(top and (string.format("Obtain %d x %s", top.missing, ns.ItemProvider.GetName(top.itemID)) .. (hint and (" - " .. hint) or "")) or "")
+      frame.nextText:SetText(top and (string.format("Obtain %d x %s", top.missing, ns.ItemProvider.GetName(top.itemID)) .. (hint and (" - " .. hint) or "")) or (view.nextStep or ""))
     end
   else
     frame.sub:SetText(view and (ns.StatusLabel[view.status] or "") or "")

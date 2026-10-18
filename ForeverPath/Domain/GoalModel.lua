@@ -7,8 +7,13 @@
 --     tracked = true, priority = 1,
 --     createdAt = 1792147990, updatedAt = 1792147990, completedAt = nil, notes = nil,
 --   }
--- `target` is type specific. CRAFT_ITEM and OBTAIN_ITEM are supported; the
--- other types are registered so saved data, UI and planners can grow into them.
+-- `target` is type specific:
+--   CRAFT_ITEM / OBTAIN_ITEM   { itemID, quantity }
+--   COMPLETE_ATTUNEMENT        { attuneID, name, icon }
+--   LEARN_RECIPE               { spellID, name, professionName, professionID, icon }
+--   REACH_SKILL                { professionID, professionName, rank, startRank, icon }
+-- COMPLETE_QUEST and REACH_REPUTATION are registered so saved data, UI and
+-- planners can grow into them.
 local _, ns = ...
 
 local GoalModel = {}
@@ -21,10 +26,12 @@ GoalModel.Types = {
   OBTAIN_ITEM = { label = "Obtain item", badge = "Item", supported = true, targetKind = "item" },
   COMPLETE_QUEST = { label = "Complete quest", badge = "Quest", supported = false, targetKind = "quest" },
   REACH_REPUTATION = { label = "Reach reputation", badge = "Reputation", supported = false, targetKind = "faction" },
-  LEARN_RECIPE = { label = "Learn recipe", badge = "Recipe", supported = false, targetKind = "recipe" },
+  LEARN_RECIPE = { label = "Learn recipe", badge = "Recipe", supported = true, targetKind = "recipe" },
   COMPLETE_ATTUNEMENT = { label = "Complete attunement", badge = "Attunement", supported = true, targetKind = "attunement" },
-  REACH_SKILL = { label = "Reach profession skill", badge = "Skill", supported = false, targetKind = "skill" },
+  REACH_SKILL = { label = "Reach profession skill", badge = "Skill", supported = true, targetKind = "skill" },
 }
+
+GoalModel.MAX_SKILL = 1000
 
 GoalModel.Statuses = { ACTIVE = "ACTIVE", QUEUED = "QUEUED", PAUSED = "PAUSED", COMPLETED = "COMPLETED" }
 GoalModel.StatusOrder = { ACTIVE = 1, QUEUED = 2, PAUSED = 3, COMPLETED = 4 }
@@ -66,10 +73,35 @@ local function validateAttunementTarget(target)
   return true
 end
 
+local function validateRecipeTarget(target)
+  if type(target) ~= "table" then
+    return false, "target missing"
+  end
+  if not Util.IsPositiveInt(target.spellID) then
+    return false, "spellID must be a positive integer"
+  end
+  return true
+end
+
+local function validateSkillTarget(target)
+  if type(target) ~= "table" then
+    return false, "target missing"
+  end
+  if type(target.professionName) ~= "string" or target.professionName == "" then
+    return false, "professionName must be set"
+  end
+  if not Util.IsPositiveInt(target.rank) or target.rank > GoalModel.MAX_SKILL then
+    return false, "rank must be a positive integer"
+  end
+  return true
+end
+
 local validators = {
   CRAFT_ITEM = validateItemTarget,
   OBTAIN_ITEM = validateItemTarget,
   COMPLETE_ATTUNEMENT = validateAttunementTarget,
+  LEARN_RECIPE = validateRecipeTarget,
+  REACH_SKILL = validateSkillTarget,
 }
 
 function GoalModel.IsSupported(goalType)
@@ -165,6 +197,19 @@ function GoalModel.SetQuantity(goal, quantity, now)
   return true
 end
 
+-- Target skill of a REACH_SKILL goal.
+function GoalModel.SetRank(goal, rank, now)
+  if goal.type ~= "REACH_SKILL" then
+    return false, "not a skill goal"
+  end
+  if not Util.IsPositiveInt(rank) or rank > GoalModel.MAX_SKILL then
+    return false, "rank must be a positive integer"
+  end
+  goal.target.rank = rank
+  goal.updatedAt = now or Util.Now()
+  return true
+end
+
 function GoalModel.SetStatus(goal, status, now)
   if not GoalModel.Statuses[status] then
     return false, "unknown status"
@@ -193,6 +238,9 @@ function GoalModel.Title(goal, nameLookup)
     local verb = goal.type == "CRAFT_ITEM" and "Craft" or "Obtain"
     return string.format("%s %dx %s", verb, goal.target.quantity or 1, name)
   end
+  if goal.type == "REACH_SKILL" and goal.target then
+    return string.format("Reach %s %d", goal.target.professionName or "skill", goal.target.rank or 0)
+  end
   if goal.target and type(goal.target.name) == "string" then
     return string.format("%s: %s", label, goal.target.name)
   end
@@ -203,6 +251,9 @@ end
 function GoalModel.Name(goal, nameLookup)
   if goal.target and goal.target.itemID then
     return (nameLookup and nameLookup(goal.target.itemID)) or ("Item " .. tostring(goal.target.itemID))
+  end
+  if goal.type == "REACH_SKILL" and goal.target then
+    return string.format("%s %d", goal.target.professionName or "Skill", goal.target.rank or 0)
   end
   if goal.target and type(goal.target.name) == "string" then
     return goal.target.name

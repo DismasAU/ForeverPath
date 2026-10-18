@@ -2,7 +2,7 @@
 ## Title: ForeverPath
 ## Notes: Goal-driven progression planner for World of Warcraft: Forever. Plan crafting and item goals and see what you still need and where it comes from.
 ## Author: Jacob
-## Version: 0.10.5
+## Version: 0.11.0
 ## IconTexture: Interface\AddOns\ForeverPath\Media\ForeverPath-Mark.png
 ## SavedVariables: ForeverPathDB
 ## SavedVariablesPerCharacter: ForeverPathCharDB
@@ -25,6 +25,7 @@ Domain\GoalStore.lua
 Domain\CraftingEngine.lua
 Domain\Allocation.lua
 Domain\DependencyResolver.lua
+Domain\SkillPlanner.lua
 Domain\Planner.lua
 Domain\Overview.lua
 Domain\ShoppingList.lua

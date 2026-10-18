@@ -365,9 +365,17 @@ local function Create(parent)
       row.bar:SetKind(percent == 100 and "ok" or "gold")
       row.bar:SetValue((percent or 0) / 100)
       if view and view.plan then
-        row.detail:SetText(ns.Overview.MissingSummary(view, ns.ItemProvider.GetName))
+        if (view.learn or view.skill) and #view.plan.materials == 0 then
+          row.detail:SetText(view.nextStep or view.message or "")
+        else
+          row.detail:SetText(ns.Overview.MissingSummary(view, ns.ItemProvider.GetName))
+        end
         Widgets.SetTextColor(row.detail, view.plan.isComplete and C.ok or C.partial)
-        if view.plan.obtain then
+        if view.skill then
+          row.meta:SetText(string.format("%d of %d", view.skill.current, view.skill.target))
+        elseif view.learn then
+          row.meta:SetText(view.learn.kind == "plans" and "Plans" or (view.learn.kind == "trainer" and "Trainer" or "Combine"))
+        elseif view.plan.obtain then
           row.meta:SetText(view.hint and view.hint.label or "Source unknown")
         else
           row.meta:SetText(string.format("%d of %d materials", view.progress.materialsHave, view.progress.materialsTotal))
