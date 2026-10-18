@@ -1,10 +1,20 @@
 # Changelog
 
-## Unreleased
+## 0.10.5 (2026-10-18) - housekeeping before release
+
+### Added
+- `OptionalDeps` in both manifests: Auctionator, AtlasLootClassic (and its
+  DungeonsAndRaids module), ForeverDungeonJournal, Attune. ForeverPath reads
+  them lazily, so this only guarantees they load first.
+- `LICENSE` (MIT), matching the `X-License` field the manifests always had.
+- README: a "Companion addons" table and a current opening paragraph.
+- `scripts/package.ps1` writes zip entries with forward slashes;
+  Compress-Archive on Windows PowerShell 5.1 stored backslashes, which macOS
+  unpacks into a flat folder of oddly named files.
 
 ### Changed
-- Documentation only: every feature through 0.10.4 has been in daily use in
-  game by the author, so the README status table, the TESTING.md checklists
+- Documentation: every feature through 0.10.4 has been in daily use in game
+  by the author, so the README status table, the TESTING.md checklists
   (sections 7 to 19) and the API notes no longer say "not yet verified in
   game". The function-level open questions in API_COMPATIBILITY.md stay
   listed because the branch each call takes was not recorded.

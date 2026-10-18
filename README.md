@@ -6,10 +6,13 @@ Pick something you want to craft. ForeverPath works out which recipe makes it,
 how many crafts you need, which reagents that takes, how many you already own
 in your bags and bank, and what is still missing.
 
-Version 0.2.0 implements the UI from the design handoff in `design/handoff/`
-on top of the 0.1.0 crafting data layer. The architecture is built to grow
-into quests, reputation, attunements, equipment planning and a craft-versus-buy
-engine without a rewrite (see `ARCHITECTURE.md`).
+It plans crafting goals, items to obtain (boss drops, quest rewards, vendor
+stock) and raid attunements, across every character on the account: a
+recursive dependency tree with route choices per node, a shopping list with
+Auction House and vendor prices, a buy-versus-craft comparison, trainer and
+vendor recorders, and a recipe catalogue generated from the client's own
+database. Quests, reputations and equipment goals are next; the architecture
+is built to take them without a rewrite (see `ARCHITECTURE.md`).
 
 ## Status
 
@@ -34,6 +37,7 @@ engine without a rewrite (see `ARCHITECTURE.md`).
 | 0.10.2 unlearned recipes in the tree: the plans as an item to get, or a "train it" step with the trainer, zone and cost; "Recipes to learn" on the shopping list | Verified in game by the author (2026-10-18) |
 | 0.10.3 gathering materials (leather tiers, essences) are planned as their own items; refining from the tier below is an opt-in route per node | Verified in game by the author (2026-10-18) |
 | 0.10.4 the ForeverPath mark as addon icon, window header and tracker emblem (`Media/ForeverPath-Mark.png`) | Verified in game by the author (2026-10-18) |
+| 0.10.5 optional dependencies declared, MIT licence file | Housekeeping |
 | Equipment, Quests, Reputations | Preview modules with "coming later" states |
 
 `TESTING.md` has the in-game checklist for 0.2.0. `API_COMPATIBILITY.md`
@@ -152,4 +156,4 @@ stored with its required skill, cost and the trainer's location
 - API usage and verification status: `API_COMPATIBILITY.md`.
 - Changes: `CHANGELOG.md`.
 
-License: MIT (see `ForeverPath.toc`; adjust if you prefer another license).
+License: MIT (see `LICENSE`).
