@@ -1,5 +1,9 @@
 # Builds dist\ForeverPath-<version>.zip containing the addon folder.
 # Usage: powershell -ExecutionPolicy Bypass -File scripts\package.ps1
+#
+# Entries are written with forward slashes. Compress-Archive on Windows
+# PowerShell 5.1 stores backslashes, which macOS unpacks into a flat folder
+# of files named "ForeverPath\Core\Bootstrap.lua".
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $source = Join-Path $repoRoot "ForeverPath"
@@ -11,5 +15,18 @@ $dist = Join-Path $repoRoot "dist"
 New-Item -ItemType Directory -Force $dist | Out-Null
 $zip = Join-Path $dist "ForeverPath-$version.zip"
 if (Test-Path $zip) { Remove-Item $zip }
-Compress-Archive -Path $source -DestinationPath $zip
-Write-Host "Created $zip"
+
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+$archive = [System.IO.Compression.ZipFile]::Open($zip, [System.IO.Compression.ZipArchiveMode]::Create)
+try {
+  $files = Get-ChildItem -Path $source -Recurse -File | Sort-Object FullName
+  foreach ($file in $files) {
+    $relative = $file.FullName.Substring($repoRoot.Length).TrimStart('\', '/') -replace '\\', '/'
+    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+      $archive, $file.FullName, $relative, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+  }
+  Write-Host "Created $zip ($($files.Count) files)"
+} finally {
+  $archive.Dispose()
+}
