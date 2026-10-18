@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Documentation only: every feature through 0.10.4 has been in daily use in
+  game by the author, so the README status table, the TESTING.md checklists
+  (sections 7 to 19) and the API notes no longer say "not yet verified in
+  game". The function-level open questions in API_COMPATIBILITY.md stay
+  listed because the branch each call takes was not recorded.
+
 ## 0.10.4 (2026-10-18) - the ForeverPath mark
 
 ### Added

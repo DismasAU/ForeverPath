@@ -110,7 +110,7 @@ status` and `/fp debug` output are the most useful things to report.
 - [ ] `/fp errors` is empty after the session (or report what it shows).
 - [ ] Disable another addon that hooks chat links (Auctionator) and confirm Shift-click still works; re-enable it and confirm both coexist.
 
-### 7. 0.2.0 design handoff UI (not yet run in game)
+### 7. 0.2.0 design handoff UI (verified in game by the author, 2026-10-18)
 - [ ] After `/reload` with 0.1.0 saved data: no Lua error, window opens at the old position, goals still listed (schema 2 migration).
 - [ ] Window: bronze border with rings and corner rivets, 46 px header, sidebar, status bar; resizes between 820x560 and 1400x960; drag by the header.
 - [ ] Header: character name in class colour, "Level N Class - Realm"; active-goal pill shows the selected goal's icon, name and %; clicking it lists open goals.
@@ -130,7 +130,7 @@ status` and `/fp debug` output are the most useful things to report.
 - [ ] Header search suggestions: same hover behaviour.
 - [ ] Dashboard character strip: all four stat cells stay inside the panel at 1000 and at 820 wide; Goals shows "N active" with the done count underneath; gold shows coin icons or the short "12g 34s" form, never clipped.
 
-### 9. 0.3.0 dependency tree (not yet run in game)
+### 9. 0.3.0 dependency tree (verified in game by the author, 2026-10-18)
 Use a goal whose recipe has a craftable intermediate, for example a Leatherworking item that needs Light Leather you can make from Ruined Leather Scraps, or any item needing a bolt/bar you can craft. Record both professions first.
 - [ ] `/fp tree` prints the tree in chat: the goal line with crafts, each reagent with have/need, intermediates indented under their parent, "N of M dependencies resolved".
 - [ ] Crafting > Dependency Tree tab: the intermediate shows "Craft - <Profession>" in Get via, its own reagents sit under it with guide lines and an elbow; Have shows your bag count in green/amber/red; Status badges match.
@@ -144,7 +144,7 @@ Use a goal whose recipe has a craftable intermediate, for example a Leatherworki
 - [ ] Link inserts the item link into an open chat box, or prints it to chat when none is open.
 - [ ] Resize to the minimum height: the Selected Node panel stays usable (known tight spot).
 
-### 10. 0.4.0 characters (not yet run in game)
+### 10. 0.4.0 characters (verified in game by the author, 2026-10-18)
 Needs two characters on the account. Log in on the alt first, then on your main.
 - [ ] On the alt: `/fp characters` lists it as "(you) ... live". `/fp snapshot` prints its professions with their source ("client list", "recorded windows only" or "kept"); if it says "none", wait ten seconds and run it again, then report which it was. Log out normally and log in on the main.
 - [ ] On the main: `/fp characters` lists both; the alt says "snapshot" with its level, class, professions and bag item count ("+ bank" if you visited a bank on it).
@@ -156,7 +156,7 @@ Needs two characters on the account. Log in on the alt first, then on your main.
 - [ ] After 24 h without logging in on the alt, its badge becomes CACHED with "N days" and "Log in on <Alt> to refresh".
 - [ ] No Lua errors on logout/login; `ForeverPathDB.characters` in the SavedVariables file holds both entries.
 
-### 11. 0.5.0 shopping list (not yet run in game)
+### 11. 0.5.0 shopping list (verified in game by the author, 2026-10-18)
 - [ ] Sidebar > Shopping List: goal chips for every open goal, active/queued ticked, paused unticked. Unticking a chip removes its materials; `/reload` remembers the choice.
 - [ ] Rows: one per missing item across the ticked goals, biggest gap first. An intermediate you will craft shows "via craft" and a "Craft - <Profession>" tag; a raw material shows "?" and "AH".
 - [ ] Pause a goal that holds materials another goal needs: the other goal's row shows Owned = what is in your bags, Reserved = the part the paused goal holds, Missing = Total - (Owned - Reserved). The tooltip repeats it.
@@ -166,7 +166,7 @@ Needs two characters on the account. Log in on the alt first, then on your main.
 - [ ] Dashboard "Open shopping list >", Crafting "Add to shopping list" (ticks that goal and opens the list) and Characters "Plan mail" all land on the screen.
 - [ ] With an alt holding a missing item: the blue strip under the summary says "<Alt> can mail N <item>".
 
-### 12. 0.6.0 item sources (not yet run in game)
+### 12. 0.6.0 item sources (verified in game by the author, 2026-10-18)
 - [ ] Open any merchant that sells a trade good (Coarse Thread at a tailoring or trade supplies vendor). `/fp vendors` counts it; `/fp sources 2320` prints "Vendor: Buy from <npc> - <zone> - <price> each" and "Price: ... (vendor)".
 - [ ] A goal needing that item: the requirements row shows the unit price and subtotal, the Source tag says "Vendor: <npc>", the footer "Buy all missing" shows a total with "(+N unpriced)", and the tree's Get via says "Vendor: <npc>".
 - [ ] Shopping list: the row moves to the Vendors tab with a cost; Estimated total shows the vendor total and "N items unpriced".
@@ -175,7 +175,7 @@ Needs two characters on the account. Log in on the alt first, then on your main.
 - [ ] An item with an extended cost (sold for other items) records "costs other items" and no price.
 - [ ] `/reload` and switching characters keep the vendor data (account-wide).
 
-### 13. 0.7.0 obtain goals and DungeonJournal (not yet run in game)
+### 13. 0.7.0 obtain goals and DungeonJournal (verified in game by the author, 2026-10-18)
 - [ ] With ForeverDungeonJournal enabled: `/fp vendors` says "DungeonJournal: installed, N items indexed" (N in the hundreds). `/fp sources 10411` (Footpads of the Fang) prints "Drop: Dropped by Kresh - Wailing Caverns (DungeonJournal)"; a quest reward from a journal dungeon prints "Quest: Quest reward: <quest> - <dungeon> ... (DungeonJournal)".
 - [ ] Shift-click a dungeon drop into the search box or `/fp add` it: the goal is created as "Obtain 1x <item>" (badge Item). The Crafting screen shows chips "Obtain" and "Dropped by <boss>", "0 of 1 in your bags - Dropped by <boss> - <dungeon> (DungeonJournal)", and one requirements row with the drop as its source tag. No "No known recipe" dead end.
 - [ ] An existing crafting goal for a drop (the "Footpads of the Fang - No known recipe" case): after `/reload` it is planned the same way, with a third chip "No known recipe"; `/fp obtain <item>` switches it to an obtain goal.
@@ -186,7 +186,7 @@ Needs two characters on the account. Log in on the alt first, then on your main.
 - [ ] Disable ForeverDungeonJournal: the goal still plans (AtlasLoot or AH route), `/fp vendors` says "DungeonJournal: not installed", no errors in `/fp errors`.
 - [ ] Gathering only when someone can: a goal needing Ruined Leather Scraps on a character without Skinning and with no skinner alt shows a BUY next step (the tree card reads "Skinning ... no character has Skinning", cost column "no gatherer"). Log a skinner alt once (or learn Skinning): the step becomes GATHER ("Gather - <alt>" when it is an alt) and the detail names who has the skill and their level.
 
-### 14. 0.8.0 Auction House prices and CraftWise (not yet run in game)
+### 14. 0.8.0 Auction House prices and CraftWise (verified in game by the author, 2026-10-18)
 - [ ] Status bar shows "AH prices: cached scan - <age>" with Auctionator enabled and a scan done; `/fp prices` prints the same plus the vendor count. Disable Auctionator: "AH prices: Auctionator not installed", no errors.
 - [ ] `/fp prices 2589` (Linen Cloth) prints "Auction House: <price> each (<age>), 7-day average ..., N listed - cheapest"; with a recorded vendor that is cheaper, the vendor line comes first and the AH line is listed under it.
 - [ ] Requirements table: Unit price / Subtotal filled for AH-priced materials, "Buy all missing" total, footer "CraftWise route: <total>"; "Open CraftWise >" switches to the CraftWise tab.
@@ -196,7 +196,7 @@ Needs two characters on the account. Log in on the alt first, then on your main.
 - [ ] Dashboard CraftWise panel: total, "Hybrid plan - saves <amount>", three rows, "Cached scan - <age>", Compare opens the tab for that goal. With no prices: "No price data" and the AH status text.
 - [ ] Rescan at the Auction House: prices and ages update after `/reload` or the next refresh without reloading ForeverPath.
 
-### 15. 0.8.1 auto-complete and celebration (not yet run in game)
+### 15. 0.8.1 auto-complete and celebration (verified in game by the author, 2026-10-18)
 - [ ] `/fp celebrate test` shows the toast at the top of the screen (gold border, icon, "GOAL COMPLETE", name, detail line); it fades after about six seconds; clicking it opens My Goals.
 - [ ] Add "Craft 1x <something cheap>" and craft it: the goal flips to Completed within a second of the item landing in your bags, the level-up sound plays, chat says "Goal complete: Crafted 1x ...", the toast appears, the goal counter on the sidebar and the Dashboard "done" count update.
 - [ ] Craft 2 of an intermediate that another goal consumes (bolts for a bag): the bolt goal completes even if the bag is crafted straight after.
@@ -205,12 +205,12 @@ Needs two characters on the account. Log in on the alt first, then on your main.
 - [ ] `/fp celebrate off`: completion still happens, silently. `/fp celebrate auto off`: nothing completes by itself; Mark complete still works.
 - [ ] Existing goals from 0.8.0 do not complete on login just because the item is in your bags.
 
-### 16. 0.8.2 affordability (not yet run in game)
+### 16. 0.8.2 affordability (verified in game by the author, 2026-10-18)
 - [ ] Shopping list: the second summary cell reads "Yes" with "<cost> of your <gold>" when you carry enough; set a goal whose materials cost more than you carry: "With alts' gold - short X here; alts hold Y" when an alt's snapshot covers it, else "No - short X across the account". Rows show + / ~ / ! before the cost and the tooltip explains it.
 - [ ] Tick a row as bought: it drops out of the remaining cost and the verdict updates. "Send to chat" prints "Cost: ..." under the header line.
 - [ ] Crafting footer: "Buy all missing: <total> - affordable" or "- short X".
 
-### 17. 0.9.0 attunement goals (not yet run in game)
+### 17. 0.9.0 attunement goals (verified in game by the author, 2026-10-18)
 - [ ] With Attune enabled: Attunements in the sidebar (no longer a preview); the picker lists your faction's raids then dungeons; `/fp attunements` prints each with a percentage and next step.
 - [ ] Pick Onyxia's Lair (or any chain you have started): done steps show green nodes and DONE, the current step a gold ring and CURRENT with the right quest name and zone, later steps LOCKED; the header percentage matches Attune's own view. Quest names should match the in-game quest log (they come from Attune's locale table).
 - [ ] A chain you have finished shows 100%, "Attuned", and the Current step panel says "Attuned".
@@ -220,7 +220,7 @@ Needs two characters on the account. Log in on the alt first, then on your main.
 - [ ] Kill / talk / use steps: done once Attune records them (its survey), or once a later quest is done.
 - [ ] Disable Attune: the screen explains, `/fp attune` refuses politely, existing attunement goals show "API unavailable" without errors.
 
-### 18. 0.10.0 recipe catalogue (not yet run in game)
+### 18. 0.10.0 recipe catalogue (verified in game by the author, 2026-10-18)
 - [ ] `/fp catalogue` prints "Recipe catalogue: 2336 recipes, 292 combines ..." with the client build; `/fp status` ends with the same line. Loading the 540 KB data file causes no visible hitch at login and no Lua error.
 - [ ] `/fp recipe 17193` (Sulfuron Hammer) prints "Blacksmithing 300 (yellow 325, grey 350) ... taught by Plans: Sulfuron Hammer" and the seven reagents; `/fp recipe sulfuras, hand` prints the combine. Compare three recipes you know with their in-game tooltips (reagents and counts must match exactly).
 - [ ] `/fp add sulfuras, hand` on a character with no Blacksmithing: a crafting goal; the Crafting screen shows the hero chips "Combine - anyone can" and the tree: Sulfuras (Combine) > Sulfuron Hammer (route AH, option card "Recipe not learned: no Blacksmithing on this account") and Eye of Sulfuras ("No route (soulbound)" unless DungeonJournal names Ragnaros). Shopping list: the eye under Gathering / drops with "Soulbound", never under Auction House.
@@ -231,7 +231,7 @@ Needs two characters on the account. Log in on the alt first, then on your main.
 - [ ] Names: a goal added by id for an item this client has never seen shows the catalogue name immediately, then the client's (identical) name once loaded; quality colour matches.
 - [ ] CraftWise on a soulbound craft (hammer when you can craft it): the Buy card has no price; craft and hybrid are computed from the reagents plus the plans.
 
-### 19. 0.10.1 trainer recorder (not yet run in game)
+### 19. 0.10.1 trainer recorder (verified in game by the author, 2026-10-18)
 - [ ] `/fp status` lists "Trainer window API: available". Before any visit, `/fp trainers` says none recorded.
 - [ ] Open a profession trainer (e.g. a Tailoring trainer in a capital): while the window is open the list shows available, too-advanced and already-known recipes (the filters were switched on); on close the filters are back to what they were. No Lua error.
 - [ ] `/fp trainers` lists the trainer with zone and recipe count; `/fp recipe <a recipe that trainer teaches>` prints "trainer <name> (<zone>)" and the required skill matches the trainer window exactly. Compare three recipes, including one above your skill and one you already know.

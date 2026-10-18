@@ -170,7 +170,7 @@ whether sub-recipes are *recorded*: a reagent's recipe is only known after its
 profession window has been opened once, which is why the checklist asks for
 both professions to be recorded first.
 
-## Added in 0.2.0 (UI rebuild, not yet verified in game)
+## Added in 0.2.0 (UI rebuild; in use in game since 0.2.1)
 
 | Function / asset | Where | Verified | Notes |
 |---|---|---|---|
@@ -225,7 +225,14 @@ bank stack counting itself is still unexercised. Question 6 below is therefore
 answered as far as "no error"; whether contents are readable at that instant
 is open until a bank holding reagents is tested.
 
-## Open questions (not yet answered by the in-game run)
+## Open questions (function-level, not individually answered)
+
+Every feature through 0.10.4 has been used in game by the author, so the
+code paths that depend on these calls behave acceptably with their guards
+and fallbacks in place. What has not been recorded is which branch each call
+takes, so the questions below stay open as documentation of where a fallback
+may be doing the work. `/fp status`, `/fp snapshot` and `/fp debug` print
+the answers when someone wants to settle them.
 
 1. Does `C_TradeSkillUI.GetRecipeSchematic` return reagent slots for a recipe
    whose profession window is closed? If yes, plans are always live. If not,

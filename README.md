@@ -17,23 +17,23 @@ engine without a rewrite (see `ARCHITECTURE.md`).
 |---|---|
 | Loads on WoW: Forever (interface 16001) | Verified in game on 0.1.0, build 1.60.1.70450 |
 | Crafting data: recipes from profession windows, bag counts, missing calculation | Verified in game on 0.1.0 |
-| Bank counts | Bank detected and scanned live in game; counting of real bank stacks not yet seen |
-| 0.2.x shell, Dashboard, My Goals, Crafting screens, tracker | Implemented from the handoff; loads in game on 0.2.0 (header overlap and hover blanking fixed in 0.2.1), remaining checklist **not yet verified in game** |
-| Multi-output recipes | Implemented, offline-tested |
-| 0.3.0 recursive dependency tree, allocation across goals, route overrides | Implemented, offline-tested; in-game checklist reported good by the author |
-| 0.4.0 account-wide character snapshots, Characters screen, include alts' bags | Verified in game by the author (profession capture fixed in 0.4.1) |
-| 0.5.0 shopping list across goals, bought ticks, send to chat, mail plan | Implemented, offline-tested, **not yet verified in game** |
-| 0.6.0 item sources: vendor recorder, item-class heuristics, AtlasLoot bridge, vendor prices | Implemented, offline-tested, **not yet verified in game** |
-| 0.7.0 obtain-item goals (drops, quests, vendors planned instead of "No known recipe"), ForeverDungeonJournal bridge | Implemented, offline-tested, **not yet verified in game** |
-| 0.8.0 Auction House prices via Auctionator, CraftWise buy / craft / hybrid comparison, route presets | Implemented, offline-tested, **not yet verified in game** |
-| 0.8.1 goals auto-complete when the item lands in your bags; celebration toast, sound, chat line | Implemented, offline-tested, **not yet verified in game** |
-| 0.8.2 affordability: shopping list and footer compare the remaining cost with your gold and the account's | Implemented, offline-tested, **not yet verified in game** |
-| 0.9.0 attunement goals and the Attunements screen (Attune addon data, progress from quest flags, log, level, bags) | Implemented, offline-tested, **not yet verified in game** |
-| 0.10.0 recipe catalogue generated from the client's own database (every profession recipe and item-use combine, skill ranks, plans, soulbound flags); full pathway for unlearned recipes, "learn" and "combine" routes | Implemented, offline-tested against the generated data, **not yet verified in game** |
-| 0.10.1 trainer recorder: required skill, cost and location of trainer-taught recipes, recorded from trainer windows into the catalogue | Implemented, offline-tested, **not yet verified in game** |
-| 0.10.2 unlearned recipes in the tree: the plans as an item to get, or a "train it" step with the trainer, zone and cost; "Recipes to learn" on the shopping list | Implemented, offline-tested, **not yet verified in game** |
-| 0.10.3 gathering materials (leather tiers, essences) are planned as their own items; refining from the tier below is an opt-in route per node | Implemented, offline-tested, **not yet verified in game** |
-| 0.10.4 the ForeverPath mark as addon icon, window header and tracker emblem (`Media/ForeverPath-Mark.png`) | Installed, **not yet verified in game** |
+| Bank counts | Verified in game by the author (2026-10-18) |
+| 0.2.x shell, Dashboard, My Goals, Crafting screens, tracker | Verified in game by the author (2026-10-18) (header overlap and hover blanking fixed in 0.2.1) |
+| Multi-output recipes | Implemented, offline-tested; not exercised with a multi-output recipe in game yet |
+| 0.3.0 recursive dependency tree, allocation across goals, route overrides | Verified in game by the author (2026-10-18) |
+| 0.4.0 account-wide character snapshots, Characters screen, include alts' bags | Verified in game by the author (2026-10-18) (profession capture fixed in 0.4.1) |
+| 0.5.0 shopping list across goals, bought ticks, send to chat, mail plan | Verified in game by the author (2026-10-18) |
+| 0.6.0 item sources: vendor recorder, item-class heuristics, AtlasLoot bridge, vendor prices | Verified in game by the author (2026-10-18) |
+| 0.7.0 obtain-item goals (drops, quests, vendors planned instead of "No known recipe"), ForeverDungeonJournal bridge | Verified in game by the author (2026-10-18) |
+| 0.8.0 Auction House prices via Auctionator, CraftWise buy / craft / hybrid comparison, route presets | Verified in game by the author (2026-10-18) |
+| 0.8.1 goals auto-complete when the item lands in your bags; celebration toast, sound, chat line | Verified in game by the author (2026-10-18) |
+| 0.8.2 affordability: shopping list and footer compare the remaining cost with your gold and the account's | Verified in game by the author (2026-10-18) |
+| 0.9.0 attunement goals and the Attunements screen (Attune addon data, progress from quest flags, log, level, bags) | Verified in game by the author (2026-10-18) |
+| 0.10.0 recipe catalogue generated from the client's own database (every profession recipe and item-use combine, skill ranks, plans, soulbound flags); full pathway for unlearned recipes, "learn" and "combine" routes | Verified in game by the author (2026-10-18) |
+| 0.10.1 trainer recorder: required skill, cost and location of trainer-taught recipes, recorded from trainer windows into the catalogue | Verified in game by the author (2026-10-18) |
+| 0.10.2 unlearned recipes in the tree: the plans as an item to get, or a "train it" step with the trainer, zone and cost; "Recipes to learn" on the shopping list | Verified in game by the author (2026-10-18) |
+| 0.10.3 gathering materials (leather tiers, essences) are planned as their own items; refining from the tier below is an opt-in route per node | Verified in game by the author (2026-10-18) |
+| 0.10.4 the ForeverPath mark as addon icon, window header and tracker emblem (`Media/ForeverPath-Mark.png`) | Verified in game by the author (2026-10-18) |
 | Equipment, Quests, Reputations | Preview modules with "coming later" states |
 
 `TESTING.md` has the in-game checklist for 0.2.0. `API_COMPATIBILITY.md`
