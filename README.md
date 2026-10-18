@@ -50,6 +50,19 @@ lists the API evidence and the remaining open questions.
 Developers: `scripts\install_dev.ps1` copies the folder into the AddOns
 directory, and `scripts\package.ps1` builds a release zip.
 
+## Companion addons (all optional)
+
+ForeverPath has no required dependencies. When these addons are installed
+it reads their data at runtime; without them the matching feature stays off
+and says so in the UI.
+
+| Addon | Used for | Without it |
+|---|---|---|
+| Auctionator | Auction House prices (shopping list, CraftWise, affordability); run a full browse scan so prices exist | Only recorded vendor prices; CraftWise shows "price unknown" |
+| AtlasLootClassic (+ DungeonsAndRaids module) | Boss and trash loot tables for drop sources | Drop sources only from ForeverDungeonJournal |
+| ForeverDungeonJournal | Forever-specific boss loot and dungeon quest rewards | Drop and quest sources only from AtlasLoot |
+| Attune | Attunement goals and the Attunements screen | The screen explains that Attune is missing |
+
 ## Using ForeverPath
 
 1. **Record your recipes once.** Open each profession window (or type
