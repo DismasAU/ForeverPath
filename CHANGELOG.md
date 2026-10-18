@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.15.1 (2026-10-18) - reputation quests feed the Quests screen
+
+### Changed
+- A reputation goal now feeds the Quests screen: every open quest that
+  gives reputation with its faction appears under the goal on the "By
+  goal" tab, counts for "Only quests that feed a goal", shows "+250
+  Ironforge reputation for Ironforge - Honored" in the quest panel, and is
+  listed by `/fp quests` (`QuestProvider.FeedsGoals` reads
+  `view.reputation.quests`, or asks `ReputationProvider.QuestsFor`).
+
 ## 0.15.0 (2026-10-18) - enchant goals
 
 Enchants (and Engineering tinkers) had no way into ForeverPath: the

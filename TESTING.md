@@ -288,6 +288,7 @@ Needs two characters on the account. Log in on the alt first, then on your main.
 - [ ] Earning reputation moves the goal's bar within a second; reaching the standing completes it with the "Reputation reached" toast.
 - [ ] `/fp rep argent dawn exalted` and the Reputation segment on My Goals add goals; `/fp reps` lists factions.
 - [ ] An obtain goal for an item a reputation vendor sells (e.g. Pattern: Argent Boots) shows "Reputation reward: Argent Dawn (Honored)" as its source, marked unavailable with the reason until the standing is reached.
+- [ ] (0.15.1) With a reputation goal open, the Quests screen's "By goal" tab lists every open dungeon quest that gives that faction reputation under the goal; the quest panel says "+N <faction> reputation for <goal>"; `/fp quests` lists them.
 
 ### 24. 0.15.0 enchant goals (not yet run in game)
 

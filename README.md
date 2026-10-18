@@ -43,6 +43,7 @@ is built to take them without a rewrite (see `ARCHITECTURE.md`).
 | 0.13.0 Equipment screen (every slot, item levels and stats from the client, GearQuest Forever's best pick per slot for your class, spec, faction and level, stat comparison, targets as goals; GearQuest's gear sources feed obtain goals) | Implemented, offline-tested, **not yet verified in game** |
 | 0.14.0 reputation goals and the Reputations screen (standings from the client, quests that give reputation from ForeverDungeonJournal, rewards per standing from AtlasLoot Factions, reputation vendors on item goals, auto-complete on the standing) | Implemented, offline-tested, **not yet verified in game** |
 | 0.15.0 enchant goals (enchants and tinkers in the catalogue, Shift-click from the Enchanting window, formula or trainer plus reagents per cast, auto-complete as you cast; Enchanting skill goals plan enchants) | Implemented, offline-tested, **not yet verified in game** |
+| 0.15.1 quests that give reputation feed the Quests screen for reputation goals | Implemented, offline-tested, **not yet verified in game** |
 
 `TESTING.md` has the in-game checklist for 0.2.0. `API_COMPATIBILITY.md`
 lists the API evidence and the remaining open questions.

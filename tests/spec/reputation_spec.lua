@@ -193,6 +193,34 @@ describe("Reputation goals", function()
     assert_eq(overview.nextSteps[1].title, "An Ancient Grudge (+250)")
     assert_eq(overview.nextSteps[1].badge, "Neutral")
     assert_match(overview.nextSteps[1].detail, "^Neutral now %- 6500 to go")
+    -- Every open quest that gives Ironforge reputation feeds the goal on the Quests screen.
+    local feeds = ns.QuestProvider.FeedsGoals({ goal }, { [goal.id] = view }, ns.GoalService.Name)
+    assert_not_nil(feeds[GRUDGE])
+    assert_eq(feeds[GRUDGE].goals[1].reputation, 250)
+    assert_eq(feeds[GRUDGE].goals[1].faction, "Ironforge")
+    assert_eq(feeds[GRUDGE].goals[1].name, "Ironforge - Honored")
+    local fed = 0
+    for _ in pairs(feeds) do fed = fed + 1 end
+    assert_eq(fed, 2, "both Ironforge quests")
+    assert_eq(#ns.QuestProvider.FeedsGoals({ goal }, {}, ns.GoalService.Name)[GRUDGE].goals, 1, "without a view the provider is asked directly")
+    ns.Commands.Dispatch("quests")
+    assert_output("An Ancient Grudge %[Available%] %- .* %- feeds Ironforge %- Honored")
+    local MainFrame = ns.UI.MainFrame
+    MainFrame.Show()
+    Mock.RunTimers()
+    MainFrame.ShowScreen("quests")
+    Mock.RunTimers()
+    local quests = MainFrame.screens.quests
+    quests.tabs.tabs.goal:Click()
+    Mock.RunTimers()
+    local labels = {}
+    for _, row in ipairs(quests.groupPool.rows) do if row:IsShown() then labels[#labels + 1] = row.label:GetText() end end
+    assert_eq(#labels, 1)
+    assert_match(labels[1], "IRONFORGE %- HONORED")
+    quests:Select(GRUDGE)
+    assert_match(quests.side.feedsText:GetText(), "^%+250 Ironforge reputation for Ironforge %- Honored$")
+    quests.tabs.tabs.zone:Click()
+    MainFrame.Hide()
     -- Defaults: no standing given means the next one up; "exalted argent dawn" also parses.
     local second = select(3, ns.GoalService.AddReputationFromInput("argent dawn"))
     assert_eq(second.target.standing, 6)

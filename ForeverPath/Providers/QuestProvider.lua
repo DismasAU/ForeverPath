@@ -416,22 +416,44 @@ function QuestProvider.QuestsRewarding(itemID)
   return out
 end
 
--- Which quests feed open goals: { [questID] = { entry, goals = { { goal, name, itemID, count } } } },
--- from the missing leaves of each goal's tree. views: goalID -> view.
+-- Which quests feed open goals: { [questID] = { entry, goals = { { goal, name,
+-- itemID, count } | { goal, name, reputation, faction } } } }, from the
+-- missing leaves of each goal's tree (quest rewards) and, for reputation
+-- goals, every open quest that gives reputation with the faction.
+-- views: goalID -> view.
 function QuestProvider.FeedsGoals(goals, views, nameOf)
   local feeds = {}
+  local function feedFor(entry)
+    local feed = feeds[entry.id]
+    if not feed then
+      feed = { entry = entry, goals = {} }
+      feeds[entry.id] = feed
+    end
+    return feed
+  end
   for _, goal in ipairs(goals or {}) do
     local view = views and views[goal.id]
-    local leaves = view and view.tree and view.tree.summary and view.tree.summary.missingLeaves or {}
-    for _, leaf in ipairs(leaves) do
-      if leaf.itemID then
-        for _, entry in ipairs(QuestProvider.QuestsRewarding(leaf.itemID)) do
-          local feed = feeds[entry.id]
-          if not feed then
-            feed = { entry = entry, goals = {} }
-            feeds[entry.id] = feed
+    local name = nameOf and nameOf(goal) or goal.id
+    if goal.type == "REACH_REPUTATION" and goal.target then
+      local quests = view and view.reputation and view.reputation.quests
+      if not quests and ns.ReputationProvider and ns.ReputationProvider.QuestsFor then
+        local ok, list = pcall(ns.ReputationProvider.QuestsFor, goal.target.name)
+        quests = ok and list or nil
+      end
+      for _, quest in ipairs(quests or {}) do
+        if quest.entry and not (quest.state and quest.state.completed) then
+          local feed = feedFor(quest.entry)
+          feed.goals[#feed.goals + 1] = { goal = goal, name = name, reputation = quest.amount, faction = goal.target.name }
+        end
+      end
+    else
+      local leaves = view and view.tree and view.tree.summary and view.tree.summary.missingLeaves or {}
+      for _, leaf in ipairs(leaves) do
+        if leaf.itemID then
+          for _, entry in ipairs(QuestProvider.QuestsRewarding(leaf.itemID)) do
+            local feed = feedFor(entry)
+            feed.goals[#feed.goals + 1] = { goal = goal, name = name, itemID = leaf.itemID, count = leaf.count }
           end
-          feed.goals[#feed.goals + 1] = { goal = goal, name = nameOf and nameOf(goal) or goal.id, itemID = leaf.itemID, count = leaf.count }
         end
       end
     end

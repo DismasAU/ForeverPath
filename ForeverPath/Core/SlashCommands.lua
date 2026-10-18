@@ -239,7 +239,7 @@ function handlers.quests()
     Log.output(string.format("  %s [%s] - %s - feeds %s", feed.entry.name, label, feed.entry.instance or "?", Util.Join(names)))
   end
   if #ids == 0 then
-    Log.output("  No known quest rewards an item your goals are missing.")
+    Log.output("  No known quest rewards an item or reputation your goals need.")
   end
   for _, goal in ipairs(goals) do
     if goal.type == "COMPLETE_QUEST" then

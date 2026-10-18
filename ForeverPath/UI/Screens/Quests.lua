@@ -448,7 +448,11 @@ local function Create(parent)
     if feed and #feed.goals > 0 then
       local parts = {}
       for _, f in ipairs(feed.goals) do
-        parts[#parts + 1] = string.format("%s: %d missing for %s", ns.ItemProvider.GetName(f.itemID), f.count or 0, f.name)
+        if f.reputation then
+          parts[#parts + 1] = string.format("+%d %s reputation for %s", f.reputation, f.faction or "?", f.name)
+        else
+          parts[#parts + 1] = string.format("%s: %d missing for %s", ns.ItemProvider.GetName(f.itemID), f.count or 0, f.name)
+        end
       end
       s.feedsText:SetText(table.concat(parts, "\n"))
     else
