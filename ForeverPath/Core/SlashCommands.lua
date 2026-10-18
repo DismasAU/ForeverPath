@@ -16,6 +16,7 @@ Commands.help = {
   { "/fp skill <profession> [rank]", "Add a reach-skill goal (default: the next cap): which recipes to craft, how often, and their materials." },
   { "/fp quest <name or id>", "Add a quest goal (dungeon quests, attunement quests, or anything in your log): chain, pick-up, objectives, rewards." },
   { "/fp quests", "List the quests ForeverPath knows that feed your goals, with their state." },
+  { "/fp equipment", "Every slot: what is worn, GearQuest Forever's best pick for it, and the goal that targets it." },
   { "/fp goals", "List open goals." },
   { "/fp select <n>", "Select goal number n (opens it in Crafting)." },
   { "/fp remove <n>", "Remove goal number n." },
@@ -94,6 +95,8 @@ function handlers.status()
   Log.output(string.format("  Goals: %d open, %d completed", ns.GoalService.Count({ open = true }), ns.GoalService.Count({ status = "COMPLETED" })))
   Log.output("  " .. ns.Data.Recipes.Status())
   Log.output("  " .. ns.TrainerProvider.Status())
+  Log.output("  " .. ns.QuestProvider.Status())
+  Log.output("  " .. ns.EquipmentProvider.Status())
 end
 
 function handlers.goals()
@@ -162,6 +165,22 @@ function handlers.quest(rest)
   if ok and ns.UI.MainFrame.IsShown() then
     ns.UI.MainFrame.SetStatus(message, "ok")
     ns.UI.MainFrame.ShowScreen("quests")
+  end
+end
+
+function handlers.equipment()
+  if not requireLoaded() then return end
+  local EP = ns.EquipmentProvider
+  Log.Print("%s", EP.Status())
+  local goals = ns.GoalService.List({ open = true })
+  local analysis = EP.Analyze({ goals = goals, views = ns.Planner.EvaluateAll(goals) })
+  for _, entry in ipairs(analysis.slots) do
+    local worn = entry.equipped
+    local parts = { worn.itemID and (ns.ItemProvider.GetName(worn.itemID) .. (worn.ilvl and (" (" .. worn.ilvl .. ")") or "")) or "empty" }
+    if entry.goal then parts[#parts + 1] = "goal: " .. ns.GoalService.Name(entry.goal) end
+    if entry.status == "bis" then parts[#parts + 1] = "best in slot"
+    elseif entry.best then parts[#parts + 1] = string.format("pick: %s (%s%s)", entry.best.name, entry.best.sourceLabel, entry.best.ilvl and (", ilvl " .. entry.best.ilvl) or "") end
+    Log.output(string.format("  %s: %s", entry.slot.label, table.concat(parts, " - ")))
   end
 end
 

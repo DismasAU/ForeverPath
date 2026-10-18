@@ -48,7 +48,8 @@ ForeverPath/
     Screens/CraftWise.lua    screen 04: strategy cards, breakdown table, "Use this plan"
     Screens/Crafting.lua     screen 02: hero panel, tabs, requirements table
     Screens/Quests.lua       quests by zone / goal / completed, details, chain, rewards
-    Screens/Preview.lua      preview modules with "later version" states (Equipment, Reputations)
+    Screens/Equipment.lua    slots, GearQuest picks, stat comparison, targets as goals
+    Screens/Preview.lua      preview modules with "later version" states (Reputations)
     Screens/Characters.lua   screen 07: character cards, coverage banner, account-wide scope
     Screens/Shopping.lua     screen 05: goal chips, summary, filter tabs, bought ticks, send to chat
     Screens/Attunements.lua  screen 06: picker, header, step timeline, current step
@@ -248,6 +249,23 @@ professionName, professionID, icon }`), REACH_SKILL (`{ professionID,
 professionName, rank, startRank, icon }`) and COMPLETE_QUEST (`{ questID,
 name, level, instance, icon }`) as supported, plus REACH_REPUTATION
 (represented, not yet planned). `target` is type specific.
+
+**Equipment.** `Providers/EquipmentProvider.lua` is a read-only view, not a
+goal type: `SLOTS` (display order, inventory slot ids, GearQuest slot names,
+equip locations), `Equipped()` (ids and links per slot, names and icons
+through ItemProvider, item levels), `Stats(linkOrID)` (client item stats
+normalised to short keys, GearQuest's `scoredStats` as a fallback),
+`SlotKeysFor(itemID)` (from the equip location), `Candidates(slotKey, {
+source })` (GearQuest's `Data.entries` after `EnsureClassLoaded`, filtered
+by class, `Spec:GetDisplaySpec`, faction and the level band, best rank per
+item, with the facts from the `<class>ItemFacts` tables), `Hints(itemID)`
+(resolver source hints from those facts, merged into
+`SourceProvider.Sources` after the journal and AtlasLoot) and `Analyze({
+source, goals, views })` (per slot: equipped, candidates, best, status
+bis / upgrade / empty / none, the open item goal whose item fits the slot).
+The Equipment screen is a consumer of `Analyze`; a target becomes a
+CRAFT_ITEM or OBTAIN_ITEM goal through `GoalService.AddItemGoal`.
+`FP_EQUIPMENT_UPDATED` follows the equipment events.
 
 **Quest planning.** `Providers/QuestProvider.lua` builds a static index
 (`Index()`, lazily, dropped on `FP_READY`) from ForeverDungeonJournal

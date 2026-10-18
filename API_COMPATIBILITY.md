@@ -59,6 +59,24 @@ client. Behaviour (return values, timing) is only verified where stated.
 | `GameTooltip:SetItemByID` | Widgets | Retail API | Guarded with pcall; falls back to a plain name tooltip |
 | `Enum.CraftingReagentType.Basic` (=1), `Enum.BankType.Character` (=0), `Enum.BagIndex.ReagentBag` (=5) | Compat | `Enum.BagIndex` in dump; the other two from Retail 12.x docs | Fallback constants used when the enum is missing |
 
+## 0.13.0
+
+The Equipment screen reads (all behind `pcall`):
+
+| Function | Used for | Evidence |
+|---|---|---|
+| `GetInventoryItemID("player", slot)`, `GetInventoryItemLink("player", slot)` | what is worn | GearQuestForever, EllesmereUI |
+| `C_Item.GetDetailedItemLevelInfo(link)`, then the 4th return of item info | item level | EllesmereUI |
+| `C_Item.GetItemStats(link)`, legacy `GetItemStats(link, table)` | stat comparison | GearQuestForever (uses both) |
+| `GetAverageItemLevel()` | the strip's average (falls back to a mean over the slots) | EllesmereUI |
+| `GetItemInfoInstant` 4th return (equip location) | which slot an item or goal fits | GearQuestForever |
+
+Events: `PLAYER_EQUIPMENT_CHANGED`, `UNIT_INVENTORY_CHANGED`. GearQuest
+Forever is read through `_G.GearQuest` (`Data.entries`, the
+`<class>ItemFacts` tables, `Data.scoredStats`, `Data:EnsureClassLoaded`,
+`Spec:GetDisplaySpec`, `Spec:GetSpecLabel`), never written; its class
+module must be enabled for the player's class, as GearQuest itself requires.
+
 ## 0.12.0
 
 Quest goals and the Quests screen read `C_QuestLog` (all behind `pcall`,
@@ -230,7 +248,7 @@ All verified present in the Forever API event list (Atraeau docs, build 70170):
 `ADDON_LOADED`, `PLAYER_LOGIN`, `PLAYER_ENTERING_WORLD`, `PLAYER_REGEN_ENABLED`,
 `BAG_UPDATE_DELAYED`, `BANKFRAME_OPENED`, `BANKFRAME_CLOSED`,
 `PLAYERBANKSLOTS_CHANGED`, `BANK_TABS_CHANGED`, `TRADE_SKILL_LIST_UPDATE`,
-`TRADE_SKILL_SHOW`, `TRADE_SKILL_DATA_SOURCE_CHANGED`, `NEW_RECIPE_LEARNED`, `QUEST_REMOVED`, `QUEST_DATA_LOAD_RESULT`,
+`TRADE_SKILL_SHOW`, `TRADE_SKILL_DATA_SOURCE_CHANGED`, `NEW_RECIPE_LEARNED`, `QUEST_REMOVED`, `QUEST_DATA_LOAD_RESULT`, `PLAYER_EQUIPMENT_CHANGED`, `UNIT_INVENTORY_CHANGED`,
 `ITEM_DATA_LOAD_RESULT`, `GET_ITEM_INFO_RECEIVED`.
 
 Not used because they do not exist on this client: `TRADE_SKILL_UPDATE`,

@@ -1,4 +1,4 @@
--- Preview modules: Equipment and Reputations.
+-- Preview modules: Reputations.
 -- Each shows the "coming in a later version" empty state from the handoff.
 local _, ns = ...
 
@@ -7,7 +7,6 @@ local Widgets = ns.UI.Widgets
 ns.UI.Screens = ns.UI.Screens or {}
 
 local PREVIEWS = {
-  equipment = { label = "Equipment", text = "Equipped gear, best-in-slot targets and upgrade goals per slot." },
   reputations = { label = "Reputations", text = "Reputation goals with standing progress and the turn-ins that move them." },
 }
 

@@ -380,6 +380,18 @@ function SourceProvider.Sources(itemID)
     if not bosses[string.lower(hint.boss or "")] then out[#out + 1] = hint end
   end
   for _, hint in ipairs(quests) do out[#out + 1] = hint end
+  -- GearQuest Forever knows where leveling gear comes from (vendor and npc,
+  -- quest and zone, boss or world drop); it fills in what nothing above did.
+  if ns.EquipmentProvider and ns.EquipmentProvider.Hints then
+    local ok, hints = pcall(ns.EquipmentProvider.Hints, itemID)
+    for _, hint in ipairs(ok and hints or {}) do
+      local duplicate = false
+      for _, existing in ipairs(out) do
+        if existing.kind == hint.kind and (existing.kind == "vendor" and existing.name == hint.name or existing.kind == "quest" and existing.quest == hint.quest) then duplicate = true end
+      end
+      if not duplicate then out[#out + 1] = hint end
+    end
+  end
   -- The class heuristic is for raw materials: an item a recipe makes keeps
   -- it only when that recipe merely refines a lower tier of the same thing.
   if #recipesFor(itemID) == 0 or SourceProvider.IsRawMaterial(itemID) then

@@ -29,8 +29,8 @@ MainFrame.Nav = {
   { key = "characters", label = "Characters" },
   { key = "attunements", label = "Attunements" },
   { key = "quests", label = "Quests" },
+  { key = "equipment", label = "Equipment" },
   { divider = true, label = "Preview modules" },
-  { key = "equipment", label = "Equipment", preview = true },
   { key = "reputations", label = "Reputations", preview = true },
 }
 
@@ -776,7 +776,7 @@ function MainFrame.OnCharactersUpdated()
 end
 
 function MainFrame.Init()
-  for _, message in ipairs({ "FP_GOALS_CHANGED", "FP_RECIPES_UPDATED", "FP_INVENTORY_UPDATED", "FP_ITEM_LOADED", "FP_QUESTS_UPDATED" }) do
+  for _, message in ipairs({ "FP_GOALS_CHANGED", "FP_RECIPES_UPDATED", "FP_INVENTORY_UPDATED", "FP_ITEM_LOADED", "FP_QUESTS_UPDATED", "FP_EQUIPMENT_UPDATED" }) do
     Events.On(message, MainFrame.RequestRefresh)
   end
   Events.On("FP_CHARACTERS_UPDATED", MainFrame.OnCharactersUpdated)

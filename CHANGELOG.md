@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.13.0 (2026-10-18) - the Equipment screen
+
+### Added
+- **Equipment screen** (no longer a preview). `Providers/EquipmentProvider.lua`
+  reads every slot (`GetInventoryItemID` / `GetInventoryItemLink`), item
+  levels (`C_Item.GetDetailedItemLevelInfo`, then item info) and stats
+  (`C_Item.GetItemStats`, legacy `GetItemStats`, GearQuest's scored stats as
+  a fallback), and bridges GearQuest Forever's hunt data: its expanded
+  entries for the player's class, spec (GearQuest's own detection or pick),
+  faction and level band (its five-level grace), ranked by its curated rank
+  and pipeline score, deduplicated per item, with the item facts (source
+  type, instructions, zone, npc, quest, profession). The screen shows a
+  summary strip (average item level, upgrades planned, tracked as goals),
+  the All slots / Upgrades only segment and a source filter (quests,
+  vendors, dungeons, crafted, drops), the seventeen slots in two columns
+  with Best in slot / Upgrade found / Empty badges or the goal line, and a
+  slot panel with the equipped item, the target card (the goal's item, else
+  GearQuest's best pick), a stat comparison (item level, armor, DPS, primary
+  stats, attack and spell power, healing, crit, hit, mana regen,
+  resistances) with deltas, the other options with "+ Goal" buttons, and
+  Open goal / + Goal for target. Targets become ordinary crafting or obtain
+  goals, so the slot line shows the goal's progress.
+- GearQuest's item facts feed the source hints of obtain goals (vendor and
+  npc, quest reward and zone, boss, rare, world drop, containers and
+  fishing) when nothing else knows the item.
+- `/fp equipment` prints the slots, picks and goals; `/fp status` ends with
+  the quest and equipment lines. `FP_EQUIPMENT_UPDATED` (from
+  `PLAYER_EQUIPMENT_CHANGED` / `UNIT_INVENTORY_CHANGED`) refreshes the window.
+
 ## 0.12.0 (2026-10-18) - quest goals and the Quests screen
 
 ### Added

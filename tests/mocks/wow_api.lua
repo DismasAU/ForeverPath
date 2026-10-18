@@ -37,6 +37,7 @@ for _, event in ipairs({
   "ITEM_DATA_LOAD_RESULT", "GET_ITEM_INFO_RECEIVED",
   "QUEST_TURNED_IN", "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "PLAYER_LEVEL_UP",
   "QUEST_REMOVED", "QUEST_DATA_LOAD_RESULT",
+  "PLAYER_EQUIPMENT_CHANGED", "UNIT_INVENTORY_CHANGED",
 }) do
   Mock.knownEvents[event] = true
 end
@@ -240,8 +241,38 @@ function Mock.AddItem(itemID, opts)
     subclassID = opts.subclassID,
     itemType = opts.itemType,
     itemSubType = opts.itemSubType,
+    equipLoc = opts.equipLoc,
+    ilvl = opts.ilvl,
+    stats = opts.stats,
   }
   return itemID
+end
+
+-- Equips an item (slotID = inventory slot) and fires the equipment events.
+function Mock.Equip(slotID, itemID)
+  Mock.equipment[slotID] = itemID
+  Mock.FireEvent("PLAYER_EQUIPMENT_CHANGED", slotID, itemID ~= nil)
+  Mock.FireEvent("UNIT_INVENTORY_CHANGED", "player")
+end
+
+-- A minimal GearQuest Forever: data = { entries = { { itemId, slot, minLevel, maxLevel, curatedRank, pipelineScore, classes, specs, factions, sourceType, instructions, zone, npc, questName } },
+-- facts = { [itemID] = { name, quality, ilvl, reqLevel, sourceType, instructions, zone, npc, questName } }, scoredStats = { [itemID] = { armor=, str= } }, spec = "arms", specLabel = "Arms" }
+function Mock.InstallGearQuest(data)
+  data = data or {}
+  local GQ = { Data = { entries = data.entries or {}, warriorItemFacts = data.facts or {}, scoredStats = data.scoredStats or {} }, Spec = {} }
+  GQ.Data.loadCalls = 0
+  function GQ.Data:EnsureClassLoaded(classFile)
+    self.loadCalls = self.loadCalls + 1
+    return data.loadFails ~= true
+  end
+  function GQ.Data:GetItemDisplayName(itemID)
+    local facts = self.warriorItemFacts[itemID]
+    return facts and facts.name or nil
+  end
+  function GQ.Spec:GetDisplaySpec(classFile) return data.spec or "arms" end
+  function GQ.Spec:GetSpecLabel(specId, classFile) return data.specLabel or specId end
+  _G.GearQuest = GQ
+  return GQ
 end
 
 -- Merchant window: items = { { itemID, price, stack, numAvailable, extended } }
@@ -650,6 +681,20 @@ function Mock.install()
     AddQuestWatch = function(questID) Mock.quests.watched[questID] = true return true end,
     GetMaxNumQuestsCanAccept = function() return 20 end,
   }
+  _G.GetInventoryItemID = function(unit, slotID)
+    if unit ~= "player" then return nil end
+    return Mock.equipment[slotID]
+  end
+  _G.GetInventoryItemLink = function(unit, slotID)
+    local id = unit == "player" and Mock.equipment[slotID] or nil
+    if not id or not Mock.items[id] then return nil end
+    return Mock.ItemLink(id)
+  end
+  _G.GetInventorySlotInfo = function(name)
+    local ids = { HeadSlot = 1, NeckSlot = 2, ShoulderSlot = 3, ChestSlot = 5, WaistSlot = 6, LegsSlot = 7, FeetSlot = 8, WristSlot = 9, HandsSlot = 10,
+      Finger0Slot = 11, Finger1Slot = 12, Trinket0Slot = 13, Trinket1Slot = 14, BackSlot = 15, MainHandSlot = 16, SecondaryHandSlot = 17, RangedSlot = 18 }
+    return ids[name]
+  end
   _G.GetQuestLink = function(index)
     local entry = questLogEntries()[index]
     if not entry or entry.isHeader then return nil end
@@ -718,14 +763,28 @@ function Mock.install()
       local id = itemIDFrom(itemInfo)
       local item = id and Mock.items[id]
       if not item or not item.loaded then return nil end
-      return item.name, Mock.ItemLink(id), item.quality, 1, 1, "Trade Goods", "Parts", 20, "", item.icon,
-        item.sellPrice, 7, 1, 0, 0, nil, true
+      return item.name, Mock.ItemLink(id), item.quality, item.ilvl or 1, 1, item.itemType or "Trade Goods", item.itemSubType or "Parts", 20, item.equipLoc or "", item.icon,
+        item.sellPrice, item.classID or 7, item.subclassID or 1, 0, 0, nil, true
     end,
     GetItemInfoInstant = function(itemInfo)
       local id = itemIDFrom(itemInfo)
       local item = id and Mock.items[id]
       if not item then return nil end
-      return id, item.itemType or "Trade Goods", item.itemSubType or "Parts", "", item.icon, item.classID or 7, item.subclassID or 1
+      return id, item.itemType or "Trade Goods", item.itemSubType or "Parts", item.equipLoc or "", item.icon, item.classID or 7, item.subclassID or 1
+    end,
+    GetItemStats = function(itemInfo)
+      local id = itemIDFrom(itemInfo)
+      local item = id and Mock.items[id]
+      if not item or not item.stats then return nil end
+      local out = {}
+      for k, v in pairs(item.stats) do out[k] = v end
+      return out
+    end,
+    GetDetailedItemLevelInfo = function(itemInfo)
+      local id = itemIDFrom(itemInfo)
+      local item = id and Mock.items[id]
+      if not item or not item.ilvl then return nil end
+      return item.ilvl, false, item.ilvl
     end,
     DoesItemExistByID = function(id) return Mock.items[id] ~= nil end,
     IsItemDataCachedByID = function(id) return Mock.items[id] ~= nil and Mock.items[id].loaded end,
@@ -894,6 +953,8 @@ function Mock.reset()
   Mock.auctionatorCalls = {}
   Mock.sounds = {}
   Mock.quests = { completed = {}, log = {}, details = {}, order = {}, titles = {}, requests = {}, watched = {} }
+  Mock.equipment = {}
+  _G.GearQuest = nil
   _G.Attune_Data = nil
   _G.AttuneLang = nil
   _G.Attune_DB = nil
