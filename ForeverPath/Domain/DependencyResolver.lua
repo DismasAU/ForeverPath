@@ -295,6 +295,20 @@ function DependencyResolver.ResolveNode(node, opts, ledger, path, tree)
     node.missing = node.quantity
     node.status = "missing"
     node.options = {}
+    -- A quest root: the quest itself is never owned or bought; the items it
+    -- asks for hang below it like reagents.
+    if node.step.kind == "quest" then
+      node.route, node.routeSource = "quest", "quest"
+      for index, spec in ipairs(node.step.items or {}) do
+        local child = {
+          key = node.key .. ">" .. tostring(spec.itemID), itemID = spec.itemID, depth = node.depth + 1, parentKey = node.key, index = index,
+          perCraft = 0, quantity = spec.quantity or spec.count or 1, children = {}, questItem = true, questName = spec.questName,
+        }
+        DependencyResolver.ResolveNode(child, opts, ledger, path, tree)
+        node.children[#node.children + 1] = child
+      end
+      return node
+    end
     if node.step.kind == "skill" then
       node.route, node.routeSource = "craft", "skill"
       for index, spec in ipairs(node.step.crafts or {}) do
@@ -514,6 +528,30 @@ function DependencyResolver.Resolve(root, opts)
 end
 
 -- Post-order walk collecting counts, missing leaves and craft steps.
+-- Hangs extra items below a resolved node (the items a quest reward's
+-- chain asks for, below the reward) and refreshes the summary. items =
+-- { { itemID, quantity | count, questName } }. Returns the new nodes.
+function DependencyResolver.AttachItems(tree, parent, items, opts)
+  opts = opts or {}
+  opts.ledger = tree.ledger
+  local added = {}
+  for _, spec in ipairs(items or {}) do
+    if tonumber(spec.itemID) then
+      local index = #parent.children + 1
+      local child = {
+        key = parent.key .. ">" .. tostring(spec.itemID), itemID = spec.itemID, depth = parent.depth + 1, parentKey = parent.key, index = index,
+        perCraft = 0, quantity = spec.quantity or spec.count or 1, children = {}, questItem = true, questName = spec.questName,
+      }
+      DependencyResolver.ResolveNode(child, opts, tree.ledger, {}, tree)
+      parent.children[index] = child
+      added[#added + 1] = child
+    end
+  end
+  parent.questParent = #added > 0 or parent.questParent
+  tree.summary = DependencyResolver.Summarize(tree)
+  return added
+end
+
 function DependencyResolver.Summarize(tree)
   local summary = { nodes = 0, resolved = 0, leaves = {}, missingLeaves = {}, crafts = {}, maxDepth = 0, blocked = 0 }
   local leafByItem = {}
@@ -528,7 +566,8 @@ function DependencyResolver.Summarize(tree)
       if node.missing <= 0 then summary.resolved = summary.resolved + 1 end
       if node.depth > summary.maxDepth then summary.maxDepth = node.depth end
       if node.blocked then summary.blocked = summary.blocked + 1 end
-      if node.missing > 0 and #node.children == 0 then
+      -- A quest reward with the chain's items below it is still something to get.
+      if node.missing > 0 and (#node.children == 0 or node.questParent) then
         summary.leaves[#summary.leaves + 1] = node
         local leafKey = node.itemID or node.key
         local entry = leafByItem[leafKey]

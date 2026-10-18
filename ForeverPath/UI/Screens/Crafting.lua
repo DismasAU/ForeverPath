@@ -169,6 +169,17 @@ local function createHero(screen)
   name:SetPoint("RIGHT", stepper, "LEFT", -20, 0)
   meta:SetPoint("RIGHT", stepper, "LEFT", -20, 0)
 
+  -- "Set waypoint": the map pin for the next quest step, when one is recorded.
+  local waypoint = Widgets.Button(body, "Set waypoint", { width = 110, onClick = function()
+    local view = screen.view
+    if not (view and view.waypoint) then return end
+    local ok, message = ns.QuestProvider.SetWaypoint(view.waypoint)
+    ns.UI.MainFrame.SetStatus(message, ok and "ok" or "error")
+  end })
+  waypoint:SetPoint("BOTTOMLEFT", body, "BOTTOMLEFT", 16, 10)
+  waypoint:Hide()
+  hero.waypoint = waypoint
+
   hero.icon, hero.name, hero.meta, hero.percent, hero.bar, hero.reagents, hero.stepper = icon, name, meta, percent, bar, reagents, stepper
   return hero
 end
@@ -529,6 +540,10 @@ local function Create(parent)
       if view.hint and view.hint.label then
         chips[#chips + 1] = { "info", view.hint.label }
       end
+      if view.questline and view.questline.line then
+        local line = view.questline.line
+        chips[#chips + 1] = { line.complete and "ok" or "info", string.format("%s - %d of %d steps", line.attune.name, line.done, line.total) }
+      end
       if goal.type == "CRAFT_ITEM" then
         chips[#chips + 1] = { "missing", "No known recipe" }
       end
@@ -543,6 +558,7 @@ local function Create(parent)
         chip:Hide()
       end
     end
+    if view.waypoint then hero.waypoint:Show() else hero.waypoint:Hide() end
     if not hero.stepper.box:HasFocus() then
       hero.stepper:SetValue(skill and goal.target.rank or goal.target.quantity or 1)
     end

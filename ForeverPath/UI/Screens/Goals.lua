@@ -561,6 +561,8 @@ local function Create(parent)
           row.sub:SetText(e.remaining <= 0 and "All casts done" or string.format("%d of %d cast%s - %s", e.casts, e.quantity, e.quantity == 1 and "" or "s", view.nextStep or ""))
         elseif view and view.learn then
           row.sub:SetText(view.learn.learned and "Learned" or ((view.learn.recipe.professionName or "") .. (view.nextStep and (" - " .. view.nextStep) or "")))
+        elseif view and view.questline and view.plan and not view.plan.isComplete then
+          row.sub:SetText("Quest reward" .. (view.nextStep and (" - " .. view.nextStep) or ""))
         elseif view and view.plan then
           row.sub:SetText(view.plan.isComplete and "Ready to craft" or string.format("%d of %d materials missing - %s", view.plan.totals.materialsMissing, #view.plan.materials, view.recipe and view.recipe.professionName or ""))
         else

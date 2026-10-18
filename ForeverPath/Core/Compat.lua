@@ -144,6 +144,47 @@ function Compat.Detect()
   Compat.hasBackdropTemplate = type(_G.BackdropTemplateMixin) == "table"
 end
 
+-- The player's position on the current zone map: uiMapID, x, y (0-1), or nil.
+function Compat.PlayerPosition()
+  local map = _G.C_Map
+  if type(map) ~= "table" or type(map.GetBestMapForUnit) ~= "function" or type(map.GetPlayerMapPosition) ~= "function" then return nil end
+  local ok, mapID = pcall(map.GetBestMapForUnit, "player")
+  if not ok or type(mapID) ~= "number" then return nil end
+  local okPos, pos = pcall(map.GetPlayerMapPosition, mapID, "player")
+  if not okPos or type(pos) ~= "table" then return mapID end
+  local okXY, x, y = pcall(pos.GetXY, pos)
+  if not okXY or type(x) ~= "number" or type(y) ~= "number" then return mapID end
+  return mapID, x, y
+end
+
+function Compat.HasWaypoints()
+  local map = _G.C_Map
+  return type(map) == "table" and type(map.SetUserWaypoint) == "function"
+    and type(_G.UiMapPoint) == "table" and type(_G.UiMapPoint.CreateFromCoordinates) == "function"
+end
+
+-- Places the client's user waypoint (the map pin the minimap tracks) at a
+-- map position; x and y are 0-1. Returns ok, reason.
+function Compat.SetWaypoint(mapID, x, y)
+  if not Compat.HasWaypoints() then return false, "This client has no map waypoints." end
+  mapID, x, y = tonumber(mapID), tonumber(x), tonumber(y)
+  if not (mapID and x and y) then return false, "No map position recorded." end
+  local map = _G.C_Map
+  if type(map.CanSetUserWaypointOnMap) == "function" then
+    local ok, can = pcall(map.CanSetUserWaypointOnMap, mapID)
+    if ok and can == false then return false, "The map does not allow waypoints here." end
+  end
+  local okPoint, point = pcall(_G.UiMapPoint.CreateFromCoordinates, mapID, x, y)
+  if not okPoint or type(point) ~= "table" then return false, "Could not build the map point." end
+  local okSet, err = pcall(map.SetUserWaypoint, point)
+  if not okSet then return false, tostring(err) end
+  local track = _G.C_SuperTrack
+  if type(track) == "table" and type(track.SetSuperTrackedUserWaypoint) == "function" then
+    pcall(track.SetSuperTrackedUserWaypoint, true)
+  end
+  return true
+end
+
 -- Registers an event without letting an unknown event name abort the file.
 -- Forever throws from RegisterEvent for events that do not exist on the client.
 function Compat.RegisterEvent(frame, event)

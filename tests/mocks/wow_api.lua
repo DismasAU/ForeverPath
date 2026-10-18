@@ -39,6 +39,7 @@ for _, event in ipairs({
   "QUEST_REMOVED", "QUEST_DATA_LOAD_RESULT",
   "PLAYER_EQUIPMENT_CHANGED", "UNIT_INVENTORY_CHANGED", "UPDATE_FACTION",
   "UNIT_SPELLCAST_SUCCEEDED",
+  "QUEST_DETAIL", "QUEST_COMPLETE", "QUEST_FINISHED",
 }) do
   Mock.knownEvents[event] = true
 end
@@ -510,6 +511,23 @@ function Mock.SetQuestObjective(questID, index, fulfilled, finished)
   Mock.FireEvent("QUEST_LOG_UPDATE")
 end
 
+-- Opens a quest-giver window offering questID (QUEST_DETAIL) at the player's position.
+function Mock.OfferQuest(questID, npcName)
+  Mock.questNPC = { questID = questID, name = npcName }
+  Mock.FireEvent("QUEST_DETAIL", 0)
+end
+
+-- Opens the reward window of questID at an NPC (QUEST_COMPLETE).
+function Mock.ShowQuestReward(questID, npcName)
+  Mock.questNPC = { questID = questID, name = npcName }
+  Mock.FireEvent("QUEST_COMPLETE")
+end
+
+function Mock.CloseQuestWindow()
+  Mock.questNPC = nil
+  Mock.FireEvent("QUEST_FINISHED")
+end
+
 -- Marks a quest completed and fires the turn-in events.
 function Mock.CompleteQuest(questID)
   Mock.quests.completed[questID] = true
@@ -644,9 +662,26 @@ function Mock.install()
   _G.CreateFont = function(name) return newWidget("Font", name) end
   _G.CreateColor = function(r, g, b, a) return { r = r, g = g, b = b, a = a } end
   _G.UnitName = function(unit)
-    if unit == "npc" then return (Mock.trainer and Mock.trainer.name) or (Mock.merchant and Mock.merchant.name) or nil end
+    if unit == "questnpc" then return Mock.questNPC and Mock.questNPC.name or nil end
+    if unit == "npc" then return (Mock.questNPC and Mock.questNPC.name) or (Mock.trainer and Mock.trainer.name) or (Mock.merchant and Mock.merchant.name) or nil end
     return Mock.character.name
   end
+  -- The quest-giver window: GetQuestID names the quest on offer / being turned in.
+  _G.GetQuestID = function() return Mock.questNPC and Mock.questNPC.questID or 0 end
+  -- Map position and user waypoints (retail-engine C_Map / C_SuperTrack).
+  _G.C_Map = {
+    GetBestMapForUnit = function() return Mock.position.mapID end,
+    GetPlayerMapPosition = function(mapID)
+      if mapID ~= Mock.position.mapID then return nil end
+      return { GetXY = function() return Mock.position.x, Mock.position.y end }
+    end,
+    CanSetUserWaypointOnMap = function(mapID) return Mock.waypointMaps == nil or Mock.waypointMaps[mapID] == true end,
+    SetUserWaypoint = function(point) Mock.waypoint = point end,
+    ClearUserWaypoint = function() Mock.waypoint = nil end,
+    HasUserWaypoint = function() return Mock.waypoint ~= nil end,
+  }
+  _G.C_SuperTrack = { SetSuperTrackedUserWaypoint = function(value) Mock.superTracked = value end }
+  _G.UiMapPoint = { CreateFromCoordinates = function(mapID, x, y) return { uiMapID = mapID, position = { x = x, y = y } } end }
   -- The trainer window API is installed by Mock.OpenTrainer; absent by default.
   _G.GetNumTrainerServices = nil
   _G.GetTrainerServiceInfo = nil
@@ -1005,6 +1040,11 @@ function Mock.reset()
   Mock.auctionatorCalls = {}
   Mock.sounds = {}
   Mock.quests = { completed = {}, log = {}, details = {}, order = {}, titles = {}, requests = {}, watched = {} }
+  Mock.questNPC = nil
+  Mock.position = { mapID = 1411, x = 0.5, y = 0.5 }
+  Mock.waypoint = nil
+  Mock.waypointMaps = nil
+  Mock.superTracked = nil
   Mock.equipment = {}
   Mock.factions = {}
   _G.GearQuest = nil

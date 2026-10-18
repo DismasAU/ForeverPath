@@ -367,7 +367,8 @@ local function Create(parent)
       row.bar:SetKind(percent == 100 and "ok" or "gold")
       row.bar:SetValue((percent or 0) / 100)
       if view and view.plan then
-        if (view.learn or view.skill or view.quest or view.reputation) and #view.plan.materials == 0 then
+        local questReward = view.questline and view.nextStep and #view.plan.materials <= 1
+        if ((view.learn or view.skill or view.quest or view.reputation) and #view.plan.materials == 0) or questReward then
           row.detail:SetText(view.nextStep or view.message or "")
         else
           row.detail:SetText(ns.Overview.MissingSummary(view, ns.ItemProvider.GetName))

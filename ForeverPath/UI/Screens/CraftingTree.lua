@@ -41,6 +41,10 @@ local function isSkillRoot(node)
   return node.step ~= nil and node.step.kind == "skill"
 end
 
+local function isQuestRoot(node)
+  return node.step ~= nil and node.step.kind == "quest"
+end
+
 local STEP_ICON = "Interface\\Icons\\INV_Misc_Book_09"
 local SKILL_ICON = "Interface\\Icons\\INV_Misc_Note_01"
 local ENCHANT_ICON = "Interface\\Icons\\INV_Enchant_Disenchant"
@@ -65,6 +69,7 @@ local function labelOf(node)
 end
 
 local function stepVia(step)
+  if step.kind == "quest" then return "Quest" end
   local trainer = step.trainer
   if trainer and trainer.name then
     return "Train - " .. trainer.name .. (trainer.zone and (" (" .. trainer.zone .. ")") or "")
@@ -134,6 +139,9 @@ local function noteText(node)
   end
   if node.forSkill then
     return string.format("%d craft%s - skill %d to %d", node.craft and node.craft.crafts or 0, node.craft and node.craft.crafts == 1 and "" or "s", node.forSkill.from or 0, node.forSkill.to or 0)
+  end
+  if isQuestRoot(node) then
+    return #node.children > 0 and string.format("%d item%s to bring", #node.children, #node.children == 1 and "" or "s") or "no items to bring"
   end
   if node.step then
     if node.step.rank and node.step.rank > 1 then
@@ -413,6 +421,13 @@ local function createSide(view, tree)
       bar:SetKind("gold")
       bar:SetValue(node.childrenResolved and 1 or 0)
       waysLabel:SetText(Theme.Upper("Reagents"))
+    elseif isQuestRoot(node) then
+      sub:SetText("Quest - the items below are what its chain asks you to bring")
+      count:SetText(string.format("%d|r %s items", #node.children, Theme.Hex.text3))
+      missing:SetText("")
+      bar:SetKind("gold")
+      bar:SetValue(node.childrenResolved and 1 or 0)
+      waysLabel:SetText(Theme.Upper("Quest items"))
     elseif node.step then
       local trainer = node.step.trainer
       sub:SetText(trainer and trainer.name

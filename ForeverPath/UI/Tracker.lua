@@ -299,6 +299,8 @@ function Tracker.Refresh()
     end
     if view.nextStep and (view.learn or view.skill or view.quest or view.reputation or view.enchant) and (view.plan.isComplete or #view.plan.materials == 0) then
       frame.nextText:SetText(view.nextStep)
+    elseif view.nextStep and view.questline and not view.plan.isComplete and #view.plan.materials <= 1 then
+      frame.nextText:SetText(view.nextStep)
     elseif view.plan.isComplete and view.plan.obtain then
       frame.nextText:SetText(string.format("All %d x %s on hand", view.plan.quantityWanted or 0, ns.GoalService.Name(goal)))
     elseif view.plan.isComplete then

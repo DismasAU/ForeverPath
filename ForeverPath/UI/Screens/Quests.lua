@@ -13,7 +13,7 @@ ns.UI.Screens = ns.UI.Screens or {}
 local ROW = 40
 local GROUP_ROW = 28
 local SIDE = 262
-local MAX_OBJECTIVES = 5
+local MAX_OBJECTIVES = 10
 local MAX_REWARDS = 4
 
 local TABS = { { key = "zone", label = "By zone" }, { key = "goal", label = "By goal" }, { key = "completed", label = "Completed" } }
@@ -154,6 +154,14 @@ local function createSide(screen)
     if side.questID then screen:WatchQuest(side.questID) end
   end })
   watch:SetPoint("RIGHT", link, "LEFT", -6, 0)
+  local waypoint = Widgets.Button(body, "Waypoint", { onClick = function()
+    if not side.questID then return end
+    local ok, message = ns.QuestProvider.SetWaypoint(ns.QuestProvider.Waypoint(side.questID))
+    ns.UI.MainFrame.SetStatus(message, ok and "ok" or "error")
+  end })
+  waypoint:SetPoint("RIGHT", watch, "LEFT", -6, 0)
+  Widgets.SetTooltip(waypoint, "Set a map waypoint", { "Pins the quest giver (or the turn-in once the quest is ready) on your map.", "Only when a position has been recorded for it." })
+  side.waypoint = waypoint
   side.icon, side.title, side.meta, side.badge, side.objectivesLabel, side.callout, side.rewardsLabel, side.rewardsText, side.feedsLabel, side.feedsText, side.addGoal, side.link, side.watch =
     icon, title, meta, badge, objectivesLabel, callout, rewardsLabel, rewardsText, feedsLabel, feedsText, addGoal, link, watch
   side.content = { icon, title, meta, badge, objectivesLabel, rewardsLabel, rewardsText, feedsLabel, feedsText, addGoal, link, watch }
@@ -361,6 +369,7 @@ local function Create(parent)
     if not questID then
       for _, w in ipairs(s.content) do w:Hide() end
       for _, o in ipairs(s.objectives) do o:Hide() end
+      s.waypoint:Hide()
       for _, r in ipairs(s.rewardIcons) do r:Hide() end
       s.callout:Hide()
       s.empty:Show()
@@ -378,7 +387,8 @@ local function Create(parent)
     local level = (entry and entry.level) or state.level
     if level then metaParts[#metaParts + 1] = Theme.Hex[DIFFICULTY_HEX[QP.Difficulty(level, playerLevel)]] .. "Level " .. level .. "|r" end
     if entry and entry.instance then metaParts[#metaParts + 1] = entry.instance end
-    if entry and entry.pickup then metaParts[#metaParts + 1] = (entry.pickup:match("^([^,]+)") or entry.pickup) end
+    local giver = QP.Giver(questID)
+    if giver and giver.name then metaParts[#metaParts + 1] = giver.name .. (giver.zone and not (entry and entry.pickup) and (" - " .. giver.zone) or "") end
     if entry and entry.requires and entry.requires > playerLevel then metaParts[#metaParts + 1] = Theme.ColorText("missing", "requires level " .. entry.requires) end
     if entry and entry.groupSize and entry.groupSize > 1 then metaParts[#metaParts + 1] = entry.groupSize .. " players" end
     s.meta:SetText(table.concat(metaParts, " - "))
@@ -393,11 +403,27 @@ local function Create(parent)
     elseif entry and entry.objective then
       lines[#lines + 1] = { text = entry.objective, value = state.completed and 1 or 0, done = state.completed }
     end
-    for _, link in ipairs(entry and entry.chain or {}) do
-      local id = tonumber(link.id)
-      local done = id and QP.State(id).completed
-      lines[#lines + 1] = { text = (done and Theme.Hex.text3 or Theme.Hex.text2) .. "Requires: " .. (link.name or ("quest " .. tostring(link.id))) .. (done and " (done)" or "") .. "|r", value = done and 1 or 0, done = done, chain = true }
+    for _, item in ipairs(QP.RequiredItems(questID)) do
+      local have = math.min(item.have or 0, item.count)
+      lines[#lines + 1] = { text = string.format("%sBring %d x %s|r", have >= item.count and Theme.Hex.text3 or Theme.Hex.text2, item.count, item.name or (item.itemID and ns.ItemProvider.GetName(item.itemID)) or "?"),
+        value = item.count > 0 and have / item.count or 0, done = have >= item.count }
     end
+    local line = QP.Questline(questID)
+    if line then
+      for index, step in ipairs(line.steps) do
+        local current = step.state == "current"
+        lines[#lines + 1] = { text = (step.done and Theme.Hex.text3 or (current and Theme.Hex.text or Theme.Hex.text2))
+          .. string.format("%d. %s: %s%s%s|r", index, step.typeLabel, step.name, step.location and (" - " .. step.location) or "", step.done and " (done)" or ""),
+          value = step.done and 1 or 0, done = step.done, chain = true }
+      end
+    else
+      for _, link in ipairs(entry and entry.chain or {}) do
+        local id = tonumber(link.id)
+        local done = id and QP.State(id).completed
+        lines[#lines + 1] = { text = (done and Theme.Hex.text3 or Theme.Hex.text2) .. "Requires: " .. (link.name or ("quest " .. tostring(link.id))) .. (done and " (done)" or "") .. "|r", value = done and 1 or 0, done = done, chain = true }
+      end
+    end
+    if QP.Waypoint(questID) then s.waypoint:Show() else s.waypoint:Hide() end
     for i, frame in ipairs(s.objectives) do
       local line = lines[i]
       if line then

@@ -59,6 +59,19 @@ client. Behaviour (return values, timing) is only verified where stated.
 | `GameTooltip:SetItemByID` | Widgets | Retail API | Guarded with pcall; falls back to a plain name tooltip |
 | `Enum.CraftingReagentType.Basic` (=1), `Enum.BankType.Character` (=0), `Enum.BagIndex.ReagentBag` (=5) | Compat | `Enum.BagIndex` in dump; the other two from Retail 12.x docs | Fallback constants used when the enum is missing |
 
+## 0.17.0
+
+| Function | Used for | Evidence |
+|---|---|---|
+| `GetQuestID()`, `UnitName("questnpc")` (then `"npc"`) | the quest and NPC of an open quest window (`QUEST_DETAIL`, `QUEST_COMPLETE`) | Classic and Retail API; Forever addons use `UnitName("npc")` at trainers and merchants. **Unverified** that `"questnpc"` resolves on Forever; the code falls back to `"npc"` |
+| `C_Map.GetBestMapForUnit("player")`, `C_Map.GetPlayerMapPosition(mapID, "player"):GetXY()` | the player's map position when a quest window opens | Retail 12.x API; Attune and the journal use uiMapIDs for pins. Guarded; a missing position leaves the giver without a pin |
+| `C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(mapID, x, y))`, `C_Map.CanSetUserWaypointOnMap`, `C_SuperTrack.SetSuperTrackedUserWaypoint(true)` | "Set waypoint" / "Waypoint" buttons | Retail 9.0+ API; **unverified** on Forever (the buttons report the client's refusal in the status bar) |
+| `C_QuestLog.GetQuestObjectives(questID)[i].type == "item"` | which objectives are items to bring | Retail API; the journal reads the same table. Untyped objectives count only when the name is a known item |
+| `GetZoneText()`, `GetSubZoneText()` | the zone recorded with a giver | already used by the trainer and vendor recorders |
+
+Events: `QUEST_DETAIL` (quest window opened), `QUEST_COMPLETE` (reward window
+opened), both long-standing quest events; `QUEST_FINISHED` is not needed.
+
 ## 0.16.0
 
 | Function | Used for | Evidence |
@@ -286,7 +299,7 @@ All verified present in the Forever API event list (Atraeau docs, build 70170):
 `ADDON_LOADED`, `PLAYER_LOGIN`, `PLAYER_ENTERING_WORLD`, `PLAYER_REGEN_ENABLED`,
 `BAG_UPDATE_DELAYED`, `BANKFRAME_OPENED`, `BANKFRAME_CLOSED`,
 `PLAYERBANKSLOTS_CHANGED`, `BANK_TABS_CHANGED`, `TRADE_SKILL_LIST_UPDATE`,
-`TRADE_SKILL_SHOW`, `TRADE_SKILL_DATA_SOURCE_CHANGED`, `NEW_RECIPE_LEARNED`, `QUEST_REMOVED`, `QUEST_DATA_LOAD_RESULT`, `PLAYER_EQUIPMENT_CHANGED`, `UNIT_INVENTORY_CHANGED`, `UPDATE_FACTION`, `UNIT_SPELLCAST_SUCCEEDED`,
+`TRADE_SKILL_SHOW`, `TRADE_SKILL_DATA_SOURCE_CHANGED`, `NEW_RECIPE_LEARNED`, `QUEST_REMOVED`, `QUEST_DATA_LOAD_RESULT`, `PLAYER_EQUIPMENT_CHANGED`, `UNIT_INVENTORY_CHANGED`, `UPDATE_FACTION`, `UNIT_SPELLCAST_SUCCEEDED`, `QUEST_DETAIL`, `QUEST_COMPLETE`,
 `ITEM_DATA_LOAD_RESULT`, `GET_ITEM_INFO_RECEIVED`.
 
 Not used because they do not exist on this client: `TRADE_SKILL_UPDATE`,

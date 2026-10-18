@@ -46,6 +46,7 @@ is built to take them without a rewrite (see `ARCHITECTURE.md`).
 | 0.15.1 quests that give reputation feed the Quests screen for reputation goals | Implemented, offline-tested, **not yet verified in game** |
 | 0.16.0 type-ahead suggestions for every goal kind (New Goal bar and header search); reputation goals for factions not met yet, from the client's faction table; the New Goal bar reflows when narrow | Implemented, offline-tested, **not yet verified in game** |
 | 0.16.1 Shift-click any item row to link it in chat or the Auction House search | Implemented, offline-tested, **not yet verified in game** |
+| 0.17.0 questlines: a quest reward or a quest plans the whole chain that leads to it (Attune's attunement and class-quest chains), the items the chain's quests ask for go on the requirement rows, the tree and the shopping list, and quest givers, turn-ins and map pins are learned at quest windows (plus a shipped catalogue) with "Set waypoint" buttons | Implemented, offline-tested, **not yet verified in game** |
 | 0.16.2 item name search matches anywhere in a name (word starts ranked above inner matches, room kept for them) and knows ForeverDungeonJournal loot and GearQuest gear names | Implemented, offline-tested, **not yet verified in game** |
 
 `TESTING.md` has the in-game checklist for 0.2.0. `API_COMPATIBILITY.md`
@@ -140,7 +141,7 @@ and says so in the UI.
 | `/fp learn <recipe>` | Add a learn-recipe goal by recipe name or spell id: the pattern to get, or the trainer to visit |
 | `/fp enchant <enchant> [casts]` | Add an enchant goal by name, spell id or Shift-clicked link: the formula or trainer, the reagents for every cast; completes as you cast it |
 | `/fp skill <profession> [rank]` | Add a reach-skill goal (default: the next cap): which recipes to craft, how often, and their materials |
-| `/fp quest <name or id>` / `/fp quests` | Add a quest goal (dungeon and attunement quests, or anything in your log); list the quests that feed your goals |
+| `/fp quest <name or id>` / `/fp quests` | Add a quest goal (dungeon and attunement quests, or anything in your log): the chain that leads to it, the giver, the turn-in, the items it asks for; list the quests that feed your goals |
 | `/fp equipment` | Every slot: what is worn, GearQuest Forever's best pick, and the goal that targets it |
 | `/fp rep <faction> [standing]` / `/fp reps` | Add a reputation goal (default: the next standing); list your factions and reputation goals |
 | `/fp sources <item>` / `/fp vendors` | Where an item comes from; how much vendor and loot-table data is available |

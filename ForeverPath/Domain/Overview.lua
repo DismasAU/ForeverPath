@@ -94,9 +94,12 @@ function Overview.Build(entries, opts)
         elseif quest then
           local label, kind = quest.label, "info"
           if quest.state.completed then kind = "ok" elseif quest.state.ready then kind = "ok" elseif label == "Locked" then kind = "partial" end
+          local where = quest.line and not quest.state.completed
+            and string.format("%s - step %d of %d - ", quest.line.attune.name, math.min(quest.line.done + 1, quest.line.total), quest.line.total)
+            or (quest.entry and quest.entry.instance and (quest.entry.instance .. " - ") or "")
           step = {
             title = view.nextStep or goalName,
-            detail = (quest.entry and quest.entry.instance and (quest.entry.instance .. " - ") or "") .. (quest.state.completed and "Mark the goal complete" or ("For " .. goalName)),
+            detail = where .. (quest.state.completed and "Mark the goal complete" or ("For " .. goalName)),
             badge = quest.state.completed and "Ready" or label, badgeKind = kind,
           }
         elseif learn and learn.learned then
@@ -135,6 +138,15 @@ function Overview.Build(entries, opts)
             title = string.format("Craft %d x %s", plan.craftsNeeded, goalName),
             detail = "All materials are in your bags",
             badge = "Ready", badgeKind = "ok",
+          }
+        elseif view and view.questline and view.nextStep then
+          -- A quest reward: the next step of the chain that leads to it.
+          local q, line = view.questline.quest, view.questline.line
+          step = {
+            title = view.nextStep,
+            detail = (line and string.format("%s - step %d of %d - ", line.attune.name, math.min(line.done + 1, line.total), line.total) or ((q.instance or "Quest") .. " - "))
+              .. string.format("rewards %s", goalName),
+            badge = "Quest", badgeKind = "info",
           }
         elseif plan and tree and tree.summary then
           -- Bottom-up: the first intermediate whose own reagents are all on

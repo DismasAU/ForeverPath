@@ -59,7 +59,26 @@ local function normalizeAttune(raw)
     id = tostring(raw.ID), name = tostring(raw.NAME or ("Attunement " .. tostring(raw.ID))),
     group = tostring(raw.GROUP or ""), faction = raw.FACTION or "Both", levels = raw.LEVELS,
     icon = raw.ICON, desc = raw.DESC, groupSize = tonumber(raw.GROUPSIZE),
+    class = type(raw.CLASS) == "string" and raw.CLASS ~= "" and string.upper(raw.CLASS) or nil,
   }
+end
+
+-- The player's class token ("SHAMAN"), or nil when the client cannot say.
+function AttuneProvider.PlayerClass()
+  if type(UnitClass) == "function" then
+    local ok, _, file = pcall(UnitClass, "player")
+    if ok and type(file) == "string" and file ~= "" then return string.upper(file) end
+  end
+  return nil
+end
+
+local function factionOK(raw, faction)
+  return not faction or raw.FACTION == faction or raw.FACTION == "Both" or raw.FACTION == nil
+end
+
+local function classOK(raw, class)
+  local wanted = type(raw.CLASS) == "string" and raw.CLASS ~= "" and string.upper(raw.CLASS) or nil
+  return not wanted or not class or wanted == class
 end
 
 -- Attunements for a faction ("Alliance"/"Horde"; nil = all), raids first.
@@ -108,12 +127,33 @@ function AttuneProvider.Find(text, faction)
   return partial
 end
 
+-- FOLLOWS = "a&b" (all of) where a part can be "x|y" (either of).
 local function splitFollows(follows)
   local out = {}
   for part in string.gmatch(tostring(follows or "0"), "[^&]+") do
     if part ~= "0" and part ~= "" then out[#out + 1] = part end
   end
   return out
+end
+
+local function alternatives(part)
+  local out = {}
+  for id in string.gmatch(tostring(part), "[^|]+") do out[#out + 1] = id end
+  return out
+end
+
+-- A predecessor part is satisfied when any of its alternatives is done
+-- (an id no step carries never blocks).
+local function followDone(byID, part)
+  local known = false
+  for _, id in ipairs(alternatives(part)) do
+    local step = byID[id]
+    if step then
+      known = true
+      if step.done then return true end
+    end
+  end
+  return not known
 end
 
 local function stepName(step)
@@ -153,6 +193,7 @@ function AttuneProvider.Steps(id)
         name = stepName(raw), location = raw.LOCATION ~= "" and raw.LOCATION or nil,
         wowheadID = tostring(raw.ID_WOWHEAD or ""), icon = raw.ICON ~= "" and raw.ICON or nil,
         follows = splitFollows(raw.FOLLOWS), stage = tonumber(raw.STAGE) or 0, side = raw.SIDE == true,
+        alternative = raw.OR == true,
         count = tonumber(raw.COUNT) or 1,
         questLevel = type(quest) == "table" and tonumber(quest[1]) or nil,
         groupSize = type(quest) == "table" and tonumber(quest[2]) or nil,
@@ -258,13 +299,15 @@ function AttuneProvider.Progress(id, ctx)
       if step.type == "End" and not step.done then
         local all = #step.follows > 0
         for _, f in ipairs(step.follows) do
-          if not (byID[f] and byID[f].done) then all = false end
+          if not followDone(byID, f) then all = false end
         end
         if all then step.done = true changed = true end
       end
       if step.done then
         for _, f in ipairs(step.follows) do
-          local prev = byID[f]
+          -- An either/or predecessor cannot be inferred done: which branch was taken is unknown.
+          local alts = alternatives(f)
+          local prev = #alts == 1 and byID[alts[1]] or nil
           if prev and not prev.done then prev.done = true changed = true end
         end
       end
@@ -282,7 +325,7 @@ function AttuneProvider.Progress(id, ctx)
     if not step.done then
       local ready = true
       for _, f in ipairs(step.follows) do
-        if byID[f] and not byID[f].done then ready = false end
+        if not followDone(byID, f) then ready = false end
       end
       step.state = ready and "current" or "locked"
       if ready and step.type ~= "End" then summary.current[#summary.current + 1] = step end
@@ -298,6 +341,104 @@ function AttuneProvider.Progress(id, ctx)
   end
   summary.next = summary.next or summary.current[1]
   return summary
+end
+
+---------------------------------------------------------------------------
+-- Questlines: the part of an attunement that leads to one quest
+---------------------------------------------------------------------------
+local QUEST_TYPES = { Quest = true, ["Pick Up"] = true, ["Turn In"] = true }
+
+local function stepHasQuest(raw, questID)
+  if not QUEST_TYPES[raw.TYPE] then return false end
+  for part in string.gmatch(tostring(raw.ID_WOWHEAD or ""), "[^|]+") do
+    if tonumber(part) == questID then return true end
+  end
+  return false
+end
+
+-- Attunements whose chain includes questID, for the player's faction and
+-- class (both default to the character's): { { attune, stepID } }, the
+-- step being the last one that references the quest (its turn-in when the
+-- chain splits pick-up and turn-in). Class chains come first.
+function AttuneProvider.AttunementsWithQuest(questID, faction, class)
+  local d = data()
+  questID = tonumber(questID)
+  if not d or not questID then return {} end
+  faction = faction or AttuneProvider.Faction()
+  class = class or AttuneProvider.PlayerClass()
+  local byID = {}
+  for _, raw in ipairs(d.attunes) do
+    if type(raw) == "table" and raw.ID then byID[tostring(raw.ID)] = raw end
+  end
+  local found, order = {}, {}
+  for _, raw in ipairs(d.steps) do
+    if type(raw) == "table" and stepHasQuest(raw, questID) then
+      local attuneRaw = byID[tostring(raw.ID_ATTUNE)]
+      if attuneRaw and factionOK(attuneRaw, faction) and classOK(attuneRaw, class) then
+        local key = tostring(raw.ID_ATTUNE)
+        local hit = found[key]
+        if not hit then
+          hit = { attune = normalizeAttune(attuneRaw), stepID = tostring(raw.ID), stage = tonumber(raw.STAGE) or 0 }
+          found[key] = hit
+          order[#order + 1] = hit
+        elseif (tonumber(raw.STAGE) or 0) >= hit.stage then
+          hit.stepID, hit.stage = tostring(raw.ID), tonumber(raw.STAGE) or 0
+        end
+      end
+    end
+  end
+  table.sort(order, function(a, b)
+    local ca, cb = a.attune.class and 0 or 1, b.attune.class and 0 or 1
+    if ca ~= cb then return ca < cb end
+    return a.attune.id < b.attune.id
+  end)
+  return order
+end
+
+-- The chain that leads to questID: every step the quest's step follows
+-- (transitively) plus the step itself, in chain order, with live progress.
+-- { attune, steps, target, next, done, total, percent, complete }, or nil
+-- when no attunement for this faction and class includes the quest.
+function AttuneProvider.QuestlineFor(questID, opts)
+  opts = opts or {}
+  local hits = AttuneProvider.AttunementsWithQuest(questID, opts.faction, opts.class)
+  local hit = hits[1]
+  if not hit then return nil end
+  local progress = AttuneProvider.Progress(hit.attune.id, opts.ctx)
+  if not progress then return nil end
+  local byID = {}
+  for _, step in ipairs(progress.steps) do byID[step.id] = step end
+  local target = byID[hit.stepID]
+  if not target then return nil end
+  local wanted = {}
+  local function mark(step)
+    if wanted[step.id] then return end
+    wanted[step.id] = true
+    for _, f in ipairs(step.follows) do
+      for _, id in ipairs(alternatives(f)) do
+        if byID[id] then mark(byID[id]) end
+      end
+    end
+  end
+  mark(target)
+  -- Either/or stages ("Call of Air" from one of two givers): once a branch
+  -- is done the untaken alternatives leave the line.
+  local doneStage = {}
+  for _, step in ipairs(progress.steps) do
+    if wanted[step.id] and step.alternative and step.done then doneStage[step.stage] = true end
+  end
+  local line = { attune = hit.attune, steps = {}, target = target, done = 0, total = 0, complete = target.done == true }
+  for _, step in ipairs(progress.steps) do
+    if wanted[step.id] and step.type ~= "End" and not (step.alternative and not step.done and doneStage[step.stage]) then
+      line.steps[#line.steps + 1] = step
+      line.total = line.total + 1
+      if step.done then line.done = line.done + 1 end
+      if not line.next and step.state == "current" then line.next = step end
+    end
+  end
+  line.percent = line.total > 0 and math.floor(line.done * 100 / line.total + 0.5) or 0
+  if line.complete then line.percent = 100 end
+  return line
 end
 
 -- "Quest: Jail Break - Blackrock Depths"

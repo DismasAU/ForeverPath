@@ -37,6 +37,7 @@ Database.DEFAULTS = {
     recipes = {},      -- recipeID -> normalized recipe (see Domain/RecipeModel.lua)
     itemRecipes = {},  -- outputItemID -> { [recipeID] = true }
     itemNames = {},    -- itemID -> name (cheap cache for display and name search)
+    questFacts = {},   -- questID -> { giver, turnin, items } learned at quest windows (see Providers/QuestFactsProvider.lua)
   },
   char = {
     schemaVersion = ns.SCHEMA_VERSION,

@@ -16,6 +16,10 @@
 -- Quests in the player's log are read from C_QuestLog whether or not either
 -- addon knows them; titles of other quests are requested from the client
 -- (RequestLoadQuestByID) and arrive with QUEST_DATA_LOAD_RESULT.
+-- Questlines (the chain of steps that leads to a quest) come from Attune's
+-- attunement and class-quest chains; quest givers, turn-ins and the items a
+-- quest asks for from Providers/QuestFactsProvider.lua (shipped catalogue +
+-- what this account has learned at quest windows).
 local _, ns = ...
 
 local Compat = ns.Compat
@@ -524,7 +528,123 @@ function QuestProvider.Status()
   if QuestProvider.HasJournal() then sources[#sources + 1] = "ForeverDungeonJournal" end
   if QuestProvider.HasAttune() then sources[#sources + 1] = "Attune" end
   local numQuests, max = QuestProvider.LogCapacity()
-  return string.format("Quests: %d known from %s; quest log %d / %d.", QuestProvider.Count(), #sources > 0 and table.concat(sources, " and ") or "no data addon", numQuests, max)
+  local QF = ns.QuestFactsProvider
+  return string.format("Quests: %d known from %s; quest log %d / %d; givers and items recorded for %d quests.", QuestProvider.Count(),
+    #sources > 0 and table.concat(sources, " and ") or "no data addon", numQuests, max, QF and (QF.Count() + QF.ShippedCount()) or 0)
+end
+
+---------------------------------------------------------------------------
+-- Questlines, givers and required items
+---------------------------------------------------------------------------
+local QUEST_STEP = { Quest = true, ["Pick Up"] = true, ["Turn In"] = true }
+QuestProvider.QUEST_STEP = QUEST_STEP
+
+local function firstQuestID(step)
+  return tonumber(string.match(tostring(step.wowheadID or ""), "^(%d+)"))
+end
+
+-- The attunement or class-quest chain (Attune) that leads to questID for
+-- this faction and class, each quest step carrying its entry and live
+-- state: { attune, steps, target, next, done, total, percent, complete }.
+-- nil when no chain includes the quest.
+function QuestProvider.Questline(questID)
+  local AP = ns.AttuneProvider
+  if not (AP and AP.IsAvailable and AP.IsAvailable() and AP.QuestlineFor) then return nil end
+  local ok, line = pcall(AP.QuestlineFor, tonumber(questID))
+  if not ok or type(line) ~= "table" then return nil end
+  for _, step in ipairs(line.steps) do
+    if QUEST_STEP[step.type] then
+      step.questID = firstQuestID(step)
+      if step.questID then
+        step.entry = QuestProvider.Get(step.questID)
+        step.questState = QuestProvider.State(step.questID)
+      end
+    end
+  end
+  return line
+end
+
+function QuestProvider.Facts(questID)
+  local QF = ns.QuestFactsProvider
+  return QF and QF.Get(questID) or nil
+end
+
+-- Map coordinates arrive as 0-1 fractions (journal, learned) or percent (Attune).
+local function fraction(v)
+  v = tonumber(v)
+  if not v then return nil end
+  if v > 1 then return v / 100 end
+  return v
+end
+
+local function placeOf(p)
+  return { name = p.name, mapID = p.mapID, x = fraction(p.x), y = fraction(p.y), zone = p.zone, subzone = p.subzone,
+    label = p.name .. (p.zone and (" - " .. p.zone) or "") }
+end
+
+-- Where a quest starts: { name, mapID, x, y, zone, label } from learned or
+-- shipped facts, else the journal/Attune start pin, else the pickup text.
+function QuestProvider.Giver(questID)
+  local facts = QuestProvider.Facts(questID)
+  if facts and facts.giver and facts.giver.name then return placeOf(facts.giver) end
+  local entry = QuestProvider.Get(questID)
+  if entry and entry.start then
+    local s = entry.start
+    local name = s.target or (s.label and (s.label:match("^([^%-]+)") or s.label):gsub("%s+$", "")) or entry.pickup
+    return { name = name, mapID = s.mapID, x = fraction(s.x), y = fraction(s.y), zone = entry.location, label = s.label or name }
+  end
+  if entry and entry.pickup then
+    return { name = entry.pickup:match("^([^,]+)") or entry.pickup, zone = entry.location, label = entry.pickup }
+  end
+  return nil
+end
+
+function QuestProvider.Turnin(questID)
+  local facts = QuestProvider.Facts(questID)
+  if facts and facts.turnin and facts.turnin.name then return placeOf(facts.turnin) end
+  local entry = QuestProvider.Get(questID)
+  if entry and entry.turnin then
+    return { name = entry.turnin:match("^([^,]+)") or entry.turnin, zone = entry.location, label = entry.turnin }
+  end
+  return nil
+end
+
+-- Items a quest asks for: live objectives while it is in the log, else the
+-- recorded facts. { { name, count, have, itemID } }
+function QuestProvider.RequiredItems(questID)
+  local QF = ns.QuestFactsProvider
+  local state = QuestProvider.State(questID)
+  if state.inLog and QF then
+    local live = QF.LiveItems(questID)
+    if #live > 0 then return live end
+  end
+  local facts = QuestProvider.Facts(questID)
+  local out = {}
+  for _, item in ipairs(facts and facts.items or {}) do
+    out[#out + 1] = { name = item.name, count = item.count or 1, have = 0, itemID = item.itemID }
+  end
+  return out
+end
+
+-- The place to go next for a quest: its turn-in once it is ready, its
+-- giver while it is not yet taken; nil while objectives are in progress or
+-- when no map position is recorded. { mapID, x, y, label, name, zone }
+function QuestProvider.Waypoint(questID)
+  local state = QuestProvider.State(questID)
+  if state.completed then return nil end
+  local where
+  if state.ready then where = QuestProvider.Turnin(questID)
+  elseif not state.inLog then where = QuestProvider.Giver(questID) end
+  if where and where.mapID and where.x and where.y then return where end
+  return nil
+end
+
+-- Places the client's map waypoint at a recorded position. Returns ok, message.
+function QuestProvider.SetWaypoint(point)
+  if type(point) ~= "table" then return false, "No map position recorded for this step yet." end
+  local ok, reason = Compat.SetWaypoint(point.mapID, point.x, point.y)
+  if ok then return true, string.format("Waypoint set: %s.", point.label or point.name or "quest") end
+  return false, reason
 end
 
 -- Chat lines for one quest.
@@ -543,6 +663,21 @@ function QuestProvider.Describe(questID, nameOf)
   for _, link in ipairs(entry and entry.chain or {}) do
     local id = tonumber(link.id)
     lines[#lines + 1] = string.format("  Requires: %s%s", link.name or ("quest " .. tostring(link.id)), id and QuestProvider.State(id).completed and " (done)" or "")
+  end
+  local giver = QuestProvider.Giver(questID)
+  if giver and not (entry and entry.pickup) then lines[#lines + 1] = "  Pick up: " .. giver.label end
+  local turnin = QuestProvider.Turnin(questID)
+  if turnin and not (entry and entry.turnin) then lines[#lines + 1] = "  Turn in: " .. turnin.label end
+  for _, item in ipairs(QuestProvider.RequiredItems(questID)) do
+    lines[#lines + 1] = string.format("  Needs: %d x %s%s", item.count, item.name or (item.itemID and nameOf(item.itemID)) or "?", item.have > 0 and string.format(" (%d/%d)", item.have, item.count) or "")
+  end
+  local line = QuestProvider.Questline(questID)
+  if line then
+    lines[#lines + 1] = string.format("  Chain: %s - %d of %d steps done", line.attune.name, line.done, line.total)
+    for index, step in ipairs(line.steps) do
+      lines[#lines + 1] = string.format("    %d. [%s] %s: %s%s", index, step.done and "x" or (step.state == "current" and ">" or " "), step.typeLabel, step.name,
+        step.location and (" - " .. step.location) or "")
+    end
   end
   if entry and #entry.rewards > 0 then
     local parts = {}

@@ -381,6 +381,128 @@ function Planner.StepPlan(complete)
   }
 end
 
+-- A plan material row for a resolved tree node.
+local function nodeMaterial(node)
+  local owned = node.owned or 0
+  local missing = node.missing or math.max(0, node.quantity - owned)
+  return {
+    itemID = node.itemID, perCraft = 1, required = node.quantity,
+    owned = owned, ownedBags = node.ownedBags, ownedBank = node.ownedBank, ownedAlts = node.ownedAlts,
+    altSources = node.altSources, bankSource = node.bankSource, reserved = node.reserved, missing = missing,
+    questItem = node.questItem, questName = node.questName,
+  }
+end
+
+local function countMissing(materials)
+  local n = 0
+  for _, m in ipairs(materials) do
+    if m.missing > 0 then n = n + 1 end
+  end
+  return n
+end
+
+-- A step plan whose materials are the items hanging below the step (what a
+-- quest asks for); complete when the step itself is done.
+function Planner.StepItemsPlan(tree, complete)
+  local plan = Planner.StepPlan(complete)
+  for _, child in ipairs(tree and tree.root and tree.root.children or {}) do
+    plan.materials[#plan.materials + 1] = nodeMaterial(child)
+  end
+  if not complete then plan.totals.materialsMissing = countMissing(plan.materials) end
+  return plan
+end
+
+---------------------------------------------------------------------------
+-- Questlines (quest goals and quest-reward items)
+---------------------------------------------------------------------------
+local QUEST_STEP = { Quest = true, ["Pick Up"] = true, ["Turn In"] = true }
+
+-- "Pick up Elemental Aid from Prate Cloudseer in Thousand Needles" for a
+-- questline step (or a bare quest: { questID, name }).
+function Planner.QuestStepText(QP, step)
+  local t = step.type or "Quest"
+  if t == "Level" then return "Reach level " .. tostring(step.wowheadID or step.name) end
+  if t == "Item" then
+    return string.format("Collect %d x %s", step.count or 1, step.name or "item") .. (step.location and (" - " .. step.location) or "")
+  end
+  if not QUEST_STEP[t] then return (step.typeLabel or t) .. ": " .. tostring(step.name) end
+  local questID = step.questID
+  local s = step.questState or (questID and QP.State(questID)) or {}
+  local name = step.name or (questID and QP.Name(questID)) or "the quest"
+  local entry = step.entry or (questID and QP.Get and QP.Get(questID)) or nil
+  local fallbackZone = step.location or (entry and entry.location) or nil
+  if s.ready or (t == "Turn In" and s.inLog) then
+    local turnin = questID and QP.Turnin and QP.Turnin(questID) or nil
+    local zone = (turnin and turnin.zone) or fallbackZone
+    return "Turn in " .. name .. (turnin and turnin.name and (" to " .. turnin.name) or "") .. (zone and (" in " .. zone) or "")
+  elseif s.inLog then
+    local progress = QP.ObjectiveText(s)
+    return "Finish " .. name .. (progress ~= "" and (": " .. progress) or "")
+  end
+  local giver = questID and QP.Giver and QP.Giver(questID) or nil
+  local zone = (giver and giver.zone) or fallbackZone
+  return "Pick up " .. name .. (giver and giver.name and (" from " .. giver.name) or "") .. (zone and (" in " .. zone) or "")
+end
+
+-- The map point for a questline step, when one is recorded.
+function Planner.QuestWaypoint(QP, step)
+  if not step or not QUEST_STEP[step.type or "Quest"] or not step.questID or not QP.Waypoint then return nil end
+  return QP.Waypoint(step.questID)
+end
+
+-- Items the open quests of a line (or one quest) still ask for:
+-- { { itemID, quantity, name, questName } }, the same item summed across quests.
+function Planner.QuestlineItems(QP, line, questID)
+  local out, byItem, seenQuest = {}, {}, {}
+  if not QP.RequiredItems then return out end
+  local function add(qid, qname)
+    if seenQuest[qid] then return end
+    seenQuest[qid] = true
+    for _, item in ipairs(QP.RequiredItems(qid)) do
+      if item.itemID then
+        local row = byItem[item.itemID]
+        if not row then
+          row = { itemID = item.itemID, quantity = 0, name = item.name, questName = qname }
+          byItem[item.itemID] = row
+          out[#out + 1] = row
+        end
+        row.quantity = row.quantity + (item.count or 1)
+      end
+    end
+  end
+  if line then
+    for _, step in ipairs(line.steps) do
+      if QUEST_STEP[step.type] and step.questID and not step.done and not (step.questState and step.questState.completed) then
+        add(step.questID, step.name)
+      end
+    end
+  elseif questID then
+    add(questID, QP.Name(questID))
+  end
+  return out
+end
+
+-- The quest that rewards an item (for this faction) and the chain that
+-- leads to it: { quest = entry, line }, or nil.
+function Planner.RewardQuestline(itemID, deps)
+  local QP = deps.quest
+  if not (QP and QP.IsAvailable and QP.IsAvailable() and QP.QuestsRewarding) then return nil end
+  local faction = QP.Faction and QP.Faction() or nil
+  local first
+  for _, entry in ipairs(QP.QuestsRewarding(itemID)) do
+    if not faction or not entry.faction or entry.faction == "Both" or entry.faction == faction then
+      local line = QP.Questline and QP.Questline(entry.id) or nil
+      if line then return { quest = entry, line = line } end
+      first = first or { quest = entry }
+    end
+  end
+  return first
+end
+
+local function lowerFirst(text)
+  return text:sub(1, 1):lower() .. text:sub(2)
+end
+
 -- Learn-recipe goals: done when this character knows the recipe; until then
 -- the tree is the plans item to get (an obtain tree marked `learn`) or the
 -- trainer visit as a single step, and the view says what blocks it (no
@@ -845,26 +967,45 @@ function Planner.EvaluateQuest(view, goal, deps)
   local name = QP.Name(questID)
   view.item.name = name
   local chain, nextStep = QP.Chain(questID)
+  local line = QP.Questline and QP.Questline(questID) or nil
   local state = chain[#chain].state
   local playerLevel = QP.PlayerLevel()
   local requires = entry and entry.requires or nil
   local quest = {
     questID = questID, entry = entry, state = state, chain = chain, next = nextStep, playerLevel = playerLevel,
     levelBlocked = requires ~= nil and requires > playerLevel, requires = requires,
-    label = QP.StateLabel(state, entry, playerLevel),
+    label = QP.StateLabel(state, entry, playerLevel), line = line,
   }
   view.quest = quest
   if state.ready then view.item.icon = QP.ICON_READY end
-
-  local done, partial = 0, 0
-  for _, step in ipairs(chain) do
-    if step.state.completed then done = done + 1
-    elseif step == nextStep and step.state.inLog then partial = step.state.fraction end
+  if line and line.next and line.next ~= line.target and not state.inLog and not state.completed and quest.label == "Available" then
+    quest.label = "Locked"
   end
-  local percent = #chain > 0 and math.floor((done + partial) * 100 / #chain + 0.5) or 0
-  if state.completed then percent = 100 end
-  view.progress = { percent = percent, ownedUnits = done, requiredUnits = #chain, materialsHave = done, materialsTotal = #chain }
-  view.plan = Planner.StepPlan(state.completed)
+
+  -- Progress: the chain's steps when Attune knows it, else the journal chain.
+  if line then
+    view.progress = { percent = line.percent, ownedUnits = line.done, requiredUnits = line.total, materialsHave = line.done, materialsTotal = line.total }
+  else
+    local done, partial = 0, 0
+    for _, step in ipairs(chain) do
+      if step.state.completed then done = done + 1
+      elseif step == nextStep and step.state.inLog then partial = step.state.fraction end
+    end
+    local percent = #chain > 0 and math.floor((done + partial) * 100 / #chain + 0.5) or 0
+    view.progress = { percent = percent, ownedUnits = done, requiredUnits = #chain, materialsHave = done, materialsTotal = #chain }
+  end
+  if state.completed then view.progress.percent = 100 end
+
+  -- What the open quests of the chain ask for, laid out like reagents so the
+  -- requirement rows, the tree and the shopping list carry them.
+  local items = (not state.completed) and Planner.QuestlineItems(QP, line, questID) or {}
+  local ctx = inventoryContext(deps)
+  local tree = DependencyResolver.Resolve({ key = "quest:" .. tostring(questID),
+    step = { kind = "quest", questID = questID, name = name, icon = view.item.icon, items = items } }, ctx.resolverOpts(goal.routes))
+  view.tree = tree
+  view.plan = Planner.StepItemsPlan(tree, state.completed)
+  view.inventoryNote = Planner.DescribeInventory(ctx.bankNote, ctx.includeBank, ctx.includeAlts)
+  quest.items = items
 
   local function where(step)
     local e = step.entry
@@ -873,12 +1014,22 @@ function Planner.EvaluateQuest(view, goal, deps)
     if e.start and e.start.label then return e.start.label end
     return e.location
   end
+  local lineStep = line and line.next or nil
   if state.completed then
     view.message = string.format("%s is completed.", name)
     view.nextStep = "Mark the goal complete"
   elseif quest.levelBlocked then
     view.message = string.format("Needs level %d; you are %d.", requires, playerLevel)
     view.nextStep = string.format("Reach level %d", requires)
+  elseif lineStep then
+    local text = Planner.QuestStepText(QP, lineStep)
+    view.nextStep = text
+    view.waypoint = Planner.QuestWaypoint(QP, lineStep)
+    if lineStep == line.target then
+      view.message = text .. "."
+    else
+      view.message = string.format("First %s (step %d of %d of %s, before %s).", lowerFirst(text), math.min(line.done + 1, line.total), line.total, line.attune.name, name)
+    end
   elseif nextStep and nextStep ~= chain[#chain] then
     local s = nextStep.state
     if s.ready then
@@ -1006,12 +1157,52 @@ function Planner.EvaluateObtain(view, goal, deps, sources)
     plan = Planner.ObtainPlan(root)
   end
   view.plan = plan
+
+  -- A quest reward: the chain that leads to the quest becomes the plan, and
+  -- what its open quests ask for hangs below the item.
+  if root.missing > 0 and not root.craft then
+    local questline = Planner.RewardQuestline(itemID, deps)
+    if questline then
+      local QP = deps.quest
+      local quest, line = questline.quest, questline.line
+      local step = line and line.next or nil
+      if not line then
+        step = { type = "Quest", questID = quest.id, name = quest.name, questState = QP.State(quest.id) }
+      end
+      questline.step = step
+      if step then
+        questline.stepText = Planner.QuestStepText(QP, step)
+      elseif line and line.complete then
+        questline.stepText = string.format("%s is done - the reward should be in your bags", quest.name or "The quest")
+      end
+      local items = Planner.QuestlineItems(QP, line, quest.id)
+      if #items > 0 then
+        for _, child in ipairs(DependencyResolver.AttachItems(tree, root, items, ctx.resolverOpts(goal.routes))) do
+          plan.materials[#plan.materials + 1] = nodeMaterial(child)
+        end
+        plan.totals.materialsMissing = countMissing(plan.materials)
+      end
+      questline.items = items
+      view.questline = questline
+      view.hint = view.hint or { kind = "quest", label = "Quest reward: " .. (quest.name or "?"), detail = quest.instance, questID = quest.id, quest = quest.name }
+      root.route, root.routeSource, root.noRoute = "quest", "quest", nil
+      root.hint = root.hint or view.hint
+      view.sourceText = Planner.SourceText(view.hint)
+      view.nextStep = questline.stepText
+      view.waypoint = step and Planner.QuestWaypoint(QP, step) or nil
+    end
+  end
   view.progress = Planner.Progress(plan)
   view.inventoryNote = Planner.DescribeInventory(ctx.bankNote, ctx.includeBank, ctx.includeAlts)
 
   local name = view.item and view.item.name or ("Item " .. itemID)
   if root.missing <= 0 then
     view.message = string.format("All %d x %s on hand.", quantity, name)
+  elseif view.questline then
+    local q, line = view.questline.quest, view.questline.line
+    view.message = string.format("%d of %d on hand. Reward from %s%s.%s", root.owned, quantity, q.name or "a quest",
+      line and string.format(" (%s, step %d of %d)", line.attune.name, math.min(line.done + 1, line.total), line.total) or "",
+      view.questline.stepText and (" Next: " .. view.questline.stepText .. ".") or "")
   elseif root.craft then
     view.message = string.format("%d of %d on hand; %s %d more %s - %d material%s still missing.",
       root.owned, quantity, root.craft.combine and "combine" or "craft", root.craft.crafts, Planner.CraftNote(root.craft, deps),
@@ -1071,11 +1262,7 @@ end
 function Planner.ObtainPlan(root)
   local owned = root.owned or 0
   local missing = root.missing or math.max(0, root.quantity - owned)
-  local material = {
-    itemID = root.itemID, perCraft = 1, required = root.quantity,
-    owned = owned, ownedBags = root.ownedBags, ownedBank = root.ownedBank, ownedAlts = root.ownedAlts,
-    altSources = root.altSources, bankSource = root.bankSource, reserved = root.reserved, missing = missing,
-  }
+  local material = nodeMaterial(root)
   return {
     obtain = true, outputItemID = root.itemID, quantityWanted = root.quantity, craftsNeeded = 0,
     outputPerCraft = 1, outputPerCraftMax = 1, expectedOutput = 0,

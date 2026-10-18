@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.17.0 (2026-10-18) - questlines: the chain behind a quest reward
+
+Put a quest reward such as Rage of the Storm in as a goal and ForeverPath
+now plans the whole chain that leads to it, lists what the chain's quests
+ask you to bring, and points you at the next giver.
+
+### Added
+- **Questlines.** `AttuneProvider.QuestlineFor(questID)` finds the
+  attunement or class-quest chain (Attune) that contains a quest for this
+  character's faction and class, and returns the steps that lead to it
+  (level gates, either/or starts, quests) with live progress; either/or
+  predecessors in Attune's `FOLLOWS` ("20|25") are now understood. A quest
+  goal plans along the chain ("First pick up Call of Air from Prate
+  Cloudseer in Thousand Needles (step 2 of 8 of Call of Air, before The
+  Tempest's Weapons)"), its progress is the chain's, and its label is
+  Locked until the chain reaches it.
+- **Quest rewards as goals.** An item goal whose item a known quest
+  rewards (`Planner.RewardQuestline`) carries `view.questline`: the quest,
+  its chain, the next step as the goal's next step, "Quest reward: <quest>"
+  as its source, and the chain's name on the crafting hero. The dashboard,
+  the tracker, My Goals and the overview show the step.
+- **What the chain asks for.** The items the open quests of the chain
+  require (`QuestProvider.RequiredItems`: the live item objectives while a
+  quest is in the log, matched to item ids by name; recorded facts
+  otherwise) hang below the reward in the dependency tree
+  (`DependencyResolver.AttachItems`) or below a quest goal's root
+  (`Resolve({ step = { kind = "quest", items } })`), so they appear on the
+  requirement rows, in the tree, in the overview's missing list and on the
+  shopping list with the usual routes.
+- **Givers, turn-ins and map pins.** `Providers/QuestFactsProvider.lua`
+  learns, account-wide (`ForeverPathDB.questFacts`), the giver's name and
+  your map position when a quest window opens (`QUEST_DETAIL`), the item
+  objectives when you accept (`QUEST_ACCEPTED`, re-resolved as items drop),
+  and the turn-in NPC at the reward window (`QUEST_COMPLETE`).
+  `Data/QuestCatalogue.lua` ships curated rows in the same shape (empty in
+  this release; the shaman chain follows in 0.17.1). Next steps name the
+  giver and zone; a "Set waypoint" button on the crafting hero and a
+  "Waypoint" button on the Quests side panel pin the giver (or the turn-in
+  once the quest is ready) with the client's map waypoint
+  (`Compat.SetWaypoint`).
+- The Quests side panel lists the chain's steps, "Bring N x <item>" lines
+  and the giver; `/fp quest` prints the chain, the giver, the turn-in and
+  the items; `/fp status` reports how many quests have facts.
+
+### Changed
+- `AttuneProvider.Steps` carries `alternative` (Attune's `OR`), attunements
+  carry `class`, and `Progress` treats "a|b" predecessors as either-of.
+
 ## 0.16.2 (2026-10-18) - item search finds names anywhere
 
 Typing "Storm" only ever showed "Storm..." items: the search already
