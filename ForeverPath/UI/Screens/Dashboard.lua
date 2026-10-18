@@ -365,7 +365,7 @@ local function Create(parent)
       row.bar:SetKind(percent == 100 and "ok" or "gold")
       row.bar:SetValue((percent or 0) / 100)
       if view and view.plan then
-        if (view.learn or view.skill or view.quest) and #view.plan.materials == 0 then
+        if (view.learn or view.skill or view.quest or view.reputation) and #view.plan.materials == 0 then
           row.detail:SetText(view.nextStep or view.message or "")
         else
           row.detail:SetText(ns.Overview.MissingSummary(view, ns.ItemProvider.GetName))
@@ -375,6 +375,8 @@ local function Create(parent)
           row.meta:SetText(string.format("%d of %d", view.skill.current, view.skill.target))
         elseif view.quest then
           row.meta:SetText(view.quest.label or "")
+        elseif view.reputation then
+          row.meta:SetText(view.reputation.record.standingLabel or "")
         elseif view.learn then
           row.meta:SetText(view.learn.kind == "plans" and "Plans" or (view.learn.kind == "trainer" and "Trainer" or "Combine"))
         elseif view.plan.obtain then

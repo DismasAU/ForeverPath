@@ -36,6 +36,7 @@ local function createNewGoalBar(screen)
     recipe = "Type a recipe name (Bolt of Woolen Cloth, Sulfuron Hammer...)",
     skill = "Type a profession and the skill to reach (Tailoring 225)",
     quest = "Type a quest name (dungeon and attunement quests, or your log)",
+    reputation = "Type a faction and the standing to reach (Argent Dawn Exalted)",
     attunement = "Type an attunement name (Onyxia, Molten Core...)",
   }
   local segment = Widgets.Segment(body, {
@@ -43,8 +44,8 @@ local function createNewGoalBar(screen)
     { key = "recipe", label = "Recipe" },
     { key = "skill", label = "Skill" },
     { key = "quest", label = "Quest" },
+    { key = "reputation", label = "Reputation" },
     { key = "attunement", label = "Attunement" },
-    { key = "reputation", label = "Reputation", disabled = true },
   }, function(key)
     if input and input.placeholder then
       input.placeholder:SetText(PLACEHOLDERS[key] or PLACEHOLDERS.item)
@@ -404,6 +405,8 @@ local function Create(parent)
       ok, message = ns.GoalService.AddSkillFromInput(text)
     elseif kind == "quest" then
       ok, message = ns.GoalService.AddQuestFromInput(text)
+    elseif kind == "reputation" then
+      ok, message = ns.GoalService.AddReputationFromInput(text)
     else
       ok, message = ns.GoalService.AddFromInput(text, newGoal.stepper:GetValue())
     end
@@ -487,6 +490,9 @@ local function Create(parent)
           row.sub:SetText(s.reached and "Reached" or string.format("%d of %d - %s", s.current, s.target, view.nextStep or ""))
         elseif view and view.quest then
           row.sub:SetText((view.quest.label or "") .. (view.nextStep and (" - " .. view.nextStep) or ""))
+        elseif view and view.reputation then
+          local p = view.reputation.progress
+          row.sub:SetText(p.reached and (p.targetLabel .. " reached") or string.format("%s - %d to %s", view.reputation.record.standingLabel, p.remaining, p.targetLabel))
         elseif view and view.learn then
           row.sub:SetText(view.learn.learned and "Learned" or ((view.learn.recipe.professionName or "") .. (view.nextStep and (" - " .. view.nextStep) or "")))
         elseif view and view.plan then

@@ -13,7 +13,7 @@
 --   LEARN_RECIPE               { spellID, name, professionName, professionID, icon }
 --   REACH_SKILL                { professionID, professionName, rank, startRank, icon }
 --   COMPLETE_QUEST             { questID, name, level, instance, icon }
--- REACH_REPUTATION is registered so saved data, UI and planners can grow into it.
+--   REACH_REPUTATION           { factionID, name, standing (1..8), startValue, icon }
 local _, ns = ...
 
 local GoalModel = {}
@@ -25,7 +25,7 @@ GoalModel.Types = {
   CRAFT_ITEM = { label = "Craft item", badge = "Crafting", supported = true, targetKind = "item" },
   OBTAIN_ITEM = { label = "Obtain item", badge = "Item", supported = true, targetKind = "item" },
   COMPLETE_QUEST = { label = "Complete quest", badge = "Quest", supported = true, targetKind = "quest" },
-  REACH_REPUTATION = { label = "Reach reputation", badge = "Reputation", supported = false, targetKind = "faction" },
+  REACH_REPUTATION = { label = "Reach reputation", badge = "Reputation", supported = true, targetKind = "faction" },
   LEARN_RECIPE = { label = "Learn recipe", badge = "Recipe", supported = true, targetKind = "recipe" },
   COMPLETE_ATTUNEMENT = { label = "Complete attunement", badge = "Attunement", supported = true, targetKind = "attunement" },
   REACH_SKILL = { label = "Reach profession skill", badge = "Skill", supported = true, targetKind = "skill" },
@@ -106,6 +106,19 @@ local function validateQuestTarget(target)
   return true
 end
 
+local function validateReputationTarget(target)
+  if type(target) ~= "table" then
+    return false, "target missing"
+  end
+  if not Util.IsPositiveInt(target.factionID) then
+    return false, "factionID must be a positive integer"
+  end
+  if not Util.IsPositiveInt(target.standing) or target.standing > 8 then
+    return false, "standing must be 1 to 8"
+  end
+  return true
+end
+
 local validators = {
   CRAFT_ITEM = validateItemTarget,
   OBTAIN_ITEM = validateItemTarget,
@@ -113,7 +126,23 @@ local validators = {
   LEARN_RECIPE = validateRecipeTarget,
   REACH_SKILL = validateSkillTarget,
   COMPLETE_QUEST = validateQuestTarget,
+  REACH_REPUTATION = validateReputationTarget,
 }
+
+GoalModel.StandingLabels = { "Hated", "Hostile", "Unfriendly", "Neutral", "Friendly", "Honored", "Revered", "Exalted" }
+
+-- Target standing of a REACH_REPUTATION goal.
+function GoalModel.SetStanding(goal, standing, now)
+  if goal.type ~= "REACH_REPUTATION" then
+    return false, "not a reputation goal"
+  end
+  if not Util.IsPositiveInt(standing) or standing > 8 then
+    return false, "standing must be 1 to 8"
+  end
+  goal.target.standing = standing
+  goal.updatedAt = now or Util.Now()
+  return true
+end
 
 function GoalModel.IsSupported(goalType)
   local def = GoalModel.Types[goalType]
@@ -252,6 +281,9 @@ function GoalModel.Title(goal, nameLookup)
   if goal.type == "REACH_SKILL" and goal.target then
     return string.format("Reach %s %d", goal.target.professionName or "skill", goal.target.rank or 0)
   end
+  if goal.type == "REACH_REPUTATION" and goal.target then
+    return string.format("Reach %s with %s", GoalModel.StandingLabels[goal.target.standing or 0] or "?", goal.target.name or ("faction " .. tostring(goal.target.factionID)))
+  end
   if goal.target and type(goal.target.name) == "string" then
     return string.format("%s: %s", label, goal.target.name)
   end
@@ -265,6 +297,9 @@ function GoalModel.Name(goal, nameLookup)
   end
   if goal.type == "REACH_SKILL" and goal.target then
     return string.format("%s %d", goal.target.professionName or "Skill", goal.target.rank or 0)
+  end
+  if goal.type == "REACH_REPUTATION" and goal.target then
+    return string.format("%s - %s", goal.target.name or ("Faction " .. tostring(goal.target.factionID)), GoalModel.StandingLabels[goal.target.standing or 0] or "?")
   end
   if goal.target and type(goal.target.name) == "string" then
     return goal.target.name

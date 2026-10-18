@@ -59,6 +59,23 @@ client. Behaviour (return values, timing) is only verified where stated.
 | `GameTooltip:SetItemByID` | Widgets | Retail API | Guarded with pcall; falls back to a plain name tooltip |
 | `Enum.CraftingReagentType.Basic` (=1), `Enum.BankType.Character` (=0), `Enum.BagIndex.ReagentBag` (=5) | Compat | `Enum.BagIndex` in dump; the other two from Retail 12.x docs | Fallback constants used when the enum is missing |
 
+## 0.14.0
+
+Reputation goals read (behind `pcall`):
+
+| Function | Used for | Evidence |
+|---|---|---|
+| `C_Reputation.GetNumFactions()`, `GetFactionDataByIndex(i)` (`name`, `factionID`, `reaction`, `currentStanding`, `currentReactionThreshold`, `nextReactionThreshold`, `isHeader`, `isHeaderWithRep`, `isCollapsed`), `GetFactionDataByID(id)` | standings and groups | EllesmereUIForeverEssentials, Attune |
+| Legacy `GetFactionInfo(i)` / `GetFactionInfoByID(id)` tuples | fallback | Attune keeps both paths |
+| `FACTION_STANDING_LABEL1..8` | standing names (English fallback built in) | EllesmereUI |
+
+Event: `UPDATE_FACTION`. The standing thresholds (Neutral 0, Friendly
+3000, Honored 9000, Revered 21000, Exalted 42000) are the classic values
+and are used only to compute "reputation still needed"; the client's own
+`currentReactionThreshold` / `nextReactionThreshold` drive the bars.
+AtlasLootClassic_Factions is loaded through `AtlasLoot.Loader:LoadModule`
+like the dungeon module and read from `ItemDB.Storage`.
+
 ## 0.13.0
 
 The Equipment screen reads (all behind `pcall`):
@@ -248,7 +265,7 @@ All verified present in the Forever API event list (Atraeau docs, build 70170):
 `ADDON_LOADED`, `PLAYER_LOGIN`, `PLAYER_ENTERING_WORLD`, `PLAYER_REGEN_ENABLED`,
 `BAG_UPDATE_DELAYED`, `BANKFRAME_OPENED`, `BANKFRAME_CLOSED`,
 `PLAYERBANKSLOTS_CHANGED`, `BANK_TABS_CHANGED`, `TRADE_SKILL_LIST_UPDATE`,
-`TRADE_SKILL_SHOW`, `TRADE_SKILL_DATA_SOURCE_CHANGED`, `NEW_RECIPE_LEARNED`, `QUEST_REMOVED`, `QUEST_DATA_LOAD_RESULT`, `PLAYER_EQUIPMENT_CHANGED`, `UNIT_INVENTORY_CHANGED`,
+`TRADE_SKILL_SHOW`, `TRADE_SKILL_DATA_SOURCE_CHANGED`, `NEW_RECIPE_LEARNED`, `QUEST_REMOVED`, `QUEST_DATA_LOAD_RESULT`, `PLAYER_EQUIPMENT_CHANGED`, `UNIT_INVENTORY_CHANGED`, `UPDATE_FACTION`,
 `ITEM_DATA_LOAD_RESULT`, `GET_ITEM_INFO_RECEIVED`.
 
 Not used because they do not exist on this client: `TRADE_SKILL_UPDATE`,

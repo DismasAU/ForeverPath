@@ -70,8 +70,15 @@ function Overview.Build(entries, opts)
 
       if #result.nextSteps < (opts.maxSteps or 3) then
         local step
-        local learn, skill, quest = view and view.learn, view and view.skill, view and view.quest
-        if quest then
+        local learn, skill, quest, reputation = view and view.learn, view and view.skill, view and view.quest, view and view.reputation
+        if reputation then
+          local p = reputation.progress
+          step = {
+            title = view.nextStep or goalName,
+            detail = p.reached and "Mark the goal complete" or string.format("%s now - %d to go - for %s", reputation.record.standingLabel, p.remaining, goalName),
+            badge = p.reached and "Ready" or reputation.record.standingLabel, badgeKind = p.reached and "ok" or "info",
+          }
+        elseif quest then
           local label, kind = quest.label, "info"
           if quest.state.completed then kind = "ok" elseif quest.state.ready then kind = "ok" elseif label == "Locked" then kind = "partial" end
           step = {
@@ -203,7 +210,7 @@ end
 function Overview.Percent(view)
   if view and view.attunement then return view.attunement.percent end
   if view and view.skill then return view.skill.percent end
-  if view and view.quest then return view.progress and view.progress.percent or 0 end
+  if view and (view.quest or view.reputation) then return view.progress and view.progress.percent or 0 end
   local plan = view and view.plan
   if not plan then return nil end
   if plan.totals.required <= 0 then return 100 end

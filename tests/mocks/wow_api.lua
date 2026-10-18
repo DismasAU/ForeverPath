@@ -37,7 +37,7 @@ for _, event in ipairs({
   "ITEM_DATA_LOAD_RESULT", "GET_ITEM_INFO_RECEIVED",
   "QUEST_TURNED_IN", "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "PLAYER_LEVEL_UP",
   "QUEST_REMOVED", "QUEST_DATA_LOAD_RESULT",
-  "PLAYER_EQUIPMENT_CHANGED", "UNIT_INVENTORY_CHANGED",
+  "PLAYER_EQUIPMENT_CHANGED", "UNIT_INVENTORY_CHANGED", "UPDATE_FACTION",
 }) do
   Mock.knownEvents[event] = true
 end
@@ -248,6 +248,36 @@ function Mock.AddItem(itemID, opts)
   return itemID
 end
 
+-- Reputation standings. list = { { name, factionID, value, isHeader, hasRep } } in client order;
+-- headers without factionID group what follows.
+local STANDING_MIN = { [1] = -42000, [2] = -6000, [3] = -3000, [4] = 0, [5] = 3000, [6] = 9000, [7] = 21000, [8] = 42000 }
+local STANDING_MAX = { [1] = -6000, [2] = -3000, [3] = 0, [4] = 3000, [5] = 9000, [6] = 21000, [7] = 42000, [8] = 42999 }
+local function standingFor(value)
+  local standing = 1
+  for s = 1, 8 do if value >= STANDING_MIN[s] then standing = s end end
+  return standing
+end
+local function factionData(entry)
+  if not entry then return nil end
+  if entry.isHeader and not entry.hasRep then
+    return { name = entry.name, isHeader = true, isHeaderWithRep = false, isCollapsed = false }
+  end
+  local value = entry.value or 0
+  local standing = standingFor(value)
+  return { name = entry.name, factionID = entry.factionID, reaction = standing, currentStanding = value,
+    currentReactionThreshold = STANDING_MIN[standing], nextReactionThreshold = STANDING_MAX[standing],
+    isHeader = entry.isHeader == true, isHeaderWithRep = entry.isHeader == true and entry.hasRep == true, isCollapsed = false, atWarWith = entry.atWar == true, isWatched = false }
+end
+function Mock.SetFactions(list)
+  Mock.factions = list
+end
+function Mock.SetReputation(factionID, value)
+  for _, entry in ipairs(Mock.factions) do
+    if entry.factionID == factionID then entry.value = value end
+  end
+  Mock.FireEvent("UPDATE_FACTION")
+end
+
 -- Equips an item (slotID = inventory slot) and fires the equipment events.
 function Mock.Equip(slotID, itemID)
   Mock.equipment[slotID] = itemID
@@ -357,7 +387,7 @@ function Mock.InstallAtlasLoot(modules, opts)
   for moduleName, contents in pairs(modules) do
     local module = { __atlaslootdata = { addonName = moduleName } }
     for instance, content in pairs(contents) do
-      module[instance] = { name = instance, items = content.items, GetName = function(self) return self.name end }
+      module[instance] = { name = instance, items = content.items, FactionID = content.FactionID, GetName = function(self) return self.name end }
     end
     storage[moduleName] = module
   end
@@ -681,6 +711,21 @@ function Mock.install()
     AddQuestWatch = function(questID) Mock.quests.watched[questID] = true return true end,
     GetMaxNumQuestsCanAccept = function() return 20 end,
   }
+  _G.C_Reputation = {
+    GetNumFactions = function() return #Mock.factions end,
+    GetFactionDataByIndex = function(index) return factionData(Mock.factions[index]) end,
+    GetFactionDataByID = function(factionID)
+      for _, entry in ipairs(Mock.factions) do
+        if entry.factionID == factionID then return factionData(entry) end
+      end
+      return nil
+    end,
+  }
+  for standing, label in ipairs({ "Hated", "Hostile", "Unfriendly", "Neutral", "Friendly", "Honored", "Revered", "Exalted" }) do
+    _G["FACTION_STANDING_LABEL" .. standing] = label
+  end
+  _G.GetFactionInfo = nil
+  _G.GetFactionInfoByID = nil
   _G.GetInventoryItemID = function(unit, slotID)
     if unit ~= "player" then return nil end
     return Mock.equipment[slotID]
@@ -954,6 +999,7 @@ function Mock.reset()
   Mock.sounds = {}
   Mock.quests = { completed = {}, log = {}, details = {}, order = {}, titles = {}, requests = {}, watched = {} }
   Mock.equipment = {}
+  Mock.factions = {}
   _G.GearQuest = nil
   _G.Attune_Data = nil
   _G.AttuneLang = nil

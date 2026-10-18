@@ -27,6 +27,7 @@ return {
   "goal_types_spec",
   "quest_goals_spec",
   "equipment_spec",
+  "reputation_spec",
   "bootstrap_spec",
   "ui_spec",
 }

@@ -184,6 +184,19 @@ function GoalStore:SetRank(id, rank)
   return true
 end
 
+function GoalStore:SetStanding(id, standing)
+  local goal = self.storage.goals[id]
+  if not goal then
+    return false, "no such goal"
+  end
+  local ok, err = GoalModel.SetStanding(goal, standing, self.now())
+  if not ok then
+    return false, err
+  end
+  notify(self, "updated", goal)
+  return true
+end
+
 function GoalStore:SetStatus(id, status)
   local goal = self.storage.goals[id]
   if not goal then

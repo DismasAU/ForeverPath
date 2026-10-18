@@ -17,6 +17,8 @@ Commands.help = {
   { "/fp quest <name or id>", "Add a quest goal (dungeon quests, attunement quests, or anything in your log): chain, pick-up, objectives, rewards." },
   { "/fp quests", "List the quests ForeverPath knows that feed your goals, with their state." },
   { "/fp equipment", "Every slot: what is worn, GearQuest Forever's best pick for it, and the goal that targets it." },
+  { "/fp rep <faction> [standing]", "Add a reputation goal (default: the next standing): progress, quests that give reputation, rewards per standing." },
+  { "/fp reps", "List your factions with their standing, and your reputation goals." },
   { "/fp goals", "List open goals." },
   { "/fp select <n>", "Select goal number n (opens it in Crafting)." },
   { "/fp remove <n>", "Remove goal number n." },
@@ -97,6 +99,7 @@ function handlers.status()
   Log.output("  " .. ns.TrainerProvider.Status())
   Log.output("  " .. ns.QuestProvider.Status())
   Log.output("  " .. ns.EquipmentProvider.Status())
+  Log.output("  " .. ns.ReputationProvider.Status())
 end
 
 function handlers.goals()
@@ -165,6 +168,27 @@ function handlers.quest(rest)
   if ok and ns.UI.MainFrame.IsShown() then
     ns.UI.MainFrame.SetStatus(message, "ok")
     ns.UI.MainFrame.ShowScreen("quests")
+  end
+end
+
+function handlers.rep(rest)
+  if not requireLoaded() then return end
+  local ok, message = ns.GoalService.AddReputationFromInput(rest)
+  Log.Print("%s", message)
+  if ok and ns.UI.MainFrame.IsShown() then
+    ns.UI.MainFrame.SetStatus(message, "ok")
+    ns.UI.MainFrame.ShowScreen("reputations")
+  end
+end
+
+function handlers.reps()
+  if not requireLoaded() then return end
+  local RP = ns.ReputationProvider
+  Log.Print("%s", RP.Status())
+  for _, record in ipairs(RP.List()) do
+    local goal = ns.GoalService.FindReputationGoal(record.factionID)
+    Log.output(string.format("  %s: %s (%d / %d)%s", record.name, record.standingLabel, record.into or 0, record.span or 0,
+      goal and (" [goal: " .. ns.GoalModel.StandingLabels[goal.target.standing] .. "]") or ""))
   end
 end
 

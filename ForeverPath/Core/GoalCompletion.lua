@@ -108,6 +108,12 @@ function GoalCompletion.Check(reason)
       if ns.QuestProvider and ns.QuestProvider.IsAvailable() and ns.QuestProvider.State(goal.target.questID).completed then
         finish(goal, { quest = true })
       end
+    elseif goal.type == "REACH_REPUTATION" then
+      local RP = ns.ReputationProvider
+      local progress = RP and RP.IsAvailable() and RP.Progress(goal.target.factionID, goal.target.standing, goal.target.startValue) or nil
+      if progress and progress.reached then
+        finish(goal, { reputation = true })
+      end
     elseif goal.type == "LEARN_RECIPE" then
       if ns.ProfessionProvider and ns.ProfessionProvider.IsLearned(goal.target.spellID) then
         finish(goal, { learned = true })
@@ -149,10 +155,12 @@ function GoalCompletion.Celebrate(goal, info)
     detail = name .. " reached"
   elseif goal.type == "COMPLETE_QUEST" then
     detail = "Quest done: " .. name
+  elseif goal.type == "REACH_REPUTATION" then
+    detail = name .. " reached"
   else
     detail = string.format("%s %dx %s", verb, quantity, name)
   end
-  local TITLES = { COMPLETE_ATTUNEMENT = "Attunement complete", LEARN_RECIPE = "Recipe learned", REACH_SKILL = "Skill reached", COMPLETE_QUEST = "Quest complete" }
+  local TITLES = { COMPLETE_ATTUNEMENT = "Attunement complete", LEARN_RECIPE = "Recipe learned", REACH_SKILL = "Skill reached", COMPLETE_QUEST = "Quest complete", REACH_REPUTATION = "Reputation reached" }
   Log.Print("Goal complete: %s. %d goal%s done.", detail, doneCount, doneCount == 1 and "" or "s")
   if setting("completeSound", true) and type(PlaySound) == "function" then
     local kit = (type(SOUNDKIT) == "table" and SOUNDKIT.LEVELUP) or GoalCompletion.SOUND
@@ -197,6 +205,11 @@ function GoalCompletion.Init()
     Events.Debounce("skill-goal-check", 1, function()
       GoalCompletion.Check("skill")
       if ns.UI and ns.UI.MainFrame then ns.UI.MainFrame.RequestRefresh() end
+    end)
+  end)
+  Events.RegisterWoW("UPDATE_FACTION", function()
+    Events.Debounce("reputation-goal-check", 1, function()
+      GoalCompletion.Check("reputation")
     end)
   end)
   -- Attunement steps and quest goals move on quests and levels.

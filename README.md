@@ -41,7 +41,7 @@ is built to take them without a rewrite (see `ARCHITECTURE.md`).
 | 0.11.0 learn-recipe goals (the pattern to get or the trainer to visit, blockers, auto-complete on learning) and reach-skill goals (which recipes to craft how many times from your skill to the target, their materials, auto-complete on the skill-up) | Implemented, offline-tested against the catalogue, **not yet verified in game** |
 | 0.12.0 quest goals and the Quests screen (dungeon quests from ForeverDungeonJournal with their chains, attunement quests from Attune, your quest log; by zone / by goal / completed; objectives, rewards, which goals a quest feeds; auto-complete on turn-in) | Implemented, offline-tested, **not yet verified in game** |
 | 0.13.0 Equipment screen (every slot, item levels and stats from the client, GearQuest Forever's best pick per slot for your class, spec, faction and level, stat comparison, targets as goals; GearQuest's gear sources feed obtain goals) | Implemented, offline-tested, **not yet verified in game** |
-| Reputations | Preview module with a "coming later" state |
+| 0.14.0 reputation goals and the Reputations screen (standings from the client, quests that give reputation from ForeverDungeonJournal, rewards per standing from AtlasLoot Factions, reputation vendors on item goals, auto-complete on the standing) | Implemented, offline-tested, **not yet verified in game** |
 
 `TESTING.md` has the in-game checklist for 0.2.0. `API_COMPATIBILITY.md`
 lists the API evidence and the remaining open questions.
@@ -66,8 +66,8 @@ and says so in the UI.
 | Addon | Used for | Without it |
 |---|---|---|
 | Auctionator | Auction House prices (shopping list, CraftWise, affordability); run a full browse scan so prices exist | Only recorded vendor prices; CraftWise shows "price unknown" |
-| AtlasLootClassic (+ DungeonsAndRaids module) | Boss and trash loot tables for drop sources | Drop sources only from ForeverDungeonJournal |
-| ForeverDungeonJournal | Forever-specific boss loot, dungeon quests with their prerequisite chains, quest givers and rewards (quest goals, the Quests screen) | Drop sources only from AtlasLoot; the Quests screen lists only your log |
+| AtlasLootClassic (+ DungeonsAndRaids and Factions modules) | Boss and trash loot tables for drop sources; the items each reputation standing unlocks | Drop sources only from ForeverDungeonJournal; no faction rewards |
+| ForeverDungeonJournal | Forever-specific boss loot, dungeon quests with their prerequisite chains, quest givers and rewards (quest goals, the Quests screen), quests that give reputation | Drop sources only from AtlasLoot; the Quests screen lists only your log; no quest sources for reputation goals |
 | Attune | Attunement goals and the Attunements screen; attunement quests (givers, rewards) on the Quests screen | The Attunements screen explains that Attune is missing |
 | GearQuest Forever (+ its class module) | Per-slot upgrade hunts on the Equipment screen (best pick, other options, sources) and gear sources for obtain goals | The Equipment screen shows what is worn and your gear goals, without picks |
 
@@ -83,7 +83,7 @@ and says so in the UI.
    looked at; the client has no searchable item database. The New Goal bar
    also takes a **recipe** to learn ("Bolt of Woolen Cloth"), a
    **profession skill** to reach ("Tailoring 225"), a **quest** ("Leaders
-   of the Fang") and an attunement.
+   of the Fang"), a **reputation** ("Argent Dawn Exalted") and an attunement.
 3. **Read the plan.**
    - **Dashboard** shows active goals with progress, the materials missing
      across all of them, and a recommended next step per goal.
@@ -101,6 +101,9 @@ and says so in the UI.
    - **Equipment** shows every slot with what you wear, GearQuest Forever's
      best pick for it (your class, spec, faction and level), a stat
      comparison and the other options; one click makes a pick a goal.
+   - **Reputations** lists your factions with their standing, the quests
+     that raise each one and the rewards each standing unlocks; pick a
+     target standing and make it a goal.
 4. **Tracker.** A compact frame near the minimap pages through tracked goals
    and shows the next step; drag it anywhere, collapse it with "-", open the
    goal with "+". `/fp tracker` hides or shows it.
@@ -120,6 +123,7 @@ and says so in the UI.
 | `/fp skill <profession> [rank]` | Add a reach-skill goal (default: the next cap): which recipes to craft, how often, and their materials |
 | `/fp quest <name or id>` / `/fp quests` | Add a quest goal (dungeon and attunement quests, or anything in your log); list the quests that feed your goals |
 | `/fp equipment` | Every slot: what is worn, GearQuest Forever's best pick, and the goal that targets it |
+| `/fp rep <faction> [standing]` / `/fp reps` | Add a reputation goal (default: the next standing); list your factions and reputation goals |
 | `/fp sources <item>` / `/fp vendors` | Where an item comes from; how much vendor and loot-table data is available |
 | `/fp recipe <item>` / `/fp catalogue` | How an item is made (every catalogue recipe and combine, with skill, plans and reagents); catalogue build and counts |
 | `/fp trainers` | Profession trainers visited and the recipe requirements recorded from them |

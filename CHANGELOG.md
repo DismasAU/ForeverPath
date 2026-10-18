@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.14.0 (2026-10-18) - reputation goals and the Reputations screen
+
+The last of the planned goal types; no preview modules remain.
+
+### Added
+- **Reputation goals** (`/fp rep <faction> [standing]`, the Reputation
+  segment on My Goals, the button on the Reputations screen).
+  `Providers/ReputationProvider.lua` reads every faction's standing through
+  `C_Reputation` (the legacy `GetFactionInfo` as a fallback) with the
+  classic thresholds (Neutral 0, Friendly 3000, Honored 9000, Revered
+  21000, Exalted 42000), groups them under the client's headers, and knows
+  two ways to earn: dungeon quests whose reward text names a faction
+  ("Ironforge +250", from ForeverDungeonJournal) with their live state, and
+  the items each standing unlocks (AtlasLootClassic_Factions, loaded on
+  demand). A goal targets a standing (default: the next one up), its
+  progress is the reputation earned since the goal was made, the next step
+  is the first open quest that gives reputation, and it completes on
+  `UPDATE_FACTION` when the standing is reached (toast "Reputation
+  reached"). Target `{ factionID, name, standing, startValue, icon }`;
+  `GoalModel.SetStanding` / `GoalStore:SetStanding` / `GoalService.SetStanding`.
+- **Reputations screen** (no longer a preview): factions by group with
+  standing and a bar through the current standing; a faction panel with the
+  standing, the target segment (Friendly to Exalted), the reputation still
+  needed, the quests that give it (click one to open it on the Quests
+  screen) and the rewards the target unlocks, and an Add / Retarget / Open
+  goal button.
+- Items sold by reputation vendors become vendor options on item goals,
+  unavailable with the reason ("needs Honored with Argent Dawn; you are
+  Friendly") until the standing is reached.
+- `/fp rep`, `/fp reps`; `/fp status` ends with the reputation line.
+
+### Removed
+- The preview module screen (`UI/Screens/Preview.lua`) and the "Preview
+  modules" divider in the sidebar: every screen is real now.
+
 ## 0.13.0 (2026-10-18) - the Equipment screen
 
 ### Added

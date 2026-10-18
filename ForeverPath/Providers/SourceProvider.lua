@@ -392,6 +392,12 @@ function SourceProvider.Sources(itemID)
       if not duplicate then out[#out + 1] = hint end
     end
   end
+  -- Reputation vendors (AtlasLoot's faction tables): a vendor option that
+  -- is unavailable until the standing is reached.
+  if ns.ReputationProvider and ns.ReputationProvider.Hints then
+    local ok, hints = pcall(ns.ReputationProvider.Hints, itemID)
+    for _, hint in ipairs(ok and hints or {}) do out[#out + 1] = hint end
+  end
   -- The class heuristic is for raw materials: an item a recipe makes keeps
   -- it only when that recipe merely refines a lower tier of the same thing.
   if #recipesFor(itemID) == 0 or SourceProvider.IsRawMaterial(itemID) then

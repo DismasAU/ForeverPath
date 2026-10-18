@@ -30,8 +30,7 @@ MainFrame.Nav = {
   { key = "attunements", label = "Attunements" },
   { key = "quests", label = "Quests" },
   { key = "equipment", label = "Equipment" },
-  { divider = true, label = "Preview modules" },
-  { key = "reputations", label = "Reputations", preview = true },
+  { key = "reputations", label = "Reputations" },
 }
 
 ---------------------------------------------------------------------------
@@ -505,7 +504,7 @@ function MainFrame.OpenGoal(goalID)
   ns.GoalService.Select(goalID)
   MainFrame.Show()
   local goal = ns.GoalService.Store() and ns.GoalService.Store():Get(goalID)
-  local SCREEN_FOR = { COMPLETE_ATTUNEMENT = "attunements", COMPLETE_QUEST = "quests" }
+  local SCREEN_FOR = { COMPLETE_ATTUNEMENT = "attunements", COMPLETE_QUEST = "quests", REACH_REPUTATION = "reputations" }
   MainFrame.ShowScreen(goal and SCREEN_FOR[goal.type] or "crafting")
 end
 
@@ -776,7 +775,7 @@ function MainFrame.OnCharactersUpdated()
 end
 
 function MainFrame.Init()
-  for _, message in ipairs({ "FP_GOALS_CHANGED", "FP_RECIPES_UPDATED", "FP_INVENTORY_UPDATED", "FP_ITEM_LOADED", "FP_QUESTS_UPDATED", "FP_EQUIPMENT_UPDATED" }) do
+  for _, message in ipairs({ "FP_GOALS_CHANGED", "FP_RECIPES_UPDATED", "FP_INVENTORY_UPDATED", "FP_ITEM_LOADED", "FP_QUESTS_UPDATED", "FP_EQUIPMENT_UPDATED", "FP_REPUTATION_UPDATED" }) do
     Events.On(message, MainFrame.RequestRefresh)
   end
   Events.On("FP_CHARACTERS_UPDATED", MainFrame.OnCharactersUpdated)

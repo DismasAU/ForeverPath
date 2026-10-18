@@ -39,6 +39,7 @@ function Planner.DefaultDeps()
     price = ns.PriceProvider,
     attune = ns.AttuneProvider,
     quest = ns.QuestProvider,
+    reputation = ns.ReputationProvider,
     settings = ns.db and ns.db.settings or {},
   }
 end
@@ -149,6 +150,9 @@ function Planner.Evaluate(goal, deps)
   end
   if goal.type == "COMPLETE_QUEST" then
     return Planner.EvaluateQuest(view, goal, deps)
+  end
+  if goal.type == "REACH_REPUTATION" then
+    return Planner.EvaluateReputation(view, goal, deps)
   end
 
   local itemID = goal.target.itemID
@@ -738,6 +742,52 @@ function Planner.EvaluateQuest(view, goal, deps)
     view.message = string.format("Pick up %s%s.", name, pickup and (" from " .. pickup) or "")
     if entry and entry.objective then view.message = view.message .. " " .. entry.objective end
     view.nextStep = "Pick up " .. name
+  end
+  return view
+end
+
+-- Reputation goals: progress is the standing itself (anchored at the value
+-- when the goal was made); the view carries `reputation = { record,
+-- progress, quests, rewards }` and names the first open quest that gives
+-- reputation as the next step.
+function Planner.EvaluateReputation(view, goal, deps)
+  local RP = deps.reputation
+  local target = goal.target
+  view.item = { name = target.name or ("Faction " .. tostring(target.factionID)), icon = target.icon or (RP and RP.ICON) or nil, quality = 1, loaded = true, exists = true }
+  if not RP or not RP.IsAvailable() then
+    view.status = Status.PROVIDER_UNAVAILABLE
+    view.message = "This client does not expose the faction API ForeverPath needs."
+    return view
+  end
+  local progress = RP.Progress(target.factionID, target.standing, target.startValue)
+  if not progress then
+    view.status = Status.ITEM_INVALID
+    view.message = string.format("%s is not in your reputation list yet.", target.name or ("Faction " .. tostring(target.factionID)))
+    return view
+  end
+  local record = progress.record
+  view.item.name = record.name
+  local quests = RP.QuestsFor(record.name)
+  local rewards = RP.Rewards(target.factionID)
+  view.reputation = { record = record, progress = progress, quests = quests, rewards = rewards, targetLabel = progress.targetLabel }
+  view.progress = { percent = progress.percent, ownedUnits = math.max(0, (record.value or 0) - progress.start), requiredUnits = math.max(0, progress.targetMin - progress.start), materialsHave = 0, materialsTotal = 0 }
+  view.plan = Planner.StepPlan(progress.reached)
+  if progress.reached then
+    view.message = string.format("%s with %s reached.", progress.targetLabel, record.name)
+    view.nextStep = "Mark the goal complete"
+    return view
+  end
+  local openQuest
+  for _, quest in ipairs(quests) do
+    if not quest.state.completed and not openQuest then openQuest = quest end
+  end
+  view.message = string.format("%d more reputation to %s with %s (you are %s, %d / %d into it).", progress.remaining, progress.targetLabel, record.name,
+    record.standingLabel, record.into or 0, record.span or 0)
+  if openQuest then
+    view.message = view.message .. string.format(" Quest %s gives +%d.", openQuest.name, openQuest.amount)
+    view.nextStep = string.format("%s (+%d)", openQuest.name, openQuest.amount)
+  else
+    view.nextStep = string.format("Earn %d reputation with %s", progress.remaining, record.name)
   end
   return view
 end

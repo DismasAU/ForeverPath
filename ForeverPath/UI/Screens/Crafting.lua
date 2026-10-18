@@ -410,12 +410,12 @@ local function Create(parent)
       self.empty:Set("No goal selected", "Add a crafting goal from My Goals or the search box, then pick it here.")
       return
     end
-    if goal.type == "COMPLETE_ATTUNEMENT" or goal.type == "COMPLETE_QUEST" then
+    local ELSEWHERE = { COMPLETE_ATTUNEMENT = { "Attunement goal", "Attunements" }, COMPLETE_QUEST = { "Quest goal", "Quests" }, REACH_REPUTATION = { "Reputation goal", "Reputations" } }
+    if ELSEWHERE[goal.type] then
       showChrome(false)
       treeView:Hide()
       craftwiseView:Hide()
-      local isQuest = goal.type == "COMPLETE_QUEST"
-      self.empty:Set(isQuest and "Quest goal" or "Attunement goal", string.format("%s is planned on the %s screen.", ns.GoalService.Name(goal), isQuest and "Quests" or "Attunements"))
+      self.empty:Set(ELSEWHERE[goal.type][1], string.format("%s is planned on the %s screen.", ns.GoalService.Name(goal), ELSEWHERE[goal.type][2]))
       return
     end
     showChrome(true)

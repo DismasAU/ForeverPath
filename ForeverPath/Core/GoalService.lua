@@ -412,6 +412,102 @@ function GoalService.AddQuestFromInput(text)
   return true, message .. note, goal
 end
 
+---------------------------------------------------------------------------
+-- Reputation goals
+---------------------------------------------------------------------------
+function GoalService.FindReputationGoal(factionID)
+  local store = GoalService.Store()
+  if not store then return nil end
+  for _, goal in ipairs(store:List()) do
+    if goal.type == "REACH_REPUTATION" and goal.target and goal.target.factionID == factionID then
+      return goal
+    end
+  end
+  return nil
+end
+
+-- Creates (or retargets) a reputation goal. standing defaults to the next one up.
+-- Returns goal, message, isNew.
+function GoalService.AddReputationGoal(factionID, standing)
+  local store = GoalService.Store()
+  if not store then
+    return nil, "ForeverPath is still loading."
+  end
+  local RP = ns.ReputationProvider
+  if not RP or not RP.IsAvailable() then
+    return nil, "Reputation goals need the faction API, which this client lacks."
+  end
+  local record = RP.Get(factionID)
+  if not record then
+    return nil, string.format("Faction %s is not in your reputation list.", tostring(factionID))
+  end
+  standing = Util.ParseInt(standing) or RP.NextStanding(record)
+  if standing < 1 or standing > 8 then
+    return nil, "The standing must be between Hated and Exalted."
+  end
+  local existing = GoalService.FindReputationGoal(record.factionID)
+  if existing then
+    store:SetStanding(existing.id, standing)
+    if not GoalModel.IsOpen(existing) then
+      existing.target.startValue = record.value
+      store:SetStatus(existing.id, GoalModel.Statuses.ACTIVE)
+    end
+    store:Select(existing.id)
+    return existing, string.format("Updated goal: %s", GoalService.Title(existing)), false
+  end
+  local goal, err = store:Create("REACH_REPUTATION", {
+    factionID = record.factionID, name = record.name, standing = standing, startValue = record.value, icon = RP.ICON,
+  })
+  if not goal then
+    return nil, err
+  end
+  store:Select(goal.id)
+  local message = string.format("Added goal: %s", GoalService.Title(goal))
+  if (record.standing or 0) >= standing then message = message .. " (already there)" end
+  return goal, message, true
+end
+
+-- "argent dawn exalted", "argent dawn" (next standing), "exalted argent dawn". Returns ok, message, goal.
+function GoalService.AddReputationFromInput(text)
+  text = Util.Trim(text or "")
+  if text == "" then
+    return false, "Type a faction, optionally with the standing to reach (Argent Dawn Exalted)."
+  end
+  local RP = ns.ReputationProvider
+  if not RP or not RP.IsAvailable() then
+    return false, "Reputation goals need the faction API, which this client lacks."
+  end
+  local name, standing = text, nil
+  local head, tail = text:match("^(.-)%s+(%a+)$")
+  if head and RP.StandingByName(tail) then
+    name, standing = head, RP.StandingByName(tail)
+  else
+    local first, rest = text:match("^(%a+)%s+(.-)$")
+    if first and RP.StandingByName(first) then name, standing = rest, RP.StandingByName(first) end
+  end
+  local hits = RP.Search(Util.Trim(name), 5)
+  if #hits == 0 then
+    return false, string.format("No faction called \"%s\" in your reputation list.", Util.Trim(name))
+  end
+  local note = ""
+  if #hits > 1 then
+    local others = {}
+    for i = 2, #hits do others[#others + 1] = hits[i].name end
+    note = string.format(" (using %s; also matched: %s)", hits[1].name, Util.Join(others))
+  end
+  local goal, message = GoalService.AddReputationGoal(hits[1].factionID, standing)
+  if not goal then
+    return false, message
+  end
+  return true, message .. note, goal
+end
+
+function GoalService.SetStanding(id, standing)
+  local store = GoalService.Store()
+  if not store then return false, "not loaded" end
+  return store:SetStanding(id, standing)
+end
+
 function GoalService.AddObtainGoal(itemID, quantity)
   return GoalService.AddItemGoal(itemID, quantity, "OBTAIN_ITEM")
 end

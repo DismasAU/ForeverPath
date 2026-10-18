@@ -49,7 +49,7 @@ ForeverPath/
     Screens/Crafting.lua     screen 02: hero panel, tabs, requirements table
     Screens/Quests.lua       quests by zone / goal / completed, details, chain, rewards
     Screens/Equipment.lua    slots, GearQuest picks, stat comparison, targets as goals
-    Screens/Preview.lua      preview modules with "later version" states (Reputations)
+    Screens/Reputations.lua  factions by group, standing, target, quests, rewards
     Screens/Characters.lua   screen 07: character cards, coverage banner, account-wide scope
     Screens/Shopping.lua     screen 05: goal chips, summary, filter tabs, bought ticks, send to chat
     Screens/Attunements.lua  screen 06: picker, header, step timeline, current step
@@ -246,9 +246,28 @@ The ledger draws bags, then bank, then alts, and only touches alts when
 `GoalModel.Types` registers CRAFT_ITEM, OBTAIN_ITEM, COMPLETE_ATTUNEMENT
 (targets `{ attuneID, name, icon }`), LEARN_RECIPE (`{ spellID, name,
 professionName, professionID, icon }`), REACH_SKILL (`{ professionID,
-professionName, rank, startRank, icon }`) and COMPLETE_QUEST (`{ questID,
-name, level, instance, icon }`) as supported, plus REACH_REPUTATION
-(represented, not yet planned). `target` is type specific.
+professionName, rank, startRank, icon }`), COMPLETE_QUEST (`{ questID,
+name, level, instance, icon }`) and REACH_REPUTATION (`{ factionID, name,
+standing, startValue, icon }`), all supported. `target` is type specific.
+
+**Reputation planning.** `Providers/ReputationProvider.lua` normalises
+`C_Reputation.GetFactionDataByIndex` / `GetFactionDataByID` (or the legacy
+tuples) into `{ factionID, name, standing (1..8), standingLabel, value,
+min, max, into, span, percentWithin, header }` (`List()`, cached until
+`UPDATE_FACTION`; `Get(factionID)`), with `StandingMin` / `StandingMax`
+for the classic thresholds, `StandingByName`, `Progress(factionID, target,
+startValue)` (`remaining`, `reached`, `percent` anchored at the goal's
+start) and `NextStanding`. Ways to earn: `QuestRewards()` parses the
+journal entries' reward texts ("<Faction> +N") through QuestProvider;
+`QuestsFor(name)` adds live states. `Rewards(factionID)` reads
+AtlasLootClassic_Factions (`EnsureAtlas` loads the module once through
+AtlasLoot's loader, `IndexAtlas` maps each tier to a standing by its label
+or its position) and `SoldBy(itemID)` / `Hints(itemID)` turn them into
+vendor options for the resolver, `unavailable` with the reason below the
+standing. `Planner.EvaluateReputation` carries `reputation = { record,
+progress, quests, rewards, targetLabel }`, `nextStep` (the first open quest
+that gives reputation) and a `StepPlan`; `GoalCompletion` finishes the goal
+on `UPDATE_FACTION`.
 
 **Equipment.** `Providers/EquipmentProvider.lua` is a read-only view, not a
 goal type: `SLOTS` (display order, inventory slot ids, GearQuest slot names,
@@ -371,8 +390,10 @@ goals on load and reports the count.
 ## Extension points
 
 - **New goal types**: add an entry to `GoalModel.Types` and a validator, then
-  a branch in `Planner.Evaluate` (or a per-type planner table). UI sections are
-  declared in `MainFrame.Sections`.
+  a branch in `Planner.Evaluate` (or a per-type planner table). Screens are
+  declared in `MainFrame.Nav`; `MainFrame.OpenGoal` maps a goal type to
+  the screen that plans it (attunements, quests, reputations), everything
+  else opens on Crafting.
 - **Recipe catalogue**: `Data/RecipeCatalogue.lua` is generated from the
   client's own tables (`tools/DbExtract`, see its README) and decoded by
   `Data/Recipes.lua`. `Planner.Candidates` merges recorded recipes with the
