@@ -55,7 +55,7 @@ local function sourceLabels(node)
     elseif option.kind == "vendor" then
       add("Vendor: " .. (option.name or "?"))
     elseif (option.kind == "gather" or option.kind == "drop" or option.kind == "quest") and not option.unavailable then
-      add(option.label or (ns.DependencyResolver and ns.DependencyResolver.RouteLabels[option.kind]) or option.kind)
+      add(option.short or option.label or (ns.DependencyResolver and ns.DependencyResolver.RouteLabels[option.kind]) or option.kind)
     elseif option.kind == "craft" and node.route ~= "craft" then
       if option.learned then
         add("Craft - " .. (option.professionName or "?"))

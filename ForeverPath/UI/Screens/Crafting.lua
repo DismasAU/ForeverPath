@@ -10,7 +10,7 @@ local Util = ns.Util
 ns.UI.Screens = ns.UI.Screens or {}
 
 local ROW = 40
-local COLUMNS = { need = 40, have = 40, missing = 54, price = 74, subtotal = 74, source = 150 }
+local COLUMNS = { need = 40, have = 40, missing = 54, price = 74, subtotal = 74, source = 180 }
 local SORTS = { { key = "missing", label = "Sort: Missing" }, { key = "name", label = "Sort: Name" }, { key = "need", label = "Sort: Need" } }
 local CHECK = "Interface\\Buttons\\UI-CheckBox-Check"
 
@@ -39,6 +39,7 @@ local function createMaterialRow(content, index)
   sourceFrame:SetSize(COLUMNS.source, ROW)
   sourceFrame:SetPoint("RIGHT", row, "RIGHT", -10, 0)
   sourceFrame.tags = {}
+  pcall(function() sourceFrame:SetClipsChildren(true) end)
   local subtotal = Widgets.Text(row, "secondaryBright", "", { justify = "RIGHT", width = COLUMNS.subtotal })
   subtotal:SetPoint("RIGHT", sourceFrame, "LEFT", -10, 0)
   local price = Widgets.Text(row, "secondaryBright", "", { justify = "RIGHT", width = COLUMNS.price })
@@ -65,26 +66,7 @@ local function createMaterialRow(content, index)
     tint, icon, name, note, need, have, missing, check, price, subtotal, sourceFrame
 
   function row:SetTags(list)
-    local previous
-    for i, text in ipairs(list) do
-      local tag = sourceFrame.tags[i]
-      if not tag then
-        tag = Widgets.Tag(sourceFrame, text)
-        sourceFrame.tags[i] = tag
-      end
-      tag:SetTag(text)
-      tag:ClearAllPoints()
-      if previous then
-        tag:SetPoint("LEFT", previous, "RIGHT", 4, 0)
-      else
-        tag:SetPoint("LEFT", sourceFrame, "LEFT", 0, 0)
-      end
-      tag:Show()
-      previous = tag
-    end
-    for i = #list + 1, #sourceFrame.tags do
-      sourceFrame.tags[i]:Hide()
-    end
+    Widgets.LayoutTags(sourceFrame, list)
   end
 
   Widgets.SetItemTooltip(row, function(self) return self.itemID end, function(self)
@@ -391,7 +373,7 @@ local function Create(parent)
     end
     for _, hint in ipairs(ns.SourceProvider.Sources(material.itemID)) do
       if (hint.kind == "gather" or hint.kind == "drop" or hint.kind == "quest") and not hint.unavailable then
-        tags[#tags + 1] = hint.gatherer and (hint.label .. " - " .. hint.gatherer) or hint.label
+        tags[#tags + 1] = hint.gatherer and (hint.label .. " - " .. hint.gatherer) or (hint.short or hint.label)
         break
       end
     end
@@ -645,7 +627,7 @@ local function Create(parent)
       row.name:SetText(Theme.QualityText(label, info.quality))
       local noteParts = {}
       local sub = describeItem(material.itemID)
-      if sub ~= "" then noteParts[#noteParts + 1] = (sub:match("^([^%-]+)") or sub):gsub("%s+$", "") end
+      if sub ~= "" then noteParts[#noteParts + 1] = (sub:match("^(.-)%s+%-%s") or sub) end
       local craftable = ns.ProfessionProvider.FindRecipesForItem(material.itemID)
       if #craftable > 0 then noteParts[#noteParts + 1] = "craftable" end
       row.note:SetText(table.concat(noteParts, " - "))

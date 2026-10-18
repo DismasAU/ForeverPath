@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.17.2 (2026-10-18) - source tags fit their column
+
+### Fixed
+- Long source tags ("Drop: Lost Ones, Fallow Sanctuary, Swamp of Sorrows")
+  ran past the right edge of the crafting requirements and the shopping
+  list. `Widgets.LayoutTags` now lays a cell's tags out inside its width:
+  a tag that does not fit is cut with an ellipsis, later ones are hidden,
+  and the cell clips. The Source column is 180 px wide on both tables.
+  Catalogue drop hints carry a short form for tags ("Drop: Lost Ones");
+  the full text stays in the row tooltip and `/fp sources`.
+- The item note under a two-handed weapon read "Two": the class text is
+  now cut at " - ", not at the first hyphen.
+
 ## 0.17.1 (2026-10-18) - the shaman Call of Air chain in the quest catalogue
 
 ### Added

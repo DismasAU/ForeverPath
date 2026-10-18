@@ -500,12 +500,60 @@ function Widgets.Tag(parent, text)
   local label = Widgets.Text(tag, "note", text, { color = C.tagText, justify = "CENTER" })
   label:SetPoint("CENTER", tag, "CENTER", 0, 0)
   tag.label = label
-  function tag:SetTag(value)
+  -- maxWidth: the tag shrinks to it and the label is cut with an ellipsis.
+  function tag:SetTag(value, maxWidth)
     label:SetText(value or "")
-    self:SetWidth((label:GetStringWidth() or 30) + 12)
+    label:SetWidth(0)
+    local natural = (label:GetStringWidth() or 30) + 12
+    if maxWidth and natural > maxWidth then
+      self:SetWidth(maxWidth)
+      label:SetWidth(math.max(10, maxWidth - 12))
+      self.truncated = true
+    else
+      self:SetWidth(natural)
+      self.truncated = false
+    end
+    self.fullText = value
   end
   tag:SetTag(text)
   return tag
+end
+
+-- Lays a source cell's tags out left to right inside the cell's width: a
+-- tag that does not fit is cut with an ellipsis, later ones are hidden.
+-- Reuses frame.tags. Returns how many are shown.
+Widgets.TAG_GAP = 4
+Widgets.TAG_MIN_WIDTH = 40
+function Widgets.LayoutTags(frame, list)
+  frame.tags = frame.tags or {}
+  local width = frame:GetWidth() or 0
+  local used, previous, shown = 0, nil, 0
+  for i, text in ipairs(list or {}) do
+    local tag = frame.tags[i]
+    if not tag then
+      tag = Widgets.Tag(frame, text)
+      frame.tags[i] = tag
+    end
+    local gap = previous and Widgets.TAG_GAP or 0
+    local room = width - used - gap
+    if width > 0 and previous and room < Widgets.TAG_MIN_WIDTH then
+      tag:Hide()
+    else
+      tag:SetTag(text, width > 0 and room or nil)
+      tag:ClearAllPoints()
+      if previous then
+        tag:SetPoint("LEFT", previous, "RIGHT", Widgets.TAG_GAP, 0)
+      else
+        tag:SetPoint("LEFT", frame, "LEFT", 0, 0)
+      end
+      tag:Show()
+      used = used + gap + (tag:GetWidth() or 0)
+      previous = tag
+      shown = shown + 1
+    end
+  end
+  for i = #(list or {}) + 1, #frame.tags do frame.tags[i]:Hide() end
+  return shown
 end
 
 -- 20 px chip with a coloured mark: kind "ok" (check), "missing" (x) or "info" (dot).

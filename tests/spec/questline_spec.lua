@@ -49,7 +49,7 @@ local function shaman()
 end
 
 local function items()
-  Mock.AddItem(RAGE, { name = "Rage of the Storm", quality = 3 })
+  Mock.AddItem(RAGE, { name = "Rage of the Storm", quality = 3, itemType = "Weapon", itemSubType = "Two-Handed Maces" })
   Mock.AddItem(CLAW, { name = "Tidebringer's Claw", quality = 3 })
   Mock.AddItem(GRASP, { name = "Lightning's Grasp", quality = 3 })
   Mock.AddItem(RUNE, { name = "Rune of the Storm", quality = 1 })
@@ -457,7 +457,51 @@ describe("Questlines", function()
     local list = shipped.ShoppingList.Build({ { goal = goal, view = view } }, { nameOf = shipped.ItemProvider.GetName })
     assert_eq(list.rows[1].itemID, 274463)
     assert_eq(list.rows[1].category, "gather")
-    assert_eq(list.rows[1].sources[1], "Drop: Charlga Razorflank, Razorfen Kraul")
+    assert_eq(list.rows[1].sources[1], "Drop: Charlga Razorflank", "the short form on tags; the full text in tooltips")
+    assert_eq(hints[1].short, "Drop: Stonevault troggs and Dustbelcher ogres")
+  end)
+
+  it("cuts source tags to their column instead of running past the table", function()
+    local Widgets = ns.UI.Widgets
+    local cell = CreateFrame("Frame")
+    cell:SetSize(180, 40)
+    local long = "Drop: the quilboar ritual at the steam pools west of Freewind Post, Thousand Needles"
+    assert_eq(Widgets.LayoutTags(cell, { long }), 1)
+    local tag = cell.tags[1]
+    assert_eq(tag:GetWidth(), 180, "no wider than the cell")
+    assert_eq(tag.label:GetWidth(), 168, "the label is cut with an ellipsis")
+    assert_true(tag.truncated)
+    assert_eq(tag.fullText, long)
+    -- Short tags keep their natural width; a tag with no room left is hidden.
+    assert_eq(Widgets.LayoutTags(cell, { "In bags", "Vendor: Tharynn Bouden", long }), 2)
+    assert_eq(cell.tags[1]:GetWidth(), 7 * 6 + 12)
+    assert_false(cell.tags[1].truncated)
+    assert_true(cell.tags[2].truncated, "the second tag takes what is left")
+    assert_false(cell.tags[3]:IsShown())
+    assert_eq(Widgets.LayoutTags(cell, { "Bank" }), 1)
+    assert_false(cell.tags[2]:IsShown())
+    -- The crafting rows and the shopping rows use the same layout.
+    shaman()
+    local MainFrame = ns.UI.MainFrame
+    MainFrame.Show()
+    Mock.RunTimers()
+    ns.Data.QuestCatalogue[STORM] = { giver = { name = "Prate Cloudseer", mapID = 1441, x = 0.45, y = 0.5, zone = "Thousand Needles" },
+      turnin = { name = "Prate Cloudseer", mapID = 1441, x = 0.45, y = 0.5, zone = "Thousand Needles" },
+      items = { { itemID = FIRE, name = "Twisted Fire Totem", count = 5, source = "Stonevault troggs and Dustbelcher ogres, Agmond's End, Badlands" } } }
+    local goal = ns.GoalService.AddItemGoal(RAGE, 1)
+    MainFrame.OpenGoal(goal.id)
+    Mock.RunTimers()
+    local row = MainFrame.screens.crafting.pool.rows[1]
+    assert_eq(row.itemID, FIRE)
+    assert_eq(row.sourceFrame.tags[1].label:GetText(), "Drop: Stonevault troggs and Dustbelcher ogres")
+    assert_true(row.sourceFrame.tags[1]:GetWidth() <= 180)
+    assert_eq(MainFrame.screens.crafting.pool.rows[2].note:GetText(), "Two-Handed Maces", "the item class note keeps its hyphen")
+    MainFrame.ShowScreen("shopping")
+    Mock.RunTimers()
+    local shopRow = MainFrame.screens.shopping.pool.rows[1]
+    assert_eq(shopRow.itemID, FIRE)
+    assert_eq(shopRow.sourceFrame.tags[1].label:GetText(), "Drop: Stonevault troggs and Dustbelcher ogres")
+    assert_true(shopRow.sourceFrame.tags[1]:GetWidth() <= 180)
   end)
 
   it("shows the chain, the items and the waypoint button on the screens", function()

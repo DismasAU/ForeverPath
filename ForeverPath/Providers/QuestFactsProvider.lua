@@ -120,6 +120,7 @@ function QuestFacts.ItemHints(itemID)
     out[#out + 1] = {
       kind = "drop", questItem = true, questID = entry.questID, quest = questName,
       label = "Drop: " .. entry.source,
+      short = "Drop: " .. (entry.source:match("^([^,]+)") or entry.source),
       detail = entry.source .. " - for " .. questName .. " (quest catalogue)",
     }
   end

@@ -9,7 +9,7 @@ local ShoppingList = ns.ShoppingList
 ns.UI.Screens = ns.UI.Screens or {}
 
 local ROW = 35
-local COLS = { total = 44, owned = 44, reserved = 56, missing = 54, cost = 74, source = 150 }
+local COLS = { total = 44, owned = 44, reserved = 56, missing = 54, cost = 74, source = 180 }
 local SORTS = { { key = "missing", label = "Sort: Missing" }, { key = "name", label = "Sort: Name" }, { key = "total", label = "Sort: Total" }, { key = "source", label = "Sort: Source" } }
 local TABS = { { key = "all", label = "All" }, { key = "buy", label = "Auction House" }, { key = "vendor", label = "Vendors" }, { key = "gather", label = "Gathering" }, { key = "craft", label = "Craftable" }, { key = "learn", label = "To learn" }, { key = "alt", label = "From alts" } }
 local STEP_ICON = "Interface\\Icons\\INV_Misc_Book_09"
@@ -64,6 +64,7 @@ local function createRow(content, index, screen)
   sourceFrame:SetSize(COLS.source, ROW)
   sourceFrame:SetPoint("RIGHT", row, "RIGHT", -10, 0)
   sourceFrame.tags = {}
+  pcall(function() sourceFrame:SetClipsChildren(true) end)
   row.sourceFrame = sourceFrame
   row.cost = Widgets.Text(row, "secondaryBright", "", { justify = "RIGHT", width = COLS.cost })
   row.cost:SetPoint("RIGHT", sourceFrame, "LEFT", -10, 0)
@@ -83,20 +84,7 @@ local function createRow(content, index, screen)
   row.note:SetPoint("RIGHT", row.total, "LEFT", -10, 0)
 
   function row:SetTags(list)
-    local previous
-    for i, text in ipairs(list) do
-      local tag = sourceFrame.tags[i]
-      if not tag then
-        tag = Widgets.Tag(sourceFrame, text)
-        sourceFrame.tags[i] = tag
-      end
-      tag:SetTag(text)
-      tag:ClearAllPoints()
-      if previous then tag:SetPoint("LEFT", previous, "RIGHT", 4, 0) else tag:SetPoint("LEFT", sourceFrame, "LEFT", 0, 0) end
-      tag:Show()
-      previous = tag
-    end
-    for i = #list + 1, #sourceFrame.tags do sourceFrame.tags[i]:Hide() end
+    Widgets.LayoutTags(sourceFrame, list)
   end
 
   Widgets.ShiftClickLinks(row, function(self) return self.itemID end)

@@ -321,6 +321,7 @@ Needs two characters on the account. Log in on the alt first, then on your main.
 - [ ] Turn a quest in: the reward window records the turn-in NPC; the chain moves to the next quest; the last turn-in completes the quest goal as before, and the item goal completes when the reward lands in the bags.
 - [ ] An attunement whose chain has either/or starts (Call of Air from two givers) shows both until one is done, then only the taken one.
 - [ ] Log in on an alt: the facts learned on the first character are there (account-wide).
+- [ ] (0.17.2) With the totems on the requirements table and the shopping list, every source tag ends inside the Source column (an ellipsis cuts long ones, the full text is in the row tooltip); the note under Rage of the Storm says "Two-Handed Maces".
 - [ ] (0.17.1) Before any quest window has been opened, "Rage of the Storm" as a goal already says "Pick up Call of Air from Searn Firewarder in Orgrimmar" (or Xanis Flameweaver / Eldrun Stormbreaker), `/fp status` says "12 quests shipped", and the Quests side panel for Storm, Earth, and Fire lists "Bring 5 x Twisted ... Totem" with "Drop: ..." sources on the shopping list. Check the shipped pins against where the NPCs stand (Prate Cloudseer, Rau Cliffrunner, Veyric Thunderhame, Bath'rah the Windwatcher) and report any that are off.
 
 ### Reporting

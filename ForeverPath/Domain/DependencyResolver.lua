@@ -112,7 +112,7 @@ local function buildOptions(itemID, opts, path)
   if type(hints) == "table" then
     for _, hint in ipairs(hints) do
       if type(hint) == "table" and hint.kind and hint.kind ~= "craft" then
-        options[#options + 1] = { kind = hint.kind, label = hint.label, detail = hint.detail, name = hint.name, count = hint.count,
+        options[#options + 1] = { kind = hint.kind, label = hint.label, short = hint.short, detail = hint.detail, name = hint.name, count = hint.count,
           skill = hint.skill, gatherer = hint.gatherer, unavailable = hint.unavailable and true or nil }
       end
     end
