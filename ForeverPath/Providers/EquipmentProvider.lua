@@ -253,6 +253,23 @@ function EquipmentProvider.Facts(itemID)
   return found or nil
 end
 
+-- Every item name in GearQuest's loaded facts tables, for name search.
+function EquipmentProvider.ItemNames()
+  local names = {}
+  local gq = gearQuest()
+  if not gq or type(gq.Data) ~= "table" then return names end
+  for key, tbl in pairs(gq.Data) do
+    if type(key) == "string" and type(tbl) == "table" and key:find("Facts") then
+      for itemID, row in pairs(tbl) do
+        if tonumber(itemID) and type(row) == "table" and type(row.name) == "string" and row.name ~= "" then
+          names[tonumber(itemID)] = row.name
+        end
+      end
+    end
+  end
+  return names
+end
+
 local function ensureClass(gq, classFile)
   if not classFile or type(gq.Data.EnsureClassLoaded) ~= "function" then return type(gq.Data.entries) == "table" end
   local ok, loaded = pcall(function() return gq.Data:EnsureClassLoaded(classFile) end)
@@ -419,6 +436,7 @@ local function changed(reason)
 end
 
 function EquipmentProvider.Init()
+  if ns.ItemProvider and ns.ItemProvider.RegisterNameSource then ns.ItemProvider.RegisterNameSource(EquipmentProvider.ItemNames) end
   if not EquipmentProvider.IsAvailable() then
     Log.Debug("GetInventoryItemID missing; equipment provider disabled")
     return

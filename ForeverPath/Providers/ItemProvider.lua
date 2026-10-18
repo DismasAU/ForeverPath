@@ -169,8 +169,37 @@ function ItemProvider.Prefetch(itemID)
   ItemProvider.GetItem(itemID)
 end
 
--- Name search over cached names and scanned recipe names. Exact matches rank
--- first, then prefix matches, then substring matches. Limited to `limit` hits.
+-- Extra places item names come from (other addons' data): each entry is a
+-- function returning { [itemID] = name } (cached by its owner).
+ItemProvider.nameSources = {}
+
+function ItemProvider.RegisterNameSource(fn)
+  if type(fn) == "function" then ItemProvider.nameSources[#ItemProvider.nameSources + 1] = fn end
+end
+
+-- Rank of a name against a lower-cased needle: 0 exact, 1 starts with it,
+-- 2 a word starts with it ("Mace of the Storms" for "storm"), 3 anywhere
+-- inside a word ("Thunderstorm Blade"); nil when it does not match.
+function ItemProvider.MatchRank(name, needle)
+  if type(name) ~= "string" then return nil end
+  local lower = name:lower()
+  if lower == needle then return 0 end
+  local position = lower:find(needle, 1, true)
+  if not position then return nil end
+  if position == 1 then return 1 end
+  local before = lower:sub(position - 1, position - 1)
+  if before == " " or before == "-" or before == "'" or before == ":" or before == "(" or before == "/" then return 2 end
+  return 3
+end
+
+-- Name search over cached names, scanned recipe names, the catalogue and
+-- every registered name source. Exact matches first, then names starting
+-- with the text, then names with a word starting with it, then any other
+-- substring; each group by name. When the list is cut to `limit`, two
+-- slots are kept for the later groups so "Storm..." never hides "Mace of
+-- the Storms".
+ItemProvider.RESERVED_SLOTS = 2
+
 function ItemProvider.SearchByName(query, limit)
   limit = limit or 10
   local results = {}
@@ -179,23 +208,16 @@ function ItemProvider.SearchByName(query, limit)
     return results
   end
   local seen = {}
-  local exact, prefix, partial = {}, {}, {}
+  local buckets = { [0] = {}, [1] = {}, [2] = {}, [3] = {} }
   local function consider(itemID, name)
     if seen[itemID] or type(name) ~= "string" then
       return
     end
-    local lower = name:lower()
-    local bucket
-    if lower == needle then
-      bucket = exact
-    elseif lower:sub(1, #needle) == needle then
-      bucket = prefix
-    elseif lower:find(needle, 1, true) then
-      bucket = partial
-    end
-    if bucket then
+    local rank = ItemProvider.MatchRank(name, needle)
+    if rank then
       seen[itemID] = true
-      bucket[#bucket + 1] = { itemID = itemID, name = name }
+      local bucket = buckets[rank]
+      bucket[#bucket + 1] = { itemID = itemID, name = name, rank = rank }
     end
   end
   local cache = nameCache()
@@ -218,16 +240,45 @@ function ItemProvider.SearchByName(query, limit)
       consider(itemID, row[1])
     end
   end
-  local function byName(a, b) return a.name < b.name end
-  table.sort(exact, byName)
-  table.sort(prefix, byName)
-  table.sort(partial, byName)
-  for _, bucket in ipairs({ exact, prefix, partial }) do
-    for _, hit in ipairs(bucket) do
-      if #results >= limit then
-        return results
+  for _, source in ipairs(ItemProvider.nameSources) do
+    local ok, names = pcall(source)
+    if ok and type(names) == "table" then
+      for itemID, name in pairs(names) do
+        consider(itemID, name)
       end
+    end
+  end
+  local function byName(a, b) return a.name < b.name end
+  local ordered, later = {}, {}
+  for rank = 0, 3 do
+    table.sort(buckets[rank], byName)
+    for _, hit in ipairs(buckets[rank]) do
+      ordered[#ordered + 1] = hit
+      if rank >= 2 then later[#later + 1] = hit end
+    end
+  end
+  if #ordered <= limit then
+    return ordered
+  end
+  -- Keep room for word-start and substring matches the earlier groups would push out.
+  local reserve = 0
+  local firstLater = 0
+  for index, hit in ipairs(ordered) do
+    if hit.rank >= 2 then firstLater = index break end
+  end
+  if firstLater > 0 and firstLater > limit - ItemProvider.RESERVED_SLOTS then
+    reserve = math.min(ItemProvider.RESERVED_SLOTS, #later)
+  end
+  for index = 1, limit - reserve do
+    results[#results + 1] = ordered[index]
+  end
+  local included = {}
+  for _, hit in ipairs(results) do included[hit.itemID] = true end
+  for _, hit in ipairs(later) do
+    if #results >= limit then break end
+    if not included[hit.itemID] then
       results[#results + 1] = hit
+      included[hit.itemID] = true
     end
   end
   return results

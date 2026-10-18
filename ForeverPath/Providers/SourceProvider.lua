@@ -110,6 +110,35 @@ function SourceProvider.IndexDungeonJournal()
   return added
 end
 
+-- Every item name the journal carries (boss and trash loot, shared loot,
+-- quest rewards), for name search; built once per session.
+function SourceProvider.JournalNames()
+  if SourceProvider.journalNames then return SourceProvider.journalNames end
+  local names = {}
+  local fdj = SourceProvider.HasDungeonJournal() and _G[SourceProvider.JOURNAL_GLOBAL] or nil
+  local function take(entry)
+    if type(entry) == "table" and tonumber(entry[1]) and type(entry[2]) == "string" and entry[2] ~= "" then
+      names[tonumber(entry[1])] = entry[2]
+    end
+  end
+  for dungeonName, dungeon in pairs(fdj and fdj.DB or {}) do
+    if type(dungeonName) == "string" and type(dungeon) == "table" then
+      for _, boss in ipairs(type(dungeon.bosses) == "table" and dungeon.bosses or {}) do
+        for _, entry in ipairs(type(boss) == "table" and type(boss.loot) == "table" and boss.loot or {}) do take(entry) end
+      end
+      local shared = type(fdj.SHARED_BY_BOSS) == "table" and fdj.SHARED_BY_BOSS[dungeonName] or nil
+      for _, list in pairs(type(shared) == "table" and shared or {}) do
+        for _, entry in ipairs(type(list) == "table" and list or {}) do take(entry) end
+      end
+      for _, quest in ipairs(type(dungeon.quests) == "table" and dungeon.quests or {}) do
+        for _, reward in ipairs(type(quest) == "table" and type(quest.rewardItems) == "table" and quest.rewardItems or {}) do take(reward) end
+      end
+    end
+  end
+  SourceProvider.journalNames = names
+  return names
+end
+
 -- Indexes the journal once per session, the first time a source is asked for.
 function SourceProvider.BuildJournalIndex()
   local journal = SourceProvider.journal
@@ -430,6 +459,7 @@ function SourceProvider.Status()
 end
 
 function SourceProvider.Init()
+  if ns.ItemProvider and ns.ItemProvider.RegisterNameSource then ns.ItemProvider.RegisterNameSource(SourceProvider.JournalNames) end
   Events.On("FP_SOURCES_UPDATED", function()
     if ns.UI and ns.UI.MainFrame then ns.UI.MainFrame.RequestRefresh() end
   end)

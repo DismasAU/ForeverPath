@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.16.2 (2026-10-18) - item search finds names anywhere
+
+Typing "Storm" only ever showed "Storm..." items: the search already
+matched anywhere in a name, but names starting with the text filled the
+short suggestion list first, and the only names it knew were the
+catalogue's (items recipes make or need) and items already seen.
+
+### Changed
+- `ItemProvider.SearchByName` ranks exact, then starts-with, then a word
+  starting with the text ("Mace of the Storms"), then anywhere inside a
+  word ("Thunderstorm Blade"), and keeps two slots of a cut list for the
+  later groups (`MatchRank`, `RESERVED_SLOTS`). The New Goal popup shows
+  eight suggestions.
+- Item names also come from ForeverDungeonJournal's loot and quest
+  rewards and from GearQuest Forever's loaded item facts
+  (`ItemProvider.RegisterNameSource`; `SourceProvider.JournalNames`,
+  `EquipmentProvider.ItemNames`), so boss drops and leveling gear are
+  found by name before you have ever seen them.
+
 ## 0.16.1 (2026-10-18) - Shift-click links from every item row
 
 ### Added

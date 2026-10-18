@@ -437,7 +437,7 @@ local function Create(parent)
       MainFrame.HideSuggestions()
       return
     end
-    MainFrame.ShowSuggestions(newGoal.input, ns.GoalService.Suggest(kind, text, 6), {
+    MainFrame.ShowSuggestions(newGoal.input, ns.GoalService.Suggest(kind, text, 8), {
       quantity = function() return newGoal.stepper:GetValue() end,
       onAdd = function(ok)
         if not ok then return end

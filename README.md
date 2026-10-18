@@ -46,6 +46,7 @@ is built to take them without a rewrite (see `ARCHITECTURE.md`).
 | 0.15.1 quests that give reputation feed the Quests screen for reputation goals | Implemented, offline-tested, **not yet verified in game** |
 | 0.16.0 type-ahead suggestions for every goal kind (New Goal bar and header search); reputation goals for factions not met yet, from the client's faction table; the New Goal bar reflows when narrow | Implemented, offline-tested, **not yet verified in game** |
 | 0.16.1 Shift-click any item row to link it in chat or the Auction House search | Implemented, offline-tested, **not yet verified in game** |
+| 0.16.2 item name search matches anywhere in a name (word starts ranked above inner matches, room kept for them) and knows ForeverDungeonJournal loot and GearQuest gear names | Implemented, offline-tested, **not yet verified in game** |
 
 `TESTING.md` has the in-game checklist for 0.2.0. `API_COMPATIBILITY.md`
 lists the API evidence and the remaining open questions.
@@ -91,9 +92,12 @@ and says so in the UI.
    **profession skill** to reach ("Tailoring 225"), a **quest** ("Leaders
    of the Fang"), a **reputation** ("Argent Dawn Exalted") and an attunement.
    After two characters a popup suggests matches for the selected kind
-   (items you have seen or that the catalogue names, recipes, enchants,
-   professions, quests, factions including ones you have not met yet,
-   attunements); click one to add it.
+   (items you have seen, that the catalogue names, that drop in a dungeon
+   ForeverDungeonJournal covers or that GearQuest Forever lists; recipes,
+   enchants, professions, quests, factions including ones you have not met
+   yet, attunements); click one to add it. Item matches can be anywhere in
+   the name: "storm" finds "Storm Gauntlets", "Mace of the Storms" and
+   "Thunderstorm Blade", in that order.
 3. **Read the plan.**
    - **Dashboard** shows active goals with progress, the materials missing
      across all of them, and a recommended next step per goal.

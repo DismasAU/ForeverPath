@@ -97,4 +97,55 @@ describe("ItemProvider", function()
     assert_eq(#Items.SearchByName("zzz"), 0)
     assert_eq(#Items.SearchByName("l", 2), 2)
   end)
+
+  it("ranks word-start and inner matches and keeps room for them in a short list", function()
+    assert_eq(Items.MatchRank("Storm Gauntlets", "storm"), 1)
+    assert_eq(Items.MatchRank("Mace of the Storms", "storm"), 2)
+    assert_eq(Items.MatchRank("Hand-Stormer", "storm"), 2)
+    assert_eq(Items.MatchRank("Thunderstorm Blade", "storm"), 3)
+    assert_eq(Items.MatchRank("storm", "storm"), 0)
+    assert_nil(Items.MatchRank("Linen Cloth", "storm"))
+    Items.RememberName(99001, "Mace of the Storms")
+    Items.RememberName(99002, "Thunderstorm Blade")
+    -- The catalogue has many "Storm..." items; a short list still shows the others.
+    local hits = Items.SearchByName("storm", 5)
+    assert_eq(#hits, 5)
+    assert_eq(hits[1].rank, 1)
+    assert_eq(hits[3].rank, 1, "three slots for names starting with it")
+    assert_true(hits[4].rank >= 2, "two slots kept for later groups")
+    assert_true(hits[5].rank >= 2)
+    assert_eq(Items.SearchByName("mace of the storms", 5)[1].rank, 0)
+    hits = Items.SearchByName("storm", 500)
+    local sawMace, sawBlade, lastRank = false, false, 0
+    for _, hit in ipairs(hits) do
+      assert_true(hit.rank >= lastRank, "ordered by rank")
+      lastRank = hit.rank
+      if hit.name == "Mace of the Storms" then sawMace = true end
+      if hit.name == "Thunderstorm Blade" then sawBlade = true end
+    end
+    assert_true(sawMace and sawBlade)
+    -- Nothing is reserved when the earlier groups already fit.
+    hits = Items.SearchByName("mace of the", 3)
+    assert_eq(hits[1].name, "Mace of the Storms")
+  end)
+
+  it("searches names from the dungeon journal and GearQuest facts", function()
+    ns = H.fresh()
+    Mock.InstallDungeonJournal({
+      ["Wailing Caverns"] = {
+        bosses = { { name = "Kresh", npcID = 3653, loot = { { 10411, "Footpads of the Fang", "Feet, Leather", 3 } } } },
+        quests = { { id = 96395, name = "An Ancient Grudge", faction = "Both", rewardItems = { { 279899, "Catacomb Cloak", 3 } } } },
+      },
+    }, { ["Wailing Caverns"] = { Kresh = { { 252512, "Brawler's Leather Helm", "Head, Leather", 3 } } } })
+    Mock.InstallGearQuest({ entries = {}, facts = { [11111] = { name = "Stormwind Guard Leggings", sourceType = "vendor" } } })
+    H.login(ns)
+    Items = ns.ItemProvider
+    assert_eq(Items.SearchByName("footpads of the fang", 5)[1].itemID, 10411)
+    assert_eq(Items.SearchByName("catacomb", 5)[1].itemID, 279899)
+    assert_eq(Items.SearchByName("brawler's leather helm", 5)[1].itemID, 252512)
+    assert_eq(Items.SearchByName("guard legg", 5)[1].itemID, 11111)
+    local names = ns.SourceProvider.JournalNames()
+    assert_eq(names[10411], "Footpads of the Fang")
+    assert_eq(ns.SourceProvider.JournalNames(), names, "built once")
+  end)
 end)
