@@ -59,6 +59,17 @@ client. Behaviour (return values, timing) is only verified where stated.
 | `GameTooltip:SetItemByID` | Widgets | Retail API | Guarded with pcall; falls back to a plain name tooltip |
 | `Enum.CraftingReagentType.Basic` (=1), `Enum.BankType.Character` (=0), `Enum.BagIndex.ReagentBag` (=5) | Compat | `Enum.BagIndex` in dump; the other two from Retail 12.x docs | Fallback constants used when the enum is missing |
 
+## 0.15.0
+
+Enchant goals add one event and rely on the profession schematic for
+enchants:
+
+| Function / event | Used for | Evidence |
+|---|---|---|
+| `UNIT_SPELLCAST_SUCCEEDED` (`unit`, `castGUID`, `spellID`) | counting the player's casts of an enchant towards its goal | Retail 12.x signature; Forever runs that engine. **Unverified in game** that a tradeskill enchant fires it with the enchant's own spell id |
+| `C_TradeSkillUI.GetRecipeSchematic(enchantID)` | recording enchants you know (`recipeType` 3 = `Enum.TradeskillRecipeType.Enchant`, no `outputItemID`) | Retail docs. **Unverified** whether Forever sets `recipeType`; the catalogue's enchant flag is the fallback, so a missing value only matters for enchants the catalogue lacks |
+| `\|Henchant:<spellID>\|h` / `\|Hspell:<spellID>\|h` links from Shift-click | enchant goals from the profession window | The trainer recorder already reads both; `ChatFrameUtil.InsertLink` / `ChatEdit_InsertLink` hook unchanged |
+
 ## 0.14.0
 
 Reputation goals read (behind `pcall`):
@@ -265,7 +276,7 @@ All verified present in the Forever API event list (Atraeau docs, build 70170):
 `ADDON_LOADED`, `PLAYER_LOGIN`, `PLAYER_ENTERING_WORLD`, `PLAYER_REGEN_ENABLED`,
 `BAG_UPDATE_DELAYED`, `BANKFRAME_OPENED`, `BANKFRAME_CLOSED`,
 `PLAYERBANKSLOTS_CHANGED`, `BANK_TABS_CHANGED`, `TRADE_SKILL_LIST_UPDATE`,
-`TRADE_SKILL_SHOW`, `TRADE_SKILL_DATA_SOURCE_CHANGED`, `NEW_RECIPE_LEARNED`, `QUEST_REMOVED`, `QUEST_DATA_LOAD_RESULT`, `PLAYER_EQUIPMENT_CHANGED`, `UNIT_INVENTORY_CHANGED`, `UPDATE_FACTION`,
+`TRADE_SKILL_SHOW`, `TRADE_SKILL_DATA_SOURCE_CHANGED`, `NEW_RECIPE_LEARNED`, `QUEST_REMOVED`, `QUEST_DATA_LOAD_RESULT`, `PLAYER_EQUIPMENT_CHANGED`, `UNIT_INVENTORY_CHANGED`, `UPDATE_FACTION`, `UNIT_SPELLCAST_SUCCEEDED`,
 `ITEM_DATA_LOAD_RESULT`, `GET_ITEM_INFO_RECEIVED`.
 
 Not used because they do not exist on this client: `TRADE_SKILL_UPDATE`,

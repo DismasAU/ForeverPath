@@ -377,6 +377,8 @@ local function Create(parent)
           row.meta:SetText(view.quest.label or "")
         elseif view.reputation then
           row.meta:SetText(view.reputation.record.standingLabel or "")
+        elseif view.enchant then
+          row.meta:SetText(string.format("%d of %d cast%s", view.enchant.casts, view.enchant.quantity, view.enchant.quantity == 1 and "" or "s"))
         elseif view.learn then
           row.meta:SetText(view.learn.kind == "plans" and "Plans" or (view.learn.kind == "trainer" and "Trainer" or "Combine"))
         elseif view.plan.obtain then

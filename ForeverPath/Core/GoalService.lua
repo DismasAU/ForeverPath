@@ -206,14 +206,23 @@ function GoalService.AddRecipeGoal(spellID)
   return goal, string.format("Added goal: %s", GoalService.Title(goal)), true
 end
 
--- Learn-recipe goal from free text: a spell id, or a recipe name searched
--- in the catalogue (exact name first). Returns ok, message, goal.
+-- Spell id from an enchant or spell link (Shift-click in a profession
+-- window or the spellbook), or "enchant:1234" / "spell:1234" text.
+function GoalService.SpellIDFromText(text)
+  if type(text) ~= "string" then return nil end
+  local id = text:match("|Henchant:(%d+)") or text:match("|Hspell:(%d+)")
+    or text:match("^%s*[Ee][Nn][Cc][Hh][Aa][Nn][Tt]:(%d+)%s*$") or text:match("^%s*[Ss][Pp][Ee][Ll][Ll]:(%d+)%s*$")
+  return id and tonumber(id) or nil
+end
+
+-- Learn-recipe goal from free text: a spell id or link, or a recipe name
+-- searched in the catalogue (exact name first). Returns ok, message, goal.
 function GoalService.AddRecipeFromInput(text)
   text = Util.Trim(text or "")
   if text == "" then
     return false, "Type a recipe name (or its spell id)."
   end
-  local spellID = Util.ParseInt(text)
+  local spellID = GoalService.SpellIDFromText(text) or Util.ParseInt(text)
   local note = ""
   if not spellID then
     local catalogue = ns.Data and ns.Data.Recipes
@@ -229,6 +238,85 @@ function GoalService.AddRecipeFromInput(text)
     end
   end
   local goal, message = GoalService.AddRecipeGoal(spellID)
+  if not goal then
+    return false, message
+  end
+  return true, message .. note, goal
+end
+
+---------------------------------------------------------------------------
+-- Enchant goals
+---------------------------------------------------------------------------
+function GoalService.FindEnchantGoal(spellID)
+  local store = GoalService.Store()
+  if not store then return nil end
+  for _, goal in ipairs(store:List()) do
+    if goal.type == "APPLY_ENCHANT" and goal.target and goal.target.spellID == spellID then
+      return goal
+    end
+  end
+  return nil
+end
+
+-- Creates (or updates) an enchant goal: cast the enchant `quantity` times.
+-- Returns goal, message, isNew.
+function GoalService.AddEnchantGoal(spellID, quantity)
+  local store = GoalService.Store()
+  if not store then
+    return nil, "ForeverPath is still loading."
+  end
+  local recipe = recipeByID(spellID)
+  if not recipe then
+    return nil, string.format("No enchant with spell id %s is known (catalogue or recorded professions).", tostring(spellID))
+  end
+  if not recipe.enchant then
+    return nil, string.format("%s makes an item: add it as a crafting goal (Shift-click the item, or /fp add).", recipe.name or "That recipe")
+  end
+  quantity = Util.IsPositiveInt(quantity) and quantity or 1
+  local existing = GoalService.FindEnchantGoal(spellID)
+  if existing then
+    store:SetQuantity(existing.id, quantity)
+    if not GoalModel.IsOpen(existing) then
+      store:SetStatus(existing.id, GoalModel.Statuses.ACTIVE)
+    end
+    store:Select(existing.id)
+    return existing, string.format("Updated goal: %s", GoalService.Title(existing)), false
+  end
+  local goal, err = store:Create("APPLY_ENCHANT", {
+    spellID = spellID, name = recipe.name, professionName = recipe.professionName, professionID = recipe.professionID, icon = recipe.icon,
+    quantity = quantity, casts = 0,
+  })
+  if not goal then
+    return nil, err
+  end
+  store:Select(goal.id)
+  if recipe.teachItemID then ItemProvider.Prefetch(recipe.teachItemID) end
+  return goal, string.format("Added goal: %s", GoalService.Title(goal)), true
+end
+
+-- Enchant goal from free text: an enchant or spell link, a spell id, or an
+-- enchant name searched in the catalogue. Returns ok, message, goal.
+function GoalService.AddEnchantFromInput(text, quantity)
+  text = Util.Trim(text or "")
+  if text == "" then
+    return false, "Type an enchant name (Enchant Weapon - Crusader), or Shift-click it in your Enchanting window."
+  end
+  local spellID = GoalService.SpellIDFromText(text) or Util.ParseInt(text)
+  local note = ""
+  if not spellID then
+    local catalogue = ns.Data and ns.Data.Recipes
+    local hits = catalogue and catalogue.Search and catalogue.Search(text, 5, nil, "enchant") or {}
+    if #hits == 0 then
+      return false, string.format("No enchant called \"%s\" is in the catalogue.", text)
+    end
+    spellID = hits[1].spellID
+    if #hits > 1 then
+      local others = {}
+      for i = 2, #hits do others[#others + 1] = hits[i].name end
+      note = string.format(" (using %s; also matched: %s)", hits[1].name, Util.Join(others))
+    end
+  end
+  local goal, message = GoalService.AddEnchantGoal(spellID, quantity)
   if not goal then
     return false, message
   end
@@ -513,8 +601,27 @@ function GoalService.AddObtainGoal(itemID, quantity)
 end
 
 -- Resolves free text (item ID, link or name) and adds an item goal (type
--- picked by TypeForItem unless given). Returns ok, message, goal.
+-- picked by TypeForItem unless given). An enchant or spell link becomes an
+-- enchant goal, or a crafting goal for the item the recipe makes.
+-- Returns ok, message, goal.
 function GoalService.AddFromInput(text, quantity, goalType)
+  local spellID = GoalService.SpellIDFromText(text)
+  if spellID then
+    local recipe = recipeByID(spellID)
+    if not recipe then
+      return false, string.format("No recipe with spell id %d is in the catalogue or your recorded professions.", spellID)
+    end
+    if recipe.enchant then
+      local goal, message = GoalService.AddEnchantGoal(spellID, quantity)
+      if not goal then
+        return false, message
+      end
+      return true, message, goal
+    end
+    if recipe.outputItemID then
+      return GoalService.AddFromInput(tostring(recipe.outputItemID), quantity, goalType)
+    end
+  end
   local parsed = ItemProvider.ParseInput(text)
   if not parsed then
     return false, "Enter an item ID, Shift-click an item link, or type an item name."

@@ -247,8 +247,35 @@ The ledger draws bags, then bank, then alts, and only touches alts when
 (targets `{ attuneID, name, icon }`), LEARN_RECIPE (`{ spellID, name,
 professionName, professionID, icon }`), REACH_SKILL (`{ professionID,
 professionName, rank, startRank, icon }`), COMPLETE_QUEST (`{ questID,
-name, level, instance, icon }`) and REACH_REPUTATION (`{ factionID, name,
-standing, startValue, icon }`), all supported. `target` is type specific.
+name, level, instance, icon }`), REACH_REPUTATION (`{ factionID, name,
+standing, startValue, icon }`) and APPLY_ENCHANT (`{ spellID, name,
+professionName, professionID, icon, quantity, casts }`), all supported.
+`target` is type specific.
+
+**Enchant planning.** The catalogue keeps enchants (and tinkers) as recipes
+with no output item: `Recipes.Get` returns `enchant = true`, `outputItemID
+= nil`, `quantityMin = 1`, `recipeType = 3`; `Recipes.Index` / `Lookup`
+skip them, `Recipes.IsEnchant(spellID)` and `Search(text, limit,
+profession, kind)` find them. `RecipeModel.FromSchematic` accepts a
+schematic without an item when `recipeType` is 3 or `opts.isEnchant`
+(the catalogue) says so, so profession scans record known enchants
+(`ProfessionProvider` never indexes them by item). `Planner.EvaluateEnchant`
+resolves `Resolve({ recipe = <enchant>, quantity = casts left, learned })`:
+the root (`enchant:<spellID>`, `node.enchant = { recipe, learned }`,
+`node.name` / `node.icon`, never claims) gets `craft` with `enchant = true`
+and one cast per unit, and `expand` adds the formula child (`learn`), a
+train step while unlearned, and the reagents. The flat plan is
+`CraftingEngine.BuildPlan` over the reagents with `plan.enchant`,
+`plan.castsDone`, `plan.stepsMissing`, and `isComplete` only when the
+formula or training is also resolved. The view carries `enchant = {
+recipe, learned, knownBy, profession, need, have, skillOK, blocked, kind,
+teachItemID, trainer, casts, quantity, remaining }` and `nextStep`.
+`GoalCompletion.RecordCast(spellID)` (from `UNIT_SPELLCAST_SUCCEEDED` for
+the player) increments `target.casts` on every open enchant goal for the
+spell and completes the goal at `quantity`; reopening resets the count.
+Skill-plan craft nodes (`forSkill`) and enchant roots have no `itemID`:
+they carry `name` / `icon`, `Summarize` lists crafts with `name` and
+`enchant`, and screens use `displayOf` / `labelOf` fallbacks.
 
 **Reputation planning.** `Providers/ReputationProvider.lua` normalises
 `C_Reputation.GetFactionDataByIndex` / `GetFactionDataByID` (or the legacy
@@ -393,7 +420,11 @@ goals on load and reports the count.
   a branch in `Planner.Evaluate` (or a per-type planner table). Screens are
   declared in `MainFrame.Nav`; `MainFrame.OpenGoal` maps a goal type to
   the screen that plans it (attunements, quests, reputations), everything
-  else opens on Crafting.
+  else (items, recipes, skills, enchants) opens on Crafting.
+- **Links**: `MainFrame.InstallLinkHook` accepts item, enchant and spell
+  links; `GoalService.SpellIDFromText` reads the spell id and
+  `AddFromInput` routes an enchant to `AddEnchantGoal` and an item recipe
+  to the item it makes.
 - **Recipe catalogue**: `Data/RecipeCatalogue.lua` is generated from the
   client's own tables (`tools/DbExtract`, see its README) and decoded by
   `Data/Recipes.lua`. `Planner.Candidates` merges recorded recipes with the

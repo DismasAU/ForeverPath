@@ -14,6 +14,7 @@ local _, ns = ...
 local Events = ns.Events
 local Log = ns.Log
 local GoalModel = ns.GoalModel
+local Util = ns.Util
 
 local GoalCompletion = { lastStatus = {} }
 ns.GoalCompletion = GoalCompletion
@@ -123,6 +124,11 @@ function GoalCompletion.Check(reason)
       if level and level >= (goal.target.rank or 0) then
         finish(goal, { skillLevel = level })
       end
+    elseif goal.type == "APPLY_ENCHANT" then
+      local casts = tonumber(goal.target.casts) or 0
+      if casts >= (goal.target.quantity or 1) then
+        finish(goal, { casts = casts })
+      end
     elseif itemGoal(goal) then
       if goal.target.baseline == nil and goal.type ~= "OBTAIN_ITEM" then
         GoalCompletion.Baseline(goal)
@@ -138,6 +144,27 @@ function GoalCompletion.Check(reason)
     Log.Debug("Auto-completed %d goal(s) (%s)", #completed, tostring(reason))
   end
   return completed
+end
+
+-- A successful cast by the player counts towards every open enchant goal
+-- for that spell. Returns how many goals it touched.
+function GoalCompletion.RecordCast(spellID)
+  spellID = tonumber(spellID)
+  if not spellID or not ns.GoalService or not ns.GoalService.Store() then return 0 end
+  local touched = 0
+  for _, goal in ipairs(ns.GoalService.List({ open = true })) do
+    if goal.type == "APPLY_ENCHANT" and goal.target and goal.target.spellID == spellID then
+      goal.target.casts = (tonumber(goal.target.casts) or 0) + 1
+      goal.updatedAt = Util.Now()
+      touched = touched + 1
+      Events.Fire("FP_GOALS_CHANGED", "updated", goal)
+    end
+  end
+  if touched > 0 then
+    GoalCompletion.Check("cast")
+    if ns.UI and ns.UI.MainFrame then ns.UI.MainFrame.RequestRefresh() end
+  end
+  return touched
 end
 
 -- Toast + sound + chat line. info = Progress() result (optional).
@@ -157,10 +184,12 @@ function GoalCompletion.Celebrate(goal, info)
     detail = "Quest done: " .. name
   elseif goal.type == "REACH_REPUTATION" then
     detail = name .. " reached"
+  elseif goal.type == "APPLY_ENCHANT" then
+    detail = string.format("Cast %dx %s", quantity, name)
   else
     detail = string.format("%s %dx %s", verb, quantity, name)
   end
-  local TITLES = { COMPLETE_ATTUNEMENT = "Attunement complete", LEARN_RECIPE = "Recipe learned", REACH_SKILL = "Skill reached", COMPLETE_QUEST = "Quest complete", REACH_REPUTATION = "Reputation reached" }
+  local TITLES = { COMPLETE_ATTUNEMENT = "Attunement complete", LEARN_RECIPE = "Recipe learned", REACH_SKILL = "Skill reached", COMPLETE_QUEST = "Quest complete", REACH_REPUTATION = "Reputation reached", APPLY_ENCHANT = "Enchant applied" }
   Log.Print("Goal complete: %s. %d goal%s done.", detail, doneCount, doneCount == 1 and "" or "s")
   if setting("completeSound", true) and type(PlaySound) == "function" then
     local kit = (type(SOUNDKIT) == "table" and SOUNDKIT.LEVELUP) or GoalCompletion.SOUND
@@ -191,6 +220,12 @@ function GoalCompletion.Init()
         -- Reopened: start counting again from what is in the bags now.
         GoalCompletion.Baseline(goal, true)
       end
+    elseif event == "updated" and goal.type == "APPLY_ENCHANT" then
+      local last = GoalCompletion.lastStatus[goal.id]
+      if last == GoalModel.Statuses.COMPLETED and GoalModel.IsOpen(goal) then
+        -- Reopened: the casts start over.
+        goal.target.casts = 0
+      end
     end
     GoalCompletion.lastStatus[goal.id] = goal.status
   end)
@@ -211,6 +246,12 @@ function GoalCompletion.Init()
     Events.Debounce("reputation-goal-check", 1, function()
       GoalCompletion.Check("reputation")
     end)
+  end)
+  -- Enchant goals count the player's own successful casts of the spell.
+  Events.RegisterWoW("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
+    if unit == "player" then
+      GoalCompletion.RecordCast(spellID)
+    end
   end)
   -- Attunement steps and quest goals move on quests and levels.
   for _, event in ipairs({ "QUEST_TURNED_IN", "QUEST_LOG_UPDATE", "PLAYER_LEVEL_UP", "QUEST_ACCEPTED" }) do

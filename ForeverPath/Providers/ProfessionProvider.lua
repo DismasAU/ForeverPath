@@ -105,6 +105,7 @@ function ProfessionProvider.GetRecipe(recipeID, refresh)
       local fresh = RecipeModel.FromSchematic(schematic, nil, {
         basicReagentType = Compat.reagentTypeBasic,
         now = cached and cached.scannedAt or nil,
+        isEnchant = ns.Data and ns.Data.Recipes and ns.Data.Recipes.IsEnchant or nil,
       })
       if fresh and #fresh.reagents > 0 then
         fresh = RecipeModel.Merge(cached, fresh)
@@ -232,24 +233,30 @@ function ProfessionProvider.ProcessScanChunk(token)
       professionName = state.name,
       basicReagentType = Compat.reagentTypeBasic,
       now = now,
+      isEnchant = ns.Data and ns.Data.Recipes and ns.Data.Recipes.IsEnchant or nil,
     })
-    -- An item recipe without reagents means the schematic was not fully loaded;
+    -- A recipe without reagents means the schematic was not fully loaded;
     -- keep whatever we had rather than storing an empty reagent list.
     if recipe and #recipe.reagents > 0 then
       ns.db.recipes[recipeID] = RecipeModel.Merge(ns.db.recipes[recipeID], recipe)
-      local index = ns.db.itemRecipes[recipe.outputItemID]
-      if not index then
-        index = {}
-        ns.db.itemRecipes[recipe.outputItemID] = index
+      -- Enchants make no item: they are found by spell id, never by output.
+      if recipe.outputItemID then
+        local index = ns.db.itemRecipes[recipe.outputItemID]
+        if not index then
+          index = {}
+          ns.db.itemRecipes[recipe.outputItemID] = index
+        end
+        index[recipeID] = true
+        ns.ItemProvider.Prefetch(recipe.outputItemID)
+      else
+        state.enchants = (state.enchants or 0) + 1
       end
-      index[recipeID] = true
       local learned = (type(recipeInfo) == "table" and recipeInfo.learned) and true or false
       ns.chardb.knownRecipes[recipeID] = learned
       state.count = state.count + 1
       if learned then
         state.learned = state.learned + 1
       end
-      ns.ItemProvider.Prefetch(recipe.outputItemID)
     else
       state.skipped = state.skipped + 1
     end
@@ -268,7 +275,7 @@ function ProfessionProvider.FinishScan(state)
   end
   ProfessionProvider.scan = nil
   if state.count == 0 then
-    Log.Debug("Scan of %s produced no item recipes (%d skipped)", state.name, state.skipped)
+    Log.Debug("Scan of %s produced no recipes (%d skipped)", state.name, state.skipped)
     return
   end
   ns.chardb.professions[state.professionID] = {
@@ -282,9 +289,10 @@ function ProfessionProvider.FinishScan(state)
   }
   if not ProfessionProvider.announced[state.professionID] then
     ProfessionProvider.announced[state.professionID] = true
-    Log.Print("Recorded %s: %d item recipes (%d learned).", state.name, state.count, state.learned)
+    Log.Print("Recorded %s: %d recipes%s (%d learned).", state.name, state.count,
+      (state.enchants or 0) > 0 and string.format(" (%d enchants)", state.enchants) or "", state.learned)
   else
-    Log.Debug("Rescanned %s: %d item recipes (%d learned, %d skipped)", state.name, state.count, state.learned, state.skipped)
+    Log.Debug("Rescanned %s: %d recipes (%d learned, %d skipped)", state.name, state.count, state.learned, state.skipped)
   end
   Events.Fire("FP_RECIPES_UPDATED", state.professionID)
   if ProfessionProvider.scanQueue then

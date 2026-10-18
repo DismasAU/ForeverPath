@@ -732,10 +732,16 @@ function MainFrame.HideSuggestions()
   end
 end
 
--- Shift-click support: links go into whichever ForeverPath input has focus,
--- or the header search when no chat box is active.
+-- Shift-click support: item links, and enchant or spell links from a
+-- profession window, go into whichever ForeverPath input has focus, or the
+-- header search when no chat box is active.
 local function onInsertLink(link)
-  if type(link) ~= "string" or not MainFrame.IsShown() or not link:find("|Hitem:", 1, true) then
+  if type(link) ~= "string" or not MainFrame.IsShown() then
+    return
+  end
+  local isItem = link:find("|Hitem:", 1, true) ~= nil
+  local isSpell = link:find("|Henchant:", 1, true) ~= nil or link:find("|Hspell:", 1, true) ~= nil
+  if not isItem and not isSpell then
     return
   end
   local focus = type(GetCurrentKeyBoardFocus) == "function" and GetCurrentKeyBoardFocus() or nil
@@ -750,7 +756,7 @@ local function onInsertLink(link)
     target = MainFrame.frame.search
   end
   target:SetText(link)
-  MainFrame.SetStatus("Item link received. Press Enter or Add goal.", "info")
+  MainFrame.SetStatus(isItem and "Item link received. Press Enter or Add goal." or "Recipe link received. Press Enter or Add goal.", "info")
 end
 
 function MainFrame.InstallLinkHook()

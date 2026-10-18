@@ -133,6 +133,8 @@ end
 
 -- A profession recipe in RecipeModel shape, plus:
 --   skill = { min, yellow, green, grey }, teachItems, teachItemID, acquire
+-- An enchant (a spell that enchants an item instead of making one) has
+-- enchant = true, no outputItemID and a yield of one cast.
 function Recipes.Get(spellID)
   local cached = Recipes.decoded[spellID]
   if cached then return cached end
@@ -140,14 +142,16 @@ function Recipes.Get(spellID)
   local row = c and c.recipes[spellID]
   if not row then return nil end
   local yellow, grey = row[6] or 0, row[7] or 0
+  local enchant = (row[3] or 0) == 0
   local recipe = {
     recipeID = spellID,
     name = row[1],
     icon = row[8] ~= 0 and row[8] or nil,
-    outputItemID = row[3],
-    quantityMin = row[4],
-    quantityMax = row[4],
-    recipeType = 1,
+    outputItemID = (not enchant) and row[3] or nil,
+    enchant = enchant or nil,
+    quantityMin = enchant and 1 or row[4],
+    quantityMax = enchant and 1 or row[4],
+    recipeType = enchant and 3 or 1,
     professionID = row[2],
     professionName = Recipes.ProfessionName(row[2]),
     reagents = flatReagents(row[11]),
@@ -242,9 +246,11 @@ function Recipes.Index()
   local c = catalogue()
   if c then
     for spellID, row in pairs(c.recipes) do
-      local list = index[row[3]]
-      if not list then list = {} index[row[3]] = list end
-      list[#list + 1] = { kind = "recipe", id = spellID }
+      if (row[3] or 0) ~= 0 then
+        local list = index[row[3]]
+        if not list then list = {} index[row[3]] = list end
+        list[#list + 1] = { kind = "recipe", id = spellID }
+      end
     end
     for spellID, row in pairs(c.combines or {}) do
       local list = index[row[2]]
@@ -277,6 +283,18 @@ end
 
 function Recipes.IsCraftable(itemID)
   return Recipes.Index()[itemID] ~= nil
+end
+
+-- True when the catalogue knows spellID as an enchant (no item output).
+function Recipes.IsEnchant(spellID)
+  local c = catalogue()
+  local row = c and c.recipes[spellID]
+  return row ~= nil and (row[3] or 0) == 0
+end
+
+function Recipes.EnchantCount()
+  local c = catalogue()
+  return c and c.counts and c.counts.enchants or 0
 end
 
 -- Every catalogue recipe (spell ids, ascending) of a profession skill line.
@@ -321,9 +339,10 @@ function Recipes.FindProfession(text)
   return nil
 end
 
--- Recipes whose name contains text: { { spellID, name, professionName, professionID } },
+-- Recipes whose name contains text: { { spellID, name, professionName, professionID, enchant } },
 -- exact matches first, then prefix matches, then the rest, each by name.
-function Recipes.Search(text, limit, professionName)
+-- kind = "enchant" keeps only enchants, "item" only item recipes.
+function Recipes.Search(text, limit, professionName, kind)
   local c = catalogue()
   if not c or type(text) ~= "string" then return {} end
   local needle = string.lower(text:gsub("^%s+", ""):gsub("%s+$", ""))
@@ -334,9 +353,11 @@ function Recipes.Search(text, limit, professionName)
     local name = row[1] or ""
     local lower = string.lower(name)
     local position = lower:find(needle, 1, true)
-    if position and (not wantedProfession or row[2] == wantedProfession) then
+    local enchant = (row[3] or 0) == 0
+    local kindOK = kind == nil or (kind == "enchant" and enchant) or (kind == "item" and not enchant)
+    if position and kindOK and (not wantedProfession or row[2] == wantedProfession) then
       local rank = lower == needle and 0 or (position == 1 and 1 or 2)
-      hits[#hits + 1] = { spellID = spellID, name = name, professionID = row[2], professionName = Recipes.ProfessionName(row[2]), rank = rank }
+      hits[#hits + 1] = { spellID = spellID, name = name, professionID = row[2], professionName = Recipes.ProfessionName(row[2]), rank = rank, enchant = enchant or nil }
     end
   end
   table.sort(hits, function(a, b)
@@ -385,8 +406,8 @@ function Recipes.Status()
   if not info or Recipes.Count() == 0 then
     return "Recipe catalogue missing: run scripts\\extract_db.ps1 to generate it from the client."
   end
-  return string.format("Recipe catalogue: %d recipes, %d combines, %d items (client build %s, generated %s).",
-    info.counts.recipes or 0, info.counts.combines or 0, info.counts.items or 0, tostring(info.build), tostring(info.generated))
+  return string.format("Recipe catalogue: %d recipes (%d enchants), %d combines, %d items (client build %s, generated %s).",
+    info.counts.recipes or 0, info.counts.enchants or 0, info.counts.combines or 0, info.counts.items or 0, tostring(info.build), tostring(info.generated))
 end
 
 -- Chat lines describing how itemID is made. nameOf(itemID) -> display name.

@@ -28,6 +28,7 @@ return {
   "quest_goals_spec",
   "equipment_spec",
   "reputation_spec",
+  "enchant_goals_spec",
   "bootstrap_spec",
   "ui_spec",
 }

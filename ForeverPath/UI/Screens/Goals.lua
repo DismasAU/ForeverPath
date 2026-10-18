@@ -34,6 +34,7 @@ local function createNewGoalBar(screen)
   local PLACEHOLDERS = {
     item = "Shift-click an item link, or type an item ID or name",
     recipe = "Type a recipe name (Bolt of Woolen Cloth, Sulfuron Hammer...)",
+    enchant = "Shift-click an enchant in your Enchanting window, or type its name (Enchant Weapon - Crusader)",
     skill = "Type a profession and the skill to reach (Tailoring 225)",
     quest = "Type a quest name (dungeon and attunement quests, or your log)",
     reputation = "Type a faction and the standing to reach (Argent Dawn Exalted)",
@@ -42,6 +43,7 @@ local function createNewGoalBar(screen)
   local segment = Widgets.Segment(body, {
     { key = "item", label = "Item" },
     { key = "recipe", label = "Recipe" },
+    { key = "enchant", label = "Enchant" },
     { key = "skill", label = "Skill" },
     { key = "quest", label = "Quest" },
     { key = "reputation", label = "Reputation" },
@@ -50,7 +52,7 @@ local function createNewGoalBar(screen)
     if input and input.placeholder then
       input.placeholder:SetText(PLACEHOLDERS[key] or PLACEHOLDERS.item)
     end
-    if stepper.SetEnabledState then stepper:SetEnabledState(key == "item") end
+    if stepper.SetEnabledState then stepper:SetEnabledState(key == "item" or key == "enchant") end
   end)
   segment:SetPoint("RIGHT", stepper, "LEFT", -10, 0)
   input = Widgets.SearchField(body, {
@@ -151,7 +153,7 @@ local function createSettings(screen)
     if not panel.goalID then return end
     if panel.goal and panel.goal.type == "REACH_SKILL" then
       ns.GoalService.SetRank(panel.goalID, value)
-    elseif panel.goal and GoalModel.Types[panel.goal.type] and GoalModel.Types[panel.goal.type].targetKind == "item" then
+    elseif panel.goal and GoalModel.Types[panel.goal.type] and (GoalModel.Types[panel.goal.type].targetKind == "item" or panel.goal.type == "APPLY_ENCHANT") then
       ns.GoalService.SetQuantity(panel.goalID, value)
     end
   end)
@@ -285,9 +287,9 @@ local function createSettings(screen)
       stepper:SetValue(goal.target.rank or 1)
       stepper:SetEnabledState(true)
     else
-      quantityLabel:SetText(Theme.Upper("Quantity"))
+      quantityLabel:SetText(Theme.Upper(goal.type == "APPLY_ENCHANT" and "Casts" or "Quantity"))
       stepper:SetValue(goal.target.quantity or 1)
-      stepper:SetEnabledState(kind == "item")
+      stepper:SetEnabledState(kind == "item" or goal.type == "APPLY_ENCHANT")
     end
     priority:SetLabel(string.format("%d%s", goal.priority or 1, (goal.priority or 1) == 1 and " - Highest" or ""))
     local isOpen = GoalModel.IsOpen(goal)
@@ -401,6 +403,8 @@ local function Create(parent)
       ok, message = ns.GoalService.AddAttunementFromInput(text)
     elseif kind == "recipe" then
       ok, message = ns.GoalService.AddRecipeFromInput(text)
+    elseif kind == "enchant" then
+      ok, message = ns.GoalService.AddEnchantFromInput(text, newGoal.stepper:GetValue())
     elseif kind == "skill" then
       ok, message = ns.GoalService.AddSkillFromInput(text)
     elseif kind == "quest" then
@@ -479,7 +483,7 @@ local function Create(parent)
         row.itemID = goal.target.itemID
         row.number:SetText(goal.priority and tostring(goal.priority) or "")
         row.icon:SetItem(item.icon, item.quality)
-        local quantity = goal.target.itemID and goal.target.quantity or 1
+        local quantity = (goal.target.itemID or goal.type == "APPLY_ENCHANT") and goal.target.quantity or 1
         row.name:SetText(Theme.QualityText(ns.GoalService.Name(goal), item.quality) .. (quantity > 1 and (Theme.Hex.text2 .. " x" .. quantity .. "|r") or ""))
         row.badge:SetBadge(view and view.obtain and "Item" or GoalModel.Types[goal.type].badge, "text")
         if view and view.attunement then
@@ -493,6 +497,9 @@ local function Create(parent)
         elseif view and view.reputation then
           local p = view.reputation.progress
           row.sub:SetText(p.reached and (p.targetLabel .. " reached") or string.format("%s - %d to %s", view.reputation.record.standingLabel, p.remaining, p.targetLabel))
+        elseif view and view.enchant then
+          local e = view.enchant
+          row.sub:SetText(e.remaining <= 0 and "All casts done" or string.format("%d of %d cast%s - %s", e.casts, e.quantity, e.quantity == 1 and "" or "s", view.nextStep or ""))
         elseif view and view.learn then
           row.sub:SetText(view.learn.learned and "Learned" or ((view.learn.recipe.professionName or "") .. (view.nextStep and (" - " .. view.nextStep) or "")))
         elseif view and view.plan then

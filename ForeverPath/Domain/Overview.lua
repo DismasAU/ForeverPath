@@ -71,7 +71,20 @@ function Overview.Build(entries, opts)
       if #result.nextSteps < (opts.maxSteps or 3) then
         local step
         local learn, skill, quest, reputation = view and view.learn, view and view.skill, view and view.quest, view and view.reputation
-        if reputation then
+        local enchant = view and view.enchant
+        if enchant and enchant.remaining <= 0 then
+          step = { title = string.format("%s cast %d time%s", goalName, enchant.casts, enchant.casts == 1 and "" or "s"), detail = "Mark the goal complete", badge = "Ready", badgeKind = "ok" }
+        elseif enchant and enchant.blocked == "profession" then
+          step = { title = string.format("Learn %s", enchant.recipe.professionName or "the profession"), detail = string.format("Needed before %s can be cast", goalName), badge = "Profession", badgeKind = "partial" }
+        elseif enchant and enchant.blocked == "skill" then
+          step = { title = string.format("Reach %s %d", enchant.recipe.professionName or "skill", enchant.need), detail = string.format("You have %d - needed for %s", enchant.have or 0, goalName), badge = "Skill", badgeKind = "partial" }
+        elseif enchant and plan and plan.isComplete then
+          step = {
+            title = string.format("Cast %d x %s", enchant.remaining, goalName),
+            detail = "All materials are in your bags" .. (enchant.casts > 0 and string.format(" - %d of %d done", enchant.casts, enchant.quantity) or ""),
+            badge = "Ready", badgeKind = "ok",
+          }
+        elseif reputation then
           local p = reputation.progress
           step = {
             title = view.nextStep or goalName,
@@ -102,6 +115,15 @@ function Overview.Build(entries, opts)
           step = { title = string.format("Open your %s window", skill.professionName), detail = string.format("ForeverPath needs your recipe list to plan %s", goalName), badge = "Scan", badgeKind = "partial" }
         elseif skill and view.skillPlan and #view.skillPlan.list == 0 then
           step = { title = string.format("Find a recipe for %s %d+", skill.professionName, skill.current), detail = string.format("Nothing you know gives points - visit a trainer or find a pattern"), badge = "Recipe", badgeKind = "partial" }
+        elseif skill and plan and plan.isComplete and tree and tree.summary and tree.summary.crafts[1] then
+          -- Every reagent of the skill plan is in the bags: name its first craft.
+          local c = tree.summary.crafts[1]
+          step = {
+            title = string.format("%s %d x %s", c.enchant and "Cast" or (c.combine and "Combine" or "Craft"), c.crafts, c.itemID and nameOf(c.itemID) or (c.name or "?")),
+            detail = string.format("%s (skill %d-%d) - all materials are in your bags - for %s", c.professionName or "Profession",
+              c.forSkill and c.forSkill.from or 0, c.forSkill and c.forSkill.to or 0, goalName),
+            badge = "Ready", badgeKind = "ok",
+          }
         elseif plan and plan.isComplete and plan.obtain then
           step = {
             title = string.format("%d x %s on hand", plan.quantityWanted or 0, goalName),
@@ -123,10 +145,10 @@ function Overview.Build(entries, opts)
           end
           if craftStep then
             local who = craftStep.crafter and not craftStep.crafter.isCurrent and (" on " .. craftStep.crafter.name) or ""
-            local verb = craftStep.combine and "Combine" or "Craft"
+            local verb = craftStep.combine and "Combine" or (craftStep.enchant and "Cast" or "Craft")
             local range = craftStep.forSkill and string.format(" (skill %d-%d)", craftStep.forSkill.from or 0, craftStep.forSkill.to or 0) or ""
             step = {
-              title = string.format("%s %d x %s%s", verb, craftStep.forSkill and craftStep.crafts or craftStep.expectedOutput, nameOf(craftStep.itemID), who),
+              title = string.format("%s %d x %s%s", verb, craftStep.forSkill and craftStep.crafts or craftStep.expectedOutput, craftStep.itemID and nameOf(craftStep.itemID) or (craftStep.name or "?"), who),
               detail = string.format("%s%s - for %s", craftStep.professionName or "Profession", range, goalName),
               badge = craftStep.combine and "Combine" or (craftStep.professionName and ("Craft - " .. craftStep.professionName) or "Craft"), badgeKind = "ok",
             }
@@ -210,7 +232,7 @@ end
 function Overview.Percent(view)
   if view and view.attunement then return view.attunement.percent end
   if view and view.skill then return view.skill.percent end
-  if view and (view.quest or view.reputation) then return view.progress and view.progress.percent or 0 end
+  if view and (view.quest or view.reputation or view.enchant) then return view.progress and view.progress.percent or 0 end
   local plan = view and view.plan
   if not plan then return nil end
   if plan.totals.required <= 0 then return 100 end

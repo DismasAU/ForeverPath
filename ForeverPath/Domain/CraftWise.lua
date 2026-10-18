@@ -157,7 +157,7 @@ function CraftWise.Compare(tree, opts)
       elseif row.choice == "alt" or row.choice == "altcraft" then
         result.hybrid.altList[#result.hybrid.altList + 1] = { itemID = node.itemID, count = node.missing, name = node.hint and node.hint.name }
       elseif row.choice == "craft" then
-        result.hybrid.craftList[#result.hybrid.craftList + 1] = { itemID = node.itemID, crafts = node.craft and node.craft.crafts or 0, count = node.missing, professionName = node.craft and node.craft.professionName }
+        result.hybrid.craftList[#result.hybrid.craftList + 1] = { itemID = node.itemID, name = node.name, crafts = node.craft and node.craft.crafts or 0, count = node.missing, professionName = node.craft and node.craft.professionName }
       else
         result.hybrid.buyList[#result.hybrid.buyList + 1] = { itemID = node.itemID, name = node.step and node.step.name or nil, count = node.missing, cost = row.hybrid, choice = row.choice }
       end

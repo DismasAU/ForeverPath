@@ -32,6 +32,8 @@ local function listText(entries, limit)
     end
     if entry.itemID then
       parts[#parts + 1] = string.format("%d %s", entry.count or entry.crafts or 0, nameOf(entry.itemID))
+    elseif entry.crafts then
+      parts[#parts + 1] = string.format("%d %s", entry.crafts, entry.name or "?")
     else
       parts[#parts + 1] = "train " .. (entry.name or "recipe")
     end
@@ -284,6 +286,8 @@ function CraftWiseView.Create(screen)
     local item
     if tree.root.step then
       item = { name = tree.root.step.name, icon = tree.root.step.icon or "Interface\\Icons\\INV_Misc_Note_01", quality = 1 }
+    elseif tree.root.enchant then
+      item = { name = tree.root.name, icon = tree.root.icon or "Interface\\Icons\\INV_Enchant_Disenchant", quality = 1 }
     else
       item = ns.ItemProvider.GetItem(result.itemID)
     end

@@ -38,6 +38,7 @@ for _, event in ipairs({
   "QUEST_TURNED_IN", "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "PLAYER_LEVEL_UP",
   "QUEST_REMOVED", "QUEST_DATA_LOAD_RESULT",
   "PLAYER_EQUIPMENT_CHANGED", "UNIT_INVENTORY_CHANGED", "UPDATE_FACTION",
+  "UNIT_SPELLCAST_SUCCEEDED",
 }) do
   Mock.knownEvents[event] = true
 end
@@ -519,6 +520,11 @@ function Mock.CompleteQuest(questID)
   end
   Mock.FireEvent("QUEST_TURNED_IN", questID)
   Mock.FireEvent("QUEST_LOG_UPDATE")
+end
+
+-- The player finishes casting a spell (an enchant, a tradeskill recipe...).
+function Mock.CastSpell(spellID, unit)
+  Mock.FireEvent("UNIT_SPELLCAST_SUCCEEDED", unit or "player", "Cast-3-1-0-0-0-" .. tostring(spellID), spellID)
 end
 
 function Mock.LoadItem(itemID, success)

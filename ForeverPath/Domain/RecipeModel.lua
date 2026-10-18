@@ -20,9 +20,14 @@ local function isPositiveInt(v)
   return type(v) == "number" and v > 0 and v == math.floor(v)
 end
 
+RecipeModel.RECIPE_TYPE_ENCHANT = 3 -- Enum.TradeskillRecipeType.Enchant
+
 -- Converts a CraftingRecipeSchematic (plus optional TradeSkillRecipeInfo) into
--- the normalized model. Returns nil, reason when the schematic does not describe
--- an item-producing recipe we can plan for.
+-- the normalized model. Returns nil, reason when the schematic describes
+-- neither an item-producing recipe nor an enchant. A recipe without an item
+-- output is an enchant when the schematic says so (recipeType) or when
+-- opts.isEnchant(recipeID) does (the catalogue); it gets enchant = true and
+-- a yield of one cast.
 function RecipeModel.FromSchematic(schematic, recipeInfo, opts)
   opts = opts or {}
   if type(schematic) ~= "table" then
@@ -33,8 +38,15 @@ function RecipeModel.FromSchematic(schematic, recipeInfo, opts)
     return nil, "recipe id missing"
   end
   local outputItemID = schematic.outputItemID
+  local enchant = nil
   if not isPositiveInt(outputItemID) then
-    return nil, "recipe has no item output"
+    local byCatalogue = type(opts.isEnchant) == "function" and opts.isEnchant(recipeID) == true
+    if schematic.recipeType == RecipeModel.RECIPE_TYPE_ENCHANT or byCatalogue then
+      enchant = true
+      outputItemID = nil
+    else
+      return nil, "recipe has no item output"
+    end
   end
 
   local basicType = opts.basicReagentType or 1
@@ -80,11 +92,11 @@ function RecipeModel.FromSchematic(schematic, recipeInfo, opts)
   end
 
   local quantityMin = schematic.quantityMin
-  if not isPositiveInt(quantityMin) then
+  if not isPositiveInt(quantityMin) or enchant then
     quantityMin = 1
   end
   local quantityMax = schematic.quantityMax
-  if not isPositiveInt(quantityMax) or quantityMax < quantityMin then
+  if not isPositiveInt(quantityMax) or quantityMax < quantityMin or enchant then
     quantityMax = quantityMin
   end
 
@@ -93,6 +105,7 @@ function RecipeModel.FromSchematic(schematic, recipeInfo, opts)
     name = schematic.name or (recipeInfo and recipeInfo.name) or ("Recipe " .. recipeID),
     icon = schematic.icon or (recipeInfo and recipeInfo.icon) or nil,
     outputItemID = outputItemID,
+    enchant = enchant,
     quantityMin = quantityMin,
     quantityMax = quantityMax,
     recipeType = schematic.recipeType,
@@ -112,7 +125,11 @@ function RecipeModel.Validate(recipe)
   if not isPositiveInt(recipe.recipeID) then
     return false, "invalid recipeID"
   end
-  if not isPositiveInt(recipe.outputItemID) then
+  if recipe.enchant == true then
+    if recipe.outputItemID ~= nil then
+      return false, "an enchant has no outputItemID"
+    end
+  elseif not isPositiveInt(recipe.outputItemID) then
     return false, "invalid outputItemID"
   end
   if not isPositiveInt(recipe.quantityMin) then
@@ -142,5 +159,6 @@ function RecipeModel.Merge(existing, fresh)
     fresh.name = existing.name or fresh.name
   end
   fresh.icon = fresh.icon or existing.icon
+  fresh.enchant = fresh.enchant or existing.enchant
   return fresh
 end

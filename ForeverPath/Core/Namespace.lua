@@ -3,7 +3,7 @@
 local ADDON_NAME, ns = ...
 
 ns.ADDON_NAME = ADDON_NAME
-ns.VERSION = "0.14.0"          -- replaced by the TOC "Version" field at load when available
+ns.VERSION = "0.15.0"          -- replaced by the TOC "Version" field at load when available
 ns.SCHEMA_VERSION = 2         -- SavedVariables schema version; bump together with a migration
 ns.PREFIX = "|cff4fc3f7ForeverPath|r"
 ns.loaded = false

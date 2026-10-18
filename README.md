@@ -42,6 +42,7 @@ is built to take them without a rewrite (see `ARCHITECTURE.md`).
 | 0.12.0 quest goals and the Quests screen (dungeon quests from ForeverDungeonJournal with their chains, attunement quests from Attune, your quest log; by zone / by goal / completed; objectives, rewards, which goals a quest feeds; auto-complete on turn-in) | Implemented, offline-tested, **not yet verified in game** |
 | 0.13.0 Equipment screen (every slot, item levels and stats from the client, GearQuest Forever's best pick per slot for your class, spec, faction and level, stat comparison, targets as goals; GearQuest's gear sources feed obtain goals) | Implemented, offline-tested, **not yet verified in game** |
 | 0.14.0 reputation goals and the Reputations screen (standings from the client, quests that give reputation from ForeverDungeonJournal, rewards per standing from AtlasLoot Factions, reputation vendors on item goals, auto-complete on the standing) | Implemented, offline-tested, **not yet verified in game** |
+| 0.15.0 enchant goals (enchants and tinkers in the catalogue, Shift-click from the Enchanting window, formula or trainer plus reagents per cast, auto-complete as you cast; Enchanting skill goals plan enchants) | Implemented, offline-tested, **not yet verified in game** |
 
 `TESTING.md` has the in-game checklist for 0.2.0. `API_COMPATIBILITY.md`
 lists the API evidence and the remaining open questions.
@@ -81,7 +82,9 @@ and says so in the UI.
    an item from your bags, or use the New Goal bar on My Goals (quantity,
    Add goal). Name search knows the catalogue's items plus items you have
    looked at; the client has no searchable item database. The New Goal bar
-   also takes a **recipe** to learn ("Bolt of Woolen Cloth"), a
+   also takes a **recipe** to learn ("Bolt of Woolen Cloth"), an
+   **enchant** to cast ("Enchant Weapon - Crusader", or Shift-click it in
+   the Enchanting window; the stepper sets how many casts), a
    **profession skill** to reach ("Tailoring 225"), a **quest** ("Leaders
    of the Fang"), a **reputation** ("Argent Dawn Exalted") and an attunement.
 3. **Read the plan.**
@@ -120,6 +123,7 @@ and says so in the UI.
 | `/fp add <item> [qty]` | Add a goal by item ID or link (crafting when a recipe is known, otherwise obtain) |
 | `/fp obtain <item> [qty]` | Add an obtain-item goal (boss drop, quest reward, vendor stock) even if a recipe exists |
 | `/fp learn <recipe>` | Add a learn-recipe goal by recipe name or spell id: the pattern to get, or the trainer to visit |
+| `/fp enchant <enchant> [casts]` | Add an enchant goal by name, spell id or Shift-clicked link: the formula or trainer, the reagents for every cast; completes as you cast it |
 | `/fp skill <profession> [rank]` | Add a reach-skill goal (default: the next cap): which recipes to craft, how often, and their materials |
 | `/fp quest <name or id>` / `/fp quests` | Add a quest goal (dungeon and attunement quests, or anything in your log); list the quests that feed your goals |
 | `/fp equipment` | Every slot: what is worn, GearQuest Forever's best pick, and the goal that targets it |
@@ -162,7 +166,12 @@ nobody can), adds the plans as something to get, treats combines such as
 Sulfuras as something anyone can do, and keeps soulbound items off the Auction
 House. Details in `tools/DbExtract/README.md`.
 
-Two goal types build on it. A **learn-recipe goal** plans the pattern to
+The catalogue also carries every **enchant** (and Engineering tinker): a
+spell that enchants an item instead of making one, with its reagents, skill
+ranks and formula. Enchants are never "an item's recipe", so they have their
+own goal type (below) and count as recipes for Enchanting skill goals.
+
+Three goal types build on it. A **learn-recipe goal** plans the pattern to
 get (with its sources) or the trainer to visit, says when your skill is too
 low or you lack the profession, and completes itself when you learn the
 recipe. A **reach-skill goal** works out which recipes to craft, how many
@@ -170,7 +179,10 @@ times, from your current skill to the target: learned recipes first, orange
 before yellow before green, cheapest by reagent prices when those are known,
 with unlearned recipes filling in where a trainer visit or a pattern has
 recorded their requirement. Its materials go on the shopping list like any
-other goal, and it completes on the skill-up.
+other goal, and it completes on the skill-up. An **enchant goal** is "cast
+this enchant N times": the formula to get or the trainer to visit while you
+do not know it, the reagents for every cast on the shopping list, and it
+completes as the casts land (each successful cast of the spell counts).
 
 One thing the client's tables do not hold is the skill a trainer requires
 for a recipe, so ForeverPath records it from trainer windows: open any

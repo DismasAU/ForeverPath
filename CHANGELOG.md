@@ -1,5 +1,57 @@
 # Changelog
 
+## 0.15.0 (2026-10-18) - enchant goals
+
+Enchants (and Engineering tinkers) had no way into ForeverPath: the
+catalogue only kept spells that create an item, the recipe model refused a
+recipe without one, and Shift-click only accepted item links.
+
+### Added
+- **Enchants in the recipe catalogue.** `tools/DbExtract` now keeps
+  profession spells whose effect enchants an item (`SpellEffect` 53 / 54)
+  as recipes with item 0: 179 Enchanting enchants and 3 Engineering
+  tinkers on build 1.60.1.70450, each with its reagents, skill ranks and
+  the formula that teaches it. `Data/Recipes.lua` decodes them with
+  `enchant = true`, no `outputItemID` and a yield of one cast
+  (`Recipes.IsEnchant`, `EnchantCount`, `Search(..., kind)`); they are
+  never indexed as an item's recipe. `RecipeModel.FromSchematic` accepts a
+  schematic without an item when the client calls it an enchant
+  (`recipeType` 3) or the catalogue does, so profession scans record the
+  enchants you know; `Validate` allows `enchant` recipes without an item.
+- **Enchant goals** (`/fp enchant <enchant> [casts]`, the Enchant segment
+  on My Goals, or Shift-click an enchant from the Enchanting window into
+  any ForeverPath input). Target `{ spellID, name, professionName,
+  professionID, icon, quantity, casts }`: cast the enchant `quantity`
+  times. `Planner.EvaluateEnchant` lays the enchant out as the root of a
+  tree (`enchant:<spellID>`, never owned or bought) with the formula to
+  get or the trainer to visit while unlearned, and the reagents for every
+  cast still to do; the plan is those reagents, and it is complete only
+  when the formula or training is too. Blockers (no profession, skill too
+  low), the formula's sources, the recorded trainer and alts who know the
+  enchant read as for learn-recipe goals. Reagents land on the shopping
+  list and in CraftWise; the enchant itself never does.
+- **Completion by casting.** `UNIT_SPELLCAST_SUCCEEDED` for the player
+  counts each cast of the spell towards every open enchant goal for it
+  (`GoalCompletion.RecordCast`); the goal completes at the cast count with
+  the "Enchant applied" toast, and reopening it starts the count over.
+- **Enchanting skill goals** plan enchants: reach-skill candidates now
+  include item-less recipes, so "Enchanting 225" picks the enchants you
+  know (or could learn) and lists their reagents. Tree nodes without an
+  item carry `name` and `icon`; every screen, the Overview, CraftWise and
+  `Describe` fall back to them.
+- Shift-click now takes enchant and spell links as well as item links: an
+  enchant becomes an enchant goal, an item recipe a goal for the item it
+  makes (`GoalService.SpellIDFromText`, `AddFromInput`); `/fp learn`
+  accepts the same links.
+
+### Changed
+- `/fp status` and the catalogue line report the enchant count; profession
+  scans report "N recipes (M enchants)".
+- The Dashboard names the first craft of a fully stocked skill plan
+  ("Craft 12 x Bolt of Silk Cloth") instead of the goal.
+- "Visit an Enchanting trainer" (article fixed for professions starting
+  with a vowel).
+
 ## 0.14.0 (2026-10-18) - reputation goals and the Reputations screen
 
 The last of the planned goal types; no preview modules remain.

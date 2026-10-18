@@ -43,13 +43,25 @@ end
 
 local STEP_ICON = "Interface\\Icons\\INV_Misc_Book_09"
 local SKILL_ICON = "Interface\\Icons\\INV_Misc_Note_01"
+local ENCHANT_ICON = "Interface\\Icons\\INV_Enchant_Disenchant"
 
--- Name, icon and quality for a row: an item, or a step such as "train this recipe".
+-- Name, icon and quality for a row: an item, a step such as "train this
+-- recipe", or an enchant (which has no item).
 local function displayOf(node)
   if node.step then
     return { name = node.step.name, icon = node.step.icon or (isSkillRoot(node) and SKILL_ICON or STEP_ICON), quality = 1, loaded = true }
   end
+  if not node.itemID then
+    return { name = node.name, icon = node.icon or ENCHANT_ICON, quality = 1, loaded = true }
+  end
   return ns.ItemProvider.GetItem(node.itemID)
+end
+
+-- Display name of any node (items by id, enchants and steps by name).
+local function labelOf(node)
+  if not node then return "?" end
+  if node.itemID then return nameOf(node.itemID) end
+  return node.name or (node.step and node.step.name) or "?"
 end
 
 local function stepVia(step)
@@ -69,7 +81,9 @@ local function viaText(node)
     return text
   end
   if isCraftRoot(node) then
-    return node.craft and node.craft.professionName and ("Craft - " .. node.craft.professionName) or "Craft"
+    local text = node.craft and node.craft.professionName and ((node.enchant and "Cast - " or "Craft - ") .. node.craft.professionName) or (node.enchant and "Cast" or "Craft")
+    if node.craft and not node.craft.learned then text = text .. " (learn first)" end
+    return text
   end
   if node.missing <= 0 then
     if (node.ownedAlts or 0) > 0 then
@@ -128,7 +142,8 @@ local function noteText(node)
     return node.step.trainer and node.step.trainer.name and "learn from trainer" or "trainer requirement not recorded yet"
   end
   if isCraftRoot(node) then
-    return string.format("%d craft%s", node.craft and node.craft.crafts or 0, node.craft and node.craft.crafts == 1 and "" or "s")
+    local unit = node.enchant and "cast" or "craft"
+    return string.format("%d %s%s", node.craft and node.craft.crafts or 0, unit, node.craft and node.craft.crafts == 1 and "" or "s")
   end
   local parts = {}
   if node.craft and node.missing > 0 then
@@ -202,7 +217,7 @@ local function createRow(content, index, tree)
     if not node or isCraftOnly(node) or node.step then return nil end
     local lines = {
       node.depth == 0 and string.format("Needed: %d (goal target)", node.quantity)
-        or string.format("Needed: %d (%d per craft of %s)", node.quantity, node.perCraft or 0, nameOf(tree.byKey and tree.byKey[node.parentKey] and tree.byKey[node.parentKey].itemID or 0)),
+        or string.format("Needed: %d (%d per craft of %s)", node.quantity, node.perCraft or 0, labelOf(tree.byKey and tree.byKey[node.parentKey] or nil)),
       string.format("Free for this goal: %d (bags %d%s)", node.available or 0, node.availableBags or 0, node.availableBank and (", bank " .. node.availableBank) or ""),
     }
     if (node.reserved or 0) > 0 then lines[#lines + 1] = string.format("Reserved by higher-priority goals: %d", node.reserved) end
@@ -408,9 +423,10 @@ local function createSide(view, tree)
       bar:SetValue(0)
       waysLabel:SetText(Theme.Upper(trainer and trainer.cost and trainer.cost > 0 and ("Training cost: " .. Widgets.Money(trainer.cost, true)) or "Training"))
     elseif isCraftRoot(node) then
-      sub:SetText(string.format("Goal target - %d craft%s", node.craft and node.craft.crafts or 0, node.craft and node.craft.crafts == 1 and "" or "s"))
+      local unit = node.enchant and "cast" or "craft"
+      sub:SetText(string.format("Goal target - %d %s%s", node.craft and node.craft.crafts or 0, unit, node.craft and node.craft.crafts == 1 and "" or "s"))
       count:SetText(string.format("%d|r %s/ %d", 0, Theme.Hex.text3, node.quantity))
-      missing:SetText(string.format("%d to craft", node.quantity))
+      missing:SetText(string.format("%d to %s", node.quantity, unit))
       bar:SetKind("gold")
       bar:SetValue(node.childrenResolved and 1 or 0)
       waysLabel:SetText(Theme.Upper("Reagents"))
@@ -475,9 +491,9 @@ local function createSide(view, tree)
           if child.step then
             card.title:SetText("Train " .. (child.step.name or "the recipe"))
           elseif child.forSkill then
-            card.title:SetText(string.format("%d x %s", child.craft and child.craft.crafts or 0, nameOf(child.itemID)))
+            card.title:SetText(string.format("%d x %s", child.craft and child.craft.crafts or 0, labelOf(child)))
           else
-            card.title:SetText(string.format("%d x %s", child.quantity, nameOf(child.itemID)))
+            card.title:SetText(string.format("%d x %s", child.quantity, labelOf(child)))
           end
           card.detail:SetText(child.forSkill and noteText(child) or viaText(child))
           best = false

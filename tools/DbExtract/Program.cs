@@ -7,7 +7,8 @@
 //
 //   recipes   profession spells that create an item (SkillLineAbility +
 //             SpellEffect CreateItem + SpellReagents), with skill ranks, the
-//             item that teaches the spell (ItemEffect Learn) and the spell icon
+//             item that teaches the spell (ItemEffect Learn) and the spell icon;
+//             enchants (SpellEffect EnchantItem) are recipes with item 0
 //   combines  item-use spells that create an item from other items, such as
 //             Eye of Sulfuras -> Sulfuras or three lesser essences -> greater
 //   items     names and quality for every item the catalogue refers to
@@ -155,6 +156,8 @@ namespace DbExtract
         static readonly HashSet<int> ProfessionCategories = new HashSet<int> { 9, 11 };
         const int EffectCreateItem = 24;
         const int EffectCreateTradeskillItem = 157;
+        const int EffectEnchantItem = 53;            // permanent enchant (Enchanting)
+        const int EffectEnchantItemTemporary = 54;   // temporary enchant (sharpening, oils applied by spell)
         const int TriggerOnUse = 0;
         const int TriggerLearn = 6;
 
@@ -243,6 +246,16 @@ namespace DbExtract
                 list.Add((item, qty));
             }
 
+            // Spells that enchant an item instead of making one (Enchanting).
+            var enchants = new HashSet<int>();
+            foreach (var row in spellEffect.Values)
+            {
+                int effect = I(row["Effect"]);
+                if (effect != EffectEnchantItem && effect != EffectEnchantItemTemporary) continue;
+                if (I(row["DifficultyID"]) != 0) continue;
+                enchants.Add(I(row["SpellID"]));
+            }
+
             var reagents = new Dictionary<int, List<(int item, int count)>>();
             foreach (var row in spellReagents.Values)
             {
@@ -310,11 +323,16 @@ namespace DbExtract
             foreach (var kv in abilityFor)
             {
                 int spell = kv.Key;
-                if (!creates.TryGetValue(spell, out var outputs)) continue;
+                bool isEnchant = false;
+                if (!creates.TryGetValue(spell, out var outputs))
+                {
+                    if (!enchants.Contains(spell)) continue;
+                    isEnchant = true;
+                }
                 if (!spellName.TryGetValue(spell, out var nameRow)) { skipped.noName.Add(spell); continue; }
                 if (!reagents.TryGetValue(spell, out var needs) || needs.Count == 0) { skipped.noReagents.Add(spell); continue; }
-                if (!InClient(outputs[0].item, needs)) { skipped.notInClient.Add(spell); continue; }
-                if (outputs.Count > 1) skipped.extraOutputs.Add(spell);
+                if (isEnchant ? !needs.All(n => clientItems.Contains(n.item)) : !InClient(outputs[0].item, needs)) { skipped.notInClient.Add(spell); continue; }
+                if (!isEnchant && outputs.Count > 1) skipped.extraOutputs.Add(spell);
                 var row = kv.Value;
                 int skillLineId = I(row["SkillLine"]);
                 var recipe = new Recipe
@@ -322,8 +340,8 @@ namespace DbExtract
                     SpellId = spell,
                     Name = Convert.ToString(nameRow["Name_lang"]),
                     SkillLine = skillLineId,
-                    ItemId = outputs[0].item,
-                    Quantity = outputs[0].qty,
+                    ItemId = isEnchant ? 0 : outputs[0].item,
+                    Quantity = isEnchant ? 0 : outputs[0].qty,
                     MinSkill = I(row["MinSkillLineRank"]),
                     GreenSkill = I(row["TrivialSkillLineRankLow"]),
                     GreySkill = I(row["TrivialSkillLineRankHigh"]),
@@ -374,7 +392,7 @@ namespace DbExtract
 
             // Items referenced anywhere.
             var itemIds = new SortedSet<int>();
-            foreach (var r in recipes.Values) { itemIds.Add(r.ItemId); itemIds.UnionWith(r.TeachItems); foreach (var x in r.Reagents) itemIds.Add(x.item); }
+            foreach (var r in recipes.Values) { if (r.ItemId != 0) itemIds.Add(r.ItemId); itemIds.UnionWith(r.TeachItems); foreach (var x in r.Reagents) itemIds.Add(x.item); }
             foreach (var c in combines.Values) { itemIds.Add(c.ItemId); itemIds.UnionWith(c.UseItems); foreach (var x in c.Reagents) itemIds.Add(x.item); }
             // Every referenced item gets its class and subclass from the Item table
             // (complete); name, quality and binding come from ItemSparse when it has
@@ -406,13 +424,16 @@ namespace DbExtract
             var outPath = Path.Combine(o.Out, "RecipeCatalogue.lua");
             var generated = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             WriteLua(outPath, config, o, hotfix, generated, professions, recipes, combines, items);
-            Console.WriteLine($"Wrote {outPath}: {recipes.Count} recipes, {combines.Count} combines, {items.Count} items, {professions.Count} professions");
+            int enchantCount = recipes.Values.Count(r => r.ItemId == 0);
+            Console.WriteLine($"Wrote {outPath}: {recipes.Count} recipes ({enchantCount} enchants), {combines.Count} combines, {items.Count} items, {professions.Count} professions");
             foreach (var p in professions.OrderByDescending(p => recipes.Values.Count(r => r.SkillLine == p.Key)))
                 Console.WriteLine($"  {p.Value.name}: {recipes.Values.Count(r => r.SkillLine == p.Key)}");
             Console.WriteLine($"  skipped: {skipped.notInClient.Count} whose item or reagents no longer exist on this client, {skipped.noReagents.Count} without reagents, {skipped.noName.Count} without a name; {skipped.extraOutputs.Count} create more than one item (first kept); {unnamed.Count} items without a cached name (the client names them at runtime)");
 
             if (recipes.TryGetValue(21161, out var sample))
                 Console.WriteLine($"  check Sulfuron Hammer: {sample.Name} skill {sample.MinSkill}/{sample.GreenSkill}/{sample.GreySkill} -> item {sample.ItemId} x{sample.Quantity}, taught by {string.Join(",", sample.TeachItems)}, reagents {string.Join(" ", sample.Reagents.Select(r => r.item + "x" + r.count))}");
+            if (recipes.TryGetValue(20034, out var sampleEnchant))
+                Console.WriteLine($"  check Enchant Weapon - Crusader: {sampleEnchant.Name} skill {sampleEnchant.MinSkill}/{sampleEnchant.GreenSkill}/{sampleEnchant.GreySkill} -> item {sampleEnchant.ItemId}, taught by {string.Join(",", sampleEnchant.TeachItems)}, reagents {string.Join(" ", sampleEnchant.Reagents.Select(r => r.item + "x" + r.count))}");
             if (combines.TryGetValue(21160, out var sampleCombine))
                 Console.WriteLine($"  check Eye of Sulfuras: {sampleCombine.Name} -> {sampleCombine.ItemId} from {string.Join(" ", sampleCombine.Reagents.Select(r => r.item + "x" + r.count))} (use item consumed: {sampleCombine.Consumes})");
 
@@ -423,7 +444,7 @@ namespace DbExtract
                 {
                     build = config.VersionName, buildName = config.BuildName, product = o.Product, locale = o.Locale, generated,
                     hotfixBuild = hotfix?.BuildId ?? 0, hotfixRows = hotfixed,
-                    counts = new { recipes = recipes.Count, combines = combines.Count, items = items.Count, professions = professions.Count },
+                    counts = new { recipes = recipes.Count, enchants = enchantCount, combines = combines.Count, items = items.Count, professions = professions.Count },
                     perProfession = professions.ToDictionary(p => p.Value.name, p => recipes.Values.Count(r => r.SkillLine == p.Key)),
                     skippedNotInClient = skipped.notInClient, skippedNoReagents = skipped.noReagents, skippedNoName = skipped.noName, multipleOutputs = skipped.extraOutputs, unnamedItems = unnamed,
                 };
@@ -469,6 +490,7 @@ namespace DbExtract
             w.AppendLine("--   yellowSkill / greySkill: SkillLineAbility trivial ranks (recipe turns yellow, then grey; green is midway).");
             w.AppendLine("--   teachItem: the item that teaches the spell, a list when several do, false when none (trainer or auto-learned).");
             w.AppendLine("--   acquire: SkillLineAbility.AcquireMethod as shipped by the client.");
+            w.AppendLine("--   itemID and quantity are 0 when the spell enchants an item instead of making one (Enchanting).");
             w.AppendLine("--   Recipes whose item or reagents no longer exist on this client are left out.");
             w.AppendLine("-- combines[spellID] = { name, itemID, quantity, consumesUseItem, { useItemID, ... }, { reagentItemID, count, ... } }");
             w.AppendLine("--   the item's on-use spell makes itemID from the reagents; consumesUseItem is 1 when the used item is spent.");
@@ -485,7 +507,7 @@ namespace DbExtract
             w.AppendLine($"  locale = {Q(o.Locale)},");
             w.AppendLine($"  hotfixBuild = {hotfix?.BuildId ?? 0},");
             w.AppendLine($"  generated = {Q(generated)},");
-            w.AppendLine($"  counts = {{ recipes = {recipes.Count}, combines = {combines.Count}, items = {items.Count}, professions = {professions.Count} }},");
+            w.AppendLine($"  counts = {{ recipes = {recipes.Count}, enchants = {recipes.Values.Count(r => r.ItemId == 0)}, combines = {combines.Count}, items = {items.Count}, professions = {professions.Count} }},");
             w.AppendLine("}");
             w.AppendLine("ns.Data.Catalogue = Catalogue");
             w.AppendLine();

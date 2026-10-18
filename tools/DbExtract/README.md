@@ -28,7 +28,7 @@ addon or a website.
 |---|---|
 | `SkillLine` | profession names, categories (11 primary, 9 secondary), parent lines |
 | `SkillLineAbility` | which spells belong to a profession; trivial ranks (yellow, grey); acquire method |
-| `SpellEffect` | effect 24 / 157 "create item": the item a spell makes and how many |
+| `SpellEffect` | effect 24 / 157 "create item": the item a spell makes and how many; effect 53 / 54 "enchant item": enchants and tinkers, kept as recipes with item 0 |
 | `SpellReagents` | reagents and counts |
 | `SpellName`, `SpellMisc` | recipe names and icons |
 | `ItemEffect` + `ItemXItemEffect` | trigger 6 "learn": the plans / pattern that teaches a spell; trigger 0 "on use": item-use combines |

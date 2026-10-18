@@ -13,6 +13,7 @@ Commands.help = {
   { "/fp add <item> [qty]", "Add a goal by item ID or link (crafting when a recipe is known, otherwise obtain)." },
   { "/fp obtain <item> [qty]", "Add an obtain-item goal (drops, vendors, quests) even if a recipe exists." },
   { "/fp learn <recipe>", "Add a learn-recipe goal by recipe name (catalogue) or spell id: plans to get, or the trainer to visit." },
+  { "/fp enchant <enchant> [casts]", "Add an enchant goal by name, spell id or Shift-clicked link: the formula or trainer, the reagents for every cast; completes as you cast it." },
   { "/fp skill <profession> [rank]", "Add a reach-skill goal (default: the next cap): which recipes to craft, how often, and their materials." },
   { "/fp quest <name or id>", "Add a quest goal (dungeon quests, attunement quests, or anything in your log): chain, pick-up, objectives, rewards." },
   { "/fp quests", "List the quests ForeverPath knows that feed your goals, with their state." },
@@ -159,6 +160,18 @@ end
 function handlers.skill(rest)
   if not requireLoaded() then return end
   addTypedGoal(ns.GoalService.AddSkillFromInput(rest))
+end
+
+-- "enchant <name or link> [casts]" - the trailing integer is the cast count.
+function handlers.enchant(rest)
+  if not requireLoaded() then return end
+  rest = Util.Trim(rest or "")
+  local text, quantity = rest, 1
+  local head, tail = rest:match("^(.-)%s+(%d+)$")
+  if head and head ~= "" then
+    text, quantity = head, tonumber(tail)
+  end
+  addTypedGoal(ns.GoalService.AddEnchantFromInput(text, quantity))
 end
 
 function handlers.quest(rest)

@@ -154,6 +154,9 @@ function Planner.Evaluate(goal, deps)
   if goal.type == "REACH_REPUTATION" then
     return Planner.EvaluateReputation(view, goal, deps)
   end
+  if goal.type == "APPLY_ENCHANT" then
+    return Planner.EvaluateEnchant(view, goal, deps)
+  end
 
   local itemID = goal.target.itemID
   local quantity = goal.target.quantity
@@ -317,6 +320,11 @@ end
 -- Learn-recipe and reach-skill goals
 ---------------------------------------------------------------------------
 
+-- "a Tailoring trainer", "an Enchanting trainer".
+local function article(word)
+  return (type(word) == "string" and word:match("^[AEIOUaeiou]")) and "an" or "a"
+end
+
 -- A recipe by spell id: the catalogue first, then a recorded profession window.
 function Planner.RecipeByID(spellID, deps)
   if deps.data and deps.data.Get then
@@ -466,7 +474,7 @@ function Planner.EvaluateLearn(view, goal, deps)
       view.nextStep = "Train at " .. trainer.name
     else
       parts[#parts + 1] = string.format("Train at any %s trainer (the requirement is recorded on your next trainer visit).", recipe.professionName or "profession")
-      view.nextStep = "Visit a " .. (recipe.professionName or "profession") .. " trainer"
+      view.nextStep = "Visit " .. article(recipe.professionName) .. " " .. (recipe.professionName or "profession") .. " trainer"
     end
   end
   if learn.blocked == "skill" then
@@ -475,6 +483,161 @@ function Planner.EvaluateLearn(view, goal, deps)
     view.nextStep = "Learn " .. (recipe.professionName or "the profession")
   end
   if #knownBy > 0 then
+    parts[#parts + 1] = string.format("%s already know%s it.", Util.Join(knownBy), #knownBy == 1 and "s" or "")
+  end
+  view.message = table.concat(parts, " ")
+  return view
+end
+
+-- Enchant goals: cast an enchant (or an Engineering tinker) a number of
+-- times. Casts already seen count towards the goal; for the rest the tree is
+-- the enchant itself with its formula or trainer visit (while unlearned) and
+-- the reagents below it, and the plan is those reagents. The view carries
+-- `enchant = { recipe, spellID, learned, knownBy, profession, hasProfession,
+-- need, have, skillOK, blocked, kind, teachItemID, trainer, casts, quantity,
+-- remaining }`.
+function Planner.EvaluateEnchant(view, goal, deps)
+  local target = goal.target
+  local recipe = Planner.RecipeByID(target.spellID, deps)
+  view.item = { name = (recipe and recipe.name) or target.name or ("Enchant " .. tostring(target.spellID)), icon = (recipe and recipe.icon) or target.icon, quality = 1, loaded = true, exists = true }
+  if not recipe then
+    view.status = Status.ITEM_INVALID
+    view.message = string.format("No enchant with spell id %s is in the catalogue or your recorded professions.", tostring(target.spellID))
+    return view
+  end
+  if not recipe.enchant then
+    view.status = Status.ITEM_INVALID
+    view.message = string.format("%s makes an item: add it as a crafting goal instead.", recipe.name or "That recipe")
+    return view
+  end
+  local learned = false
+  if deps.profession and deps.profession.IsLearned then
+    local ok, known = pcall(deps.profession.IsLearned, target.spellID)
+    learned = ok and known == true
+  end
+  local profession = Planner.CurrentSkill(deps, recipe.professionName, recipe.professionID)
+  local need = recipe.skill and recipe.skill.min or 0
+  local knownBy = {}
+  if deps.characters and deps.characters.WhoKnows then
+    local ok, names = pcall(deps.characters.WhoKnows, target.spellID)
+    if ok and type(names) == "table" then knownBy = names end
+  end
+  local quantity = target.quantity or 1
+  local casts = math.min(tonumber(target.casts) or 0, quantity)
+  local enchant = {
+    recipe = recipe, spellID = target.spellID, learned = learned, knownBy = knownBy,
+    profession = profession, hasProfession = profession ~= nil, need = need,
+    have = profession and profession.skillLevel or nil,
+    skillOK = profession ~= nil and (profession.skillLevel or 0) >= need,
+    kind = recipe.teachItemID and "plans" or "trainer",
+    teachItemID = recipe.teachItemID, trainer = recipe.trainer,
+    casts = casts, quantity = quantity, remaining = quantity - casts,
+  }
+  if not profession then
+    enchant.blocked = "profession"
+  elseif not enchant.skillOK then
+    enchant.blocked = "skill"
+  end
+  view.enchant = enchant
+  view.recipe = recipe
+  local name = recipe.name or "the enchant"
+  if enchant.remaining <= 0 then
+    view.plan = Planner.StepPlan(true)
+    view.progress = Planner.Progress(view.plan)
+    view.message = string.format("%s cast %d time%s.", name, casts, casts == 1 and "" or "s")
+    view.nextStep = "Mark the goal complete"
+    return view
+  end
+
+  local ctx = inventoryContext(deps)
+  local root = { recipe = recipe, quantity = enchant.remaining, learned = learned }
+  local tree = DependencyResolver.Resolve(root, ctx.resolverOpts(goal.routes))
+  view.tree = tree
+  view.fullTree = Planner.FullTree(root, goal, ctx)
+  local direct = DependencyResolver.DirectCounts(tree)
+  local plan, err = CraftingEngine.BuildPlan(recipe, enchant.remaining, function(reagentID)
+    return direct[reagentID] or 0
+  end, { includeBank = ctx.includeBank, includeAlts = ctx.includeAlts })
+  if not plan then
+    view.status = Status.RECIPE_DATA_INVALID
+    view.message = tostring(err)
+    return view
+  end
+  plan.enchant = true
+  plan.castsDone = casts
+  -- The reagents can all be in the bags while the formula or the training is not.
+  plan.stepsMissing = 0
+  local formulaNode
+  for _, child in ipairs(tree.root.children) do
+    if child.learn then formulaNode = child end
+    if (child.learn or child.step) and child.missing > 0 then plan.stepsMissing = plan.stepsMissing + 1 end
+  end
+  plan.isComplete = plan.totals.missing == 0 and plan.stepsMissing == 0
+  view.plan = plan
+  view.progress = Planner.Progress(plan)
+  if casts > 0 then
+    -- Casts done count as finished; the reagents in hand cover the rest.
+    view.progress.percent = math.floor((casts * 100 + (view.progress.percent or 0) * enchant.remaining) / quantity + 0.5)
+  end
+  view.inventoryNote = Planner.DescribeInventory(ctx.bankNote, ctx.includeBank, ctx.includeAlts)
+
+  local parts = {}
+  if casts > 0 then
+    parts[#parts + 1] = string.format("%d of %d cast%s done.", casts, quantity, quantity == 1 and "" or "s")
+  end
+  if enchant.blocked == "profession" then
+    parts[#parts + 1] = string.format("You do not have %s on this character.", recipe.professionName or "the profession")
+  elseif enchant.blocked == "skill" then
+    parts[#parts + 1] = string.format("Needs %s %d; you have %d.", recipe.professionName or "skill", need, profession.skillLevel or 0)
+  end
+  if not learned then
+    if formulaNode then
+      local info = deps.item and deps.item.GetItem and deps.item.GetItem(recipe.teachItemID) or nil
+      local plansName = (type(info) == "table" and info.name) or ("item " .. recipe.teachItemID)
+      if formulaNode.missing <= 0 then
+        parts[#parts + 1] = string.format("%s is in your bags: read it to learn %s.", plansName, name)
+        view.nextStep = "Read " .. plansName
+      else
+        local sourceText = Planner.SourceText(formulaNode.hint)
+        parts[#parts + 1] = string.format("Get %s%s.", plansName, sourceText and (" - " .. sourceText) or (formulaNode.noRoute and " (soulbound, no source recorded yet)" or ""))
+        view.nextStep = "Get " .. plansName
+      end
+    else
+      local trainer = recipe.trainer
+      if trainer and trainer.name then
+        parts[#parts + 1] = string.format("Train at %s%s%s.", trainer.name, trainer.zone and (", " .. trainer.zone) or "",
+          trainer.cost and trainer.cost > 0 and (" for " .. Util.FormatMoney(trainer.cost)) or "")
+        view.nextStep = "Train at " .. trainer.name
+      else
+        parts[#parts + 1] = string.format("Train at any %s trainer (the requirement is recorded on your next trainer visit).", recipe.professionName or "profession")
+        view.nextStep = "Visit " .. article(recipe.professionName) .. " " .. (recipe.professionName or "profession") .. " trainer"
+      end
+    end
+  end
+  if plan.totals.missing == 0 then
+    parts[#parts + 1] = string.format("All materials for %d cast%s are on hand.", enchant.remaining, enchant.remaining == 1 and "" or "s")
+  else
+    parts[#parts + 1] = string.format("%d material%s still missing for %d cast%s.",
+      plan.totals.materialsMissing, plan.totals.materialsMissing == 1 and "" or "s", enchant.remaining, enchant.remaining == 1 and "" or "s")
+  end
+  if not view.nextStep then
+    if plan.totals.missing == 0 then
+      view.nextStep = string.format("Cast %d x %s", enchant.remaining, name)
+    else
+      local top
+      for _, material in ipairs(plan.materials) do
+        if material.missing > 0 and (not top or material.missing > top.missing) then top = material end
+      end
+      local info = deps.item and deps.item.GetItem and deps.item.GetItem(top.itemID) or nil
+      view.nextStep = string.format("Obtain %d x %s", top.missing, (type(info) == "table" and info.name) or ("item " .. top.itemID))
+    end
+  end
+  if enchant.blocked == "skill" then
+    view.nextStep = string.format("Reach %s %d", recipe.professionName or "skill", need)
+  elseif enchant.blocked == "profession" then
+    view.nextStep = "Learn " .. (recipe.professionName or "the profession")
+  end
+  if not learned and #knownBy > 0 then
     parts[#parts + 1] = string.format("%s already know%s it.", Util.Join(knownBy), #knownBy == 1 and "s" or "")
   end
   view.message = table.concat(parts, " ")

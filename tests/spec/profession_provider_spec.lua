@@ -16,8 +16,8 @@ describe("ProfessionProvider", function()
     Mock.AddRecipe({ recipeID = 2963, name = "Bolt of Linen Cloth", outputItemID = 2996, reagents = { { itemID = 2589, quantity = 2 } } })
     Mock.AddRecipe({ recipeID = 3755, name = "Linen Bag", outputItemID = 4238, learned = false,
       reagents = { { itemID = 2996, quantity = 3 }, { itemID = 2320, quantity = 3 } } })
-    -- An enchant-style recipe has no item output and must be skipped.
-    Mock.AddRecipe({ recipeID = 7420, name = "Enchant Chest - Minor Health", outputItemID = nil, recipeType = 3,
+    -- An enchant has no item output: recorded by spell id, never indexed by item.
+    Mock.AddRecipe({ recipeID = 7420, name = "Enchant Chest - Minor Health", outputItemID = nil, recipeType = 3, learned = false,
       reagents = { { itemID = 10940, quantity = 1 } } })
     local profession = { professionID = 197, name = "Tailoring", skillLevel = 75, maxSkillLevel = 150, recipeIDs = { 2963, 3755, 7420 } }
     Mock.OpenProfession(profession)
@@ -52,7 +52,13 @@ describe("ProfessionProvider", function()
     assert_deep_eq(updates, { 197 })
     assert_not_nil(ns.db.recipes[2963])
     assert_not_nil(ns.db.recipes[3755])
-    assert_nil(ns.db.recipes[7420], "enchant without item output is skipped")
+    assert_true(ns.db.recipes[7420].enchant, "enchant recorded with the enchant flag")
+    assert_nil(ns.db.recipes[7420].outputItemID)
+    assert_eq(ns.db.recipes[7420].quantityMin, 1)
+    assert_eq(ns.chardb.knownRecipes[7420], false)
+    local indexed = false
+    for _, ids in pairs(ns.db.itemRecipes) do if ids[7420] then indexed = true end end
+    assert_false(indexed, "an enchant produces no item")
     assert_eq(ns.db.recipes[2963].professionName, "Tailoring")
     assert_eq(ns.db.recipes[2963].reagents[1].quantity, 2)
     assert_true(ns.db.itemRecipes[2996][2963])
@@ -60,10 +66,10 @@ describe("ProfessionProvider", function()
     assert_eq(ns.chardb.knownRecipes[3755], false)
     local summary = ns.chardb.professions[197]
     assert_eq(summary.name, "Tailoring")
-    assert_eq(summary.recipeCount, 2)
+    assert_eq(summary.recipeCount, 3)
     assert_eq(summary.learnedCount, 1)
     assert_eq(summary.skillLevel, 75)
-    assert_output("Recorded Tailoring: 2 item recipes %(1 learned%)")
+    assert_output("Recorded Tailoring: 3 recipes %(1 enchants%) %(1 learned%)")
     assert_eq(#Prof.GetScannedProfessions(), 1)
     assert_true(ns.Util.IsPlainData(ns.db.recipes))
   end)
@@ -146,7 +152,7 @@ describe("ProfessionProvider", function()
     Mock.tradeskill.recipes[3755].info.learned = false
     scan()
     assert_eq(ns.chardb.knownRecipes[3755], false)
-    assert_eq(ns.chardb.professions[197].recipeCount, 2)
+    assert_eq(ns.chardb.professions[197].recipeCount, 3)
   end)
 
   it("opens unrecorded professions for /fp scan and closes afterwards", function()

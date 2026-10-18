@@ -159,7 +159,7 @@ local function createHero(screen)
     if not screen.goal then return end
     if screen.goal.type == "REACH_SKILL" then
       ns.GoalService.SetRank(screen.goal.id, value)
-    elseif screen.goal.target.itemID then
+    elseif screen.goal.target.itemID or screen.goal.type == "APPLY_ENCHANT" then
       ns.GoalService.SetQuantity(screen.goal.id, value)
     end
   end)
@@ -423,16 +423,21 @@ local function Create(parent)
     self.view = view
     local item = view.item or {}
     local itemName = item.name or (goal.target.itemID and ("Item " .. goal.target.itemID)) or ns.GoalService.Name(goal)
-    local learn, skill = view.learn, view.skill
+    local learn, skill, enchant = view.learn, view.skill, view.enchant
     if skill then itemName = ns.GoalService.Name(goal) end
     crumbRest:SetText(string.format("  >  Crafting  >  %s%s|r", Theme.Hex.text, itemName))
     tracked:SetChecked(goal.tracked)
     alts:SetChecked(ns.db and ns.db.settings.includeAlts == true)
 
     hero.icon:SetItem(item.icon, item.quality)
-    local quantity = goal.target.itemID and goal.target.quantity or 1
+    local quantity = (goal.target.itemID or enchant) and goal.target.quantity or 1
     hero.name:SetText(Theme.QualityText(itemName, item.quality) .. (quantity > 1 and (Theme.Hex.text2 .. "  x" .. quantity .. "|r") or ""))
-    if learn then
+    if enchant then
+      local recipe = enchant.recipe
+      hero.meta:SetText(string.format("%s enchant%s - %s", recipe.professionName or "Profession",
+        enchant.need > 1 and (" - needs " .. enchant.need) or "",
+        enchant.kind == "plans" and "taught by " .. ns.ItemProvider.GetName(enchant.teachItemID) or "taught by a trainer"))
+    elseif learn then
       local recipe = learn.recipe
       hero.meta:SetText(string.format("%s recipe%s - %s", recipe.professionName or "Profession",
         learn.need > 1 and (" - needs " .. learn.need) or "",
@@ -443,7 +448,26 @@ local function Create(parent)
       hero.meta:SetText(describeItem(goal.target.itemID))
     end
     local chips = {}
-    if learn then
+    if enchant then
+      if enchant.learned then
+        chips[#chips + 1] = { "ok", "Known" }
+      elseif enchant.blocked == "profession" then
+        chips[#chips + 1] = { "missing", "No " .. (enchant.recipe.professionName or "profession") }
+      elseif enchant.blocked == "skill" then
+        chips[#chips + 1] = { "partial", string.format("Needs %s %d - you have %d", enchant.recipe.professionName or "skill", enchant.need, enchant.have or 0) }
+      else
+        chips[#chips + 1] = { "partial", "Not learned" }
+      end
+      if not enchant.learned then
+        if enchant.kind == "plans" then
+          chips[#chips + 1] = { "info", view.plan and view.plan.stepsMissing == 0 and "Formula in bags" or "Needs the formula" }
+        else
+          chips[#chips + 1] = { "info", enchant.trainer and enchant.trainer.name and ("Trainer: " .. enchant.trainer.name) or "Trainer (not recorded yet)" }
+        end
+      end
+      chips[#chips + 1] = { enchant.remaining <= 0 and "ok" or "info", string.format("%d of %d cast%s", enchant.casts, enchant.quantity, enchant.quantity == 1 and "" or "s") }
+      if not enchant.learned and #enchant.knownBy > 0 then chips[#chips + 1] = { "info", Util.Join(enchant.knownBy) .. " know" .. (#enchant.knownBy == 1 and "s" or "") .. " it" } end
+    elseif learn then
       if learn.learned then
         chips[#chips + 1] = { "ok", "Learned" }
       elseif learn.blocked == "profession" then
@@ -521,7 +545,7 @@ local function Create(parent)
     if not hero.stepper.box:HasFocus() then
       hero.stepper:SetValue(skill and goal.target.rank or goal.target.quantity or 1)
     end
-    hero.stepper:SetEnabledState(skill ~= nil or goal.target.itemID ~= nil)
+    hero.stepper:SetEnabledState(skill ~= nil or enchant ~= nil or goal.target.itemID ~= nil)
     local percent = ns.Overview.Percent(view)
     hero.percent:SetText(percent and (percent .. "%") or "-")
     hero.bar:SetKind(percent == 100 and "ok" or "gold")
@@ -529,6 +553,10 @@ local function Create(parent)
     if skill then
       hero.reagents:SetText(skill.reached and view.message or string.format("%d of %d skill points - %d craft%s planned", math.max(0, skill.current - skill.start), math.max(0, skill.target - skill.start),
         view.plan and view.plan.craftsNeeded or 0, view.plan and view.plan.craftsNeeded == 1 and "" or "s"))
+    elseif enchant and (enchant.remaining <= 0 or not view.progress) then
+      hero.reagents:SetText(view.message or "")
+    elseif enchant then
+      hero.reagents:SetText(string.format("%d of %d reagents in your bags - %d cast%s to do", view.progress.ownedUnits, view.progress.requiredUnits, enchant.remaining, enchant.remaining == 1 and "" or "s"))
     elseif learn and view.plan and view.plan.step then
       hero.reagents:SetText(view.nextStep or view.message or "")
     elseif view.progress and view.plan.obtain then
@@ -575,7 +603,7 @@ local function Create(parent)
       self.tableMessage:Show()
       return
     end
-    if #view.plan.materials == 0 and (learn or skill) then
+    if #view.plan.materials == 0 and (learn or skill or enchant) then
       -- Nothing to gather: a trainer visit, a recipe already known, a skill reached.
       self.pool:HideFrom(1)
       scroll:SetContentHeight(1)

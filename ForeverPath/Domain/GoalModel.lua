@@ -14,6 +14,7 @@
 --   REACH_SKILL                { professionID, professionName, rank, startRank, icon }
 --   COMPLETE_QUEST             { questID, name, level, instance, icon }
 --   REACH_REPUTATION           { factionID, name, standing (1..8), startValue, icon }
+--   APPLY_ENCHANT              { spellID, name, professionName, professionID, icon, quantity, casts }
 local _, ns = ...
 
 local GoalModel = {}
@@ -29,6 +30,7 @@ GoalModel.Types = {
   LEARN_RECIPE = { label = "Learn recipe", badge = "Recipe", supported = true, targetKind = "recipe" },
   COMPLETE_ATTUNEMENT = { label = "Complete attunement", badge = "Attunement", supported = true, targetKind = "attunement" },
   REACH_SKILL = { label = "Reach profession skill", badge = "Skill", supported = true, targetKind = "skill" },
+  APPLY_ENCHANT = { label = "Apply enchant", badge = "Enchant", supported = true, targetKind = "enchant" },
 }
 
 GoalModel.MAX_SKILL = 1000
@@ -119,6 +121,19 @@ local function validateReputationTarget(target)
   return true
 end
 
+local function validateEnchantTarget(target)
+  if type(target) ~= "table" then
+    return false, "target missing"
+  end
+  if not Util.IsPositiveInt(target.spellID) then
+    return false, "spellID must be a positive integer"
+  end
+  if not Util.IsPositiveInt(target.quantity) or target.quantity > 1000 then
+    return false, "quantity must be a positive integer"
+  end
+  return true
+end
+
 local validators = {
   CRAFT_ITEM = validateItemTarget,
   OBTAIN_ITEM = validateItemTarget,
@@ -127,6 +142,7 @@ local validators = {
   REACH_SKILL = validateSkillTarget,
   COMPLETE_QUEST = validateQuestTarget,
   REACH_REPUTATION = validateReputationTarget,
+  APPLY_ENCHANT = validateEnchantTarget,
 }
 
 GoalModel.StandingLabels = { "Hated", "Hostile", "Unfriendly", "Neutral", "Friendly", "Honored", "Revered", "Exalted" }
@@ -283,6 +299,9 @@ function GoalModel.Title(goal, nameLookup)
   end
   if goal.type == "REACH_REPUTATION" and goal.target then
     return string.format("Reach %s with %s", GoalModel.StandingLabels[goal.target.standing or 0] or "?", goal.target.name or ("faction " .. tostring(goal.target.factionID)))
+  end
+  if goal.type == "APPLY_ENCHANT" and goal.target then
+    return string.format("Cast %dx %s", goal.target.quantity or 1, goal.target.name or ("Enchant " .. tostring(goal.target.spellID)))
   end
   if goal.target and type(goal.target.name) == "string" then
     return string.format("%s: %s", label, goal.target.name)
