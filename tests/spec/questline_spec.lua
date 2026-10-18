@@ -73,6 +73,8 @@ describe("Questlines", function()
     installAttune()
     items()
     seen(ns, RAGE, FIRE, EARTH, AIR, WATER)
+    -- The shipped catalogue covers this very chain; these tests supply their own facts.
+    ns.Data.QuestCatalogue = {}
     QP.Invalidate()
   end)
 
@@ -393,6 +395,69 @@ describe("Questlines", function()
     Mock.questNPC = { questID = 0, name = "Nobody" }
     Mock.FireEvent("QUEST_DETAIL", 0)
     assert_nil(ns.db.questFacts[0])
+  end)
+
+  it("ships the shaman Call of Air chain for both factions in the quest catalogue", function()
+    local shipped = H.fresh()
+    H.login(shipped)
+    local rows = shipped.Data.QuestCatalogue
+    local QF = shipped.QuestFactsProvider
+    assert_eq(QF.ShippedCount(), 12)
+    for questID, row in pairs(rows) do
+      assert_true(type(questID) == "number" and questID > 0, "quest id")
+      for _, key in ipairs({ "giver", "turnin" }) do
+        local place = row[key]
+        assert_true(type(place) == "table" and type(place.name) == "string" and place.name ~= "", questID .. " " .. key)
+        assert_true(type(place.mapID) == "number" and place.mapID > 0, questID .. " " .. key .. " map")
+        assert_true(place.x > 0 and place.x < 1 and place.y > 0 and place.y < 1, questID .. " " .. key .. " position as a fraction")
+        assert_true(type(place.zone) == "string", questID .. " " .. key .. " zone")
+      end
+      for _, item in ipairs(row.items) do
+        assert_true(type(item.itemID) == "number" and item.itemID > 0, questID .. " item id")
+        assert_true(type(item.name) == "string" and item.count > 0, questID .. " item name and count")
+        assert_true(type(item.source) == "string" and item.source ~= "", questID .. " item source")
+      end
+    end
+    local QP2 = shipped.QuestProvider
+    -- No Attune needed: the catalogue alone names the givers and the items.
+    assert_eq(QP2.Giver(TEMPEST).label, "Rau Cliffrunner - Thousand Needles")
+    assert_eq(QP2.Giver(TEMPEST).mapID, 1441)
+    assert_eq(QP2.Turnin(TEMPEST).label, "Bath'rah the Windwatcher - Alterac Mountains")
+    assert_eq(QP2.Waypoint(TEMPEST).name, "Rau Cliffrunner")
+    assert_eq(QP2.Giver(94789).name, "Eldrun Stormbreaker")
+    assert_eq(QP2.Turnin(94789).name, "Veyric Thunderhame")
+    local needed = QP2.RequiredItems(STORM)
+    assert_eq(#needed, 4)
+    assert_eq(needed[1].itemID, FIRE)
+    assert_eq(needed[1].count, 5)
+    assert_match(needed[1].source, "Badlands")
+    assert_eq(QP2.RequiredItems(79358)[4].itemID, WATER)
+    assert_eq(QP2.RequiredItems(AID)[1].itemID, 274463)
+    assert_eq(QP2.RequiredItems(HEED)[1].itemID, 212792)
+    -- The item sources reach the resolver through SourceProvider.
+    local hints = shipped.SourceProvider.Sources(FIRE)
+    assert_eq(hints[1].kind, "drop")
+    assert_eq(hints[1].label, "Drop: Stonevault troggs and Dustbelcher ogres, Agmond's End, Badlands")
+    assert_match(hints[1].detail, "for Quest 79358 %(quest catalogue%)", "no Attune here: the lowest quest id names it")
+    assert_true(hints[1].questItem)
+    assert_eq(#shipped.SourceProvider.Sources(FIRE), 1, "the same source for both factions' quests is listed once")
+    assert_eq(#QF.ItemHints(999999), 0)
+    assert_match(QF.Status(), "^Quest facts: 12 quests shipped, 0 learned")
+    -- A quest goal with the shipped facts and no chain: the items and the giver.
+    Mock.AddItem(274463, { name = "Tattered Note" })
+    Mock.quests.titles[AID] = "Elemental Aid"
+    local goal = shipped.GoalService.AddQuestGoal(AID)
+    local view = shipped.Planner.Evaluate(goal)
+    assert_eq(view.nextStep, "Pick up Elemental Aid from Prate Cloudseer in Thousand Needles")
+    assert_eq(view.waypoint.mapID, 1441)
+    assert_eq(#view.plan.materials, 1)
+    assert_eq(view.plan.materials[1].itemID, 274463)
+    assert_eq(view.tree.root.children[1].route, "drop")
+    assert_eq(view.tree.root.children[1].hint.label, "Drop: Charlga Razorflank, Razorfen Kraul")
+    local list = shipped.ShoppingList.Build({ { goal = goal, view = view } }, { nameOf = shipped.ItemProvider.GetName })
+    assert_eq(list.rows[1].itemID, 274463)
+    assert_eq(list.rows[1].category, "gather")
+    assert_eq(list.rows[1].sources[1], "Drop: Charlga Razorflank, Razorfen Kraul")
   end)
 
   it("shows the chain, the items and the waypoint button on the screens", function()

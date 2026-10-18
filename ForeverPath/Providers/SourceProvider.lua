@@ -409,6 +409,11 @@ function SourceProvider.Sources(itemID)
     if not bosses[string.lower(hint.boss or "")] then out[#out + 1] = hint end
   end
   for _, hint in ipairs(quests) do out[#out + 1] = hint end
+  -- The quest catalogue says where the items a curated quest asks for drop.
+  if ns.QuestFactsProvider and ns.QuestFactsProvider.ItemHints then
+    local ok, hints = pcall(ns.QuestFactsProvider.ItemHints, itemID)
+    for _, hint in ipairs(ok and hints or {}) do out[#out + 1] = hint end
+  end
   -- GearQuest Forever knows where leveling gear comes from (vendor and npc,
   -- quest and zone, boss or world drop); it fills in what nothing above did.
   if ns.EquipmentProvider and ns.EquipmentProvider.Hints then

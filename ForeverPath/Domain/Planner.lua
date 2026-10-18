@@ -1045,17 +1045,28 @@ function Planner.EvaluateQuest(view, goal, deps)
       view.nextStep = "Pick up " .. nextStep.name
     end
   elseif state.ready then
-    view.message = string.format("Ready to turn in%s.", entry and entry.turnin and (" at " .. entry.turnin) or "")
+    local turnin = (entry and entry.turnin) or (QP.Turnin and QP.Turnin(questID) or nil)
+    local at = type(turnin) == "table" and turnin.label or turnin
+    view.message = string.format("Ready to turn in%s.", at and (" at " .. at) or "")
     view.nextStep = "Turn in " .. name
+    view.waypoint = Planner.QuestWaypoint(QP, { type = "Quest", questID = questID })
   elseif state.inLog then
     local progress = QP.ObjectiveText(state)
     view.message = string.format("In your log%s.", progress ~= "" and (": " .. progress) or (entry and entry.objective and (": " .. entry.objective) or ""))
     view.nextStep = "Finish " .. name
   else
     local pickup = where(chain[#chain])
-    view.message = string.format("Pick up %s%s.", name, pickup and (" from " .. pickup) or "")
+    if pickup then
+      view.message = string.format("Pick up %s from %s.", name, pickup)
+      view.nextStep = "Pick up " .. name
+    else
+      -- No journal text: the recorded giver (quest facts) names the place.
+      local text = Planner.QuestStepText(QP, { type = "Quest", questID = questID, name = name, questState = state })
+      view.message = text .. "."
+      view.nextStep = text
+    end
     if entry and entry.objective then view.message = view.message .. " " .. entry.objective end
-    view.nextStep = "Pick up " .. name
+    view.waypoint = Planner.QuestWaypoint(QP, { type = "Quest", questID = questID })
   end
   return view
 end

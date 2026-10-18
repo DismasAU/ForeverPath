@@ -621,7 +621,7 @@ function QuestProvider.RequiredItems(questID)
   local facts = QuestProvider.Facts(questID)
   local out = {}
   for _, item in ipairs(facts and facts.items or {}) do
-    out[#out + 1] = { name = item.name, count = item.count or 1, have = 0, itemID = item.itemID }
+    out[#out + 1] = { name = item.name, count = item.count or 1, have = 0, itemID = item.itemID, source = item.source }
   end
   return out
 end

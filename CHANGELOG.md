@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.17.1 (2026-10-18) - the shaman Call of Air chain in the quest catalogue
+
+### Added
+- `Data/QuestCatalogue.lua` ships the shaman level-30 "Call of Air" chain
+  for both factions (Horde: Call of Air from Searn Firewarder or Xanis
+  Flameweaver, Elemental Aid, Eyes on the Sky, Storm, Earth, and Fire, Heed
+  My Call, The Tempest's Weapons; Alliance: Call of Air from Eldrun
+  Stormbreaker, Elemental Aid, Storm, Earth, and Fire, Heed My Call, The
+  Tempest's Weapons): giver and turn-in with map positions (Prate
+  Cloudseer, Rau Cliffrunner, Veyric Thunderhame, Bath'rah the Windwatcher)
+  and the items each quest asks for - the Tattered Note from Charlga
+  Razorflank, 5 of each Twisted Totem with the mobs and zones they drop
+  from, the Eye of the Tempest from the ritual. Sources are listed at the
+  top of the file; positions are unverified on the beta and a quest window
+  opened in game overrides them.
+- Catalogue items carry `source`; `QuestFactsProvider.ItemHints(itemID)`
+  turns them into drop hints that `SourceProvider.Sources` lists, so the
+  totems show "Drop: Mirefin murlocs, Dreadmurk Shore, Dustwallow Marsh" on
+  the shopping list, the tree and the requirement rows.
+
+### Fixed
+- The 0.17.0 notes said Attune carries no giver pins for class-chain
+  quests; it does (`AttuneClassQuests.lua` merges them into
+  `Attune_Data.questGivers`), and ForeverPath already read them. The
+  catalogue adds the turn-ins and the items.
+
 ## 0.17.0 (2026-10-18) - questlines: the chain behind a quest reward
 
 Put a quest reward such as Rage of the Storm in as a goal and ForeverPath

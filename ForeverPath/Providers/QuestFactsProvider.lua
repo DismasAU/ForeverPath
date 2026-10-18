@@ -76,10 +76,53 @@ function QuestFacts.Get(questID)
   elseif learned and type(learned.items) == "table" then items = learned.items end
   out.items = {}
   for _, item in ipairs(items or {}) do
-    out.items[#out.items + 1] = { name = item.name, count = tonumber(item.count) or 1, itemID = tonumber(item.itemID) }
+    out.items[#out.items + 1] = { name = item.name, count = tonumber(item.count) or 1, itemID = tonumber(item.itemID), source = item.source }
   end
+  out.note = (learned and learned.note) or (shipped and shipped.note) or nil
   out.learned = learned ~= nil
   out.shipped = shipped ~= nil
+  return out
+end
+
+-- Where the catalogue says a quest item comes from, as source hints for
+-- the resolver: { { kind = "drop", label, detail, questID, quest } }.
+local hintIndex
+function QuestFacts.ItemHints(itemID)
+  itemID = tonumber(itemID)
+  if not itemID then return {} end
+  if not hintIndex then
+    hintIndex = {}
+    local catalogue = ns.Data and ns.Data.QuestCatalogue
+    for questID, row in pairs(type(catalogue) == "table" and catalogue or {}) do
+      for _, item in ipairs(type(row.items) == "table" and row.items or {}) do
+        local id = tonumber(item.itemID)
+        if id and type(item.source) == "string" and item.source ~= "" then
+          hintIndex[id] = hintIndex[id] or {}
+          local list = hintIndex[id]
+          -- One hint per source text, attributed to the lowest quest id (both factions share the totems).
+          local existing
+          for _, e in ipairs(list) do
+            if e.source == item.source then existing = e end
+          end
+          if existing then
+            if questID < existing.questID then existing.questID = questID end
+          else
+            list[#list + 1] = { source = item.source, questID = questID }
+          end
+        end
+      end
+    end
+  end
+  local out = {}
+  for _, entry in ipairs(hintIndex[itemID] or {}) do
+    local QP = ns.QuestProvider
+    local questName = QP and QP.Name and QP.Name(entry.questID) or ("Quest " .. tostring(entry.questID))
+    out[#out + 1] = {
+      kind = "drop", questItem = true, questID = entry.questID, quest = questName,
+      label = "Drop: " .. entry.source,
+      detail = entry.source .. " - for " .. questName .. " (quest catalogue)",
+    }
+  end
   return out
 end
 
