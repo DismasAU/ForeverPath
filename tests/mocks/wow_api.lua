@@ -769,7 +769,7 @@ function Mock.install()
   _G.WOW_PROJECT_ID = 1
   _G.WOW_PROJECT_MAINLINE = 1
   _G.InCombatLockdown = function() return Mock.combat end
-  _G.IsShiftKeyDown = function() return false end
+  _G.IsShiftKeyDown = function() return Mock.shift == true end
   _G.GetCurrentKeyBoardFocus = function() return Mock.focus end
   _G.ChatEdit_InsertLink = function() return false end
   _G.ChatFrameUtil = nil
@@ -986,6 +986,7 @@ function Mock.reset()
   Mock.loadRequests = {}
   Mock.hooks = {}
   Mock.focus = nil
+  Mock.shift = false
   Mock.combat = false
   Mock.strictEvents = true
   Mock.bags = {}

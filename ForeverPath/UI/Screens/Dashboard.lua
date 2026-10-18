@@ -114,6 +114,7 @@ local function createGoalRow(content, index)
   row:SetScript("OnClick", function(self)
     if self.goalID then ns.UI.MainFrame.OpenGoal(self.goalID) end
   end)
+  Widgets.ShiftClickLinks(row, function(self) return self.itemID end)
   Widgets.SetItemTooltip(row, function(self) return self.itemID end)
   return row
 end
@@ -168,6 +169,7 @@ local function createMaterialRow(content, index)
   Widgets.SetItemTooltip(row, function(self) return self.itemID end, function(self)
     return self.goals and { "Needed for: " .. Util.Join(self.goals) } or nil
   end)
+  Widgets.ShiftClickLinks(row, function(self) return self.itemID end)
   return row
 end
 

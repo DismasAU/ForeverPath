@@ -212,6 +212,7 @@ local function createRow(content, index, tree)
   row:SetScript("OnClick", function()
     if row.node then tree:SelectNode(row.node.key) end
   end)
+  Widgets.ShiftClickLinks(row, function(self) return self.node and self.node.itemID end)
   Widgets.SetItemTooltip(row, function(self) return self.node and self.node.itemID end, function(self)
     local node = self.node
     if not node or isCraftOnly(node) or node.step then return nil end
@@ -761,22 +762,7 @@ function CraftingTree.Create(screen)
   return view
 end
 
--- Inserts an item link into the open chat box, or prints it.
+-- Inserts an item link into the open chat box or search (MainFrame.LinkItem).
 function CraftingTree.LinkItem(itemID)
-  local item = ns.ItemProvider.GetItem(itemID)
-  local link = item and item.link
-  if not link then
-    ns.UI.MainFrame.SetStatus("Item data not loaded yet.", "info")
-    return false
-  end
-  local inserted = false
-  if type(ChatFrameUtil) == "table" and type(ChatFrameUtil.InsertLink) == "function" then
-    inserted = ChatFrameUtil.InsertLink(link)
-  elseif type(ChatEdit_InsertLink) == "function" then
-    inserted = ChatEdit_InsertLink(link)
-  end
-  if not inserted then
-    ns.Log.Print("%s", link)
-  end
-  return true
+  return ns.UI.MainFrame.LinkItem(itemID)
 end

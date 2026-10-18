@@ -670,6 +670,31 @@ function MainFrame.SubmitSearch(box)
   end
 end
 
+-- Sends an item link wherever the client puts Shift-clicked links: the
+-- open chat box, the Auction House search (the default one, or Auctionator's
+-- shopping search through its hook), or a ForeverPath input with focus.
+-- Prints the link when nothing takes it. Returns true when the link existed.
+function MainFrame.LinkItem(itemID)
+  local item = ns.ItemProvider.GetItem(itemID)
+  local link = item and item.link
+  if not link then
+    MainFrame.SetStatus("Item data not loaded yet.", "info")
+    return false
+  end
+  local inserted = false
+  if type(ChatFrameUtil) == "table" and type(ChatFrameUtil.InsertLink) == "function" then
+    inserted = ChatFrameUtil.InsertLink(link)
+  elseif type(ChatEdit_InsertLink) == "function" then
+    inserted = ChatEdit_InsertLink(link)
+  end
+  if inserted then
+    MainFrame.SetStatus(string.format("%s linked.", item.name or "Item"), "ok")
+  else
+    ns.Log.Print("%s", link)
+  end
+  return true
+end
+
 -- Type-ahead popup under an input. hits come from GoalService.Suggest;
 -- clicking a row adds its goal. opts.quantity() supplies the quantity for
 -- item and enchant goals, opts.onAdd(ok, message, goal) runs after a pick.

@@ -99,6 +99,7 @@ local function createRow(content, index, screen)
     for i = #list + 1, #sourceFrame.tags do sourceFrame.tags[i]:Hide() end
   end
 
+  Widgets.ShiftClickLinks(row, function(self) return self.itemID end)
   Widgets.SetItemTooltip(row, function(self) return self.itemID end, function(self)
     local r = self.entry
     if not r then return nil end

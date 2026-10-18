@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.16.1 (2026-10-18) - Shift-click links from every item row
+
+### Added
+- Shift-click an item on the shopping list, the crafting requirements,
+  the dependency tree, the dashboard, the tracker or the Equipment screen
+  to send its link where the client sends Shift-clicked links: the open
+  chat box, the Auction House search (the default one, or Auctionator's
+  shopping search, which hooks the same call), or a ForeverPath input with
+  focus. The status bar confirms it; when nothing takes the link it is
+  printed to chat. Item tooltips mention it (`Widgets.ShiftClickLinks`,
+  `MainFrame.LinkItem`).
+
 ## 0.16.0 (2026-10-18) - type-ahead and unmet factions
 
 Typing "Cenarion Circle Exalted" into New Goal did nothing visible: the

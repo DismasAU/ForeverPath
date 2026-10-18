@@ -293,6 +293,47 @@ describe("UI shell and screens (mock widgets)", function()
     assert_eq(frame.search:GetText(), "")
   end)
 
+  it("links an item from any row on Shift-click", function()
+    local captured
+    _G.ChatEdit_InsertLink = function(link) captured = link return true end
+    ns.GoalService.AddCraftGoal(2996, 10)
+    Mock.RunTimers()
+    MainFrame.ShowScreen("shopping")
+    Mock.RunTimers()
+    local shop = screen("shopping")
+    local cloth
+    for _, row in ipairs(shop.pool.rows) do if row:IsShown() and row.itemID == 2589 then cloth = row end end
+    assert_not_nil(cloth, "20 cloth needed, 5 owned")
+    cloth:Click()
+    assert_nil(captured, "a plain click links nothing")
+    Mock.shift = true
+    cloth:Click()
+    assert_match(captured, "|Hitem:2589:")
+    assert_match(frame.alertText:GetText(), "^Linen Cloth linked%.")
+    -- The crafting requirements and the dashboard behave the same; the goal row does not navigate.
+    captured = nil
+    MainFrame.ShowScreen("crafting")
+    Mock.RunTimers()
+    screen("crafting").pool.rows[1]:Click()
+    assert_match(captured, "|Hitem:2589:")
+    captured = nil
+    MainFrame.ShowScreen("dashboard")
+    Mock.RunTimers()
+    screen("dashboard").goalsPanel.pool.rows[1]:Click()
+    assert_match(captured, "|Hitem:2996:")
+    assert_eq(MainFrame.currentScreen, "dashboard")
+    Mock.shift = false
+    screen("dashboard").goalsPanel.pool.rows[1]:Click()
+    assert_eq(MainFrame.currentScreen, "crafting")
+    -- Nothing takes the link: it is printed instead.
+    _G.ChatEdit_InsertLink = function() return false end
+    Mock.shift = true
+    assert_true(MainFrame.LinkItem(2589))
+    assert_output("|Hitem:2589:")
+    Mock.shift = false
+    assert_eq(#ns.Log.errors, 0, ns.Log.errors[1] and ns.Log.errors[1].message or "")
+  end)
+
   it("updates when inventory and item data change", function()
     Mock.AddItem(2320, { name = "Coarse Thread", loaded = false })
     ns.GoalService.AddCraftGoal(4238, 1)

@@ -307,6 +307,7 @@ Needs two characters on the account. Log in on the alt first, then on your main.
 - [ ] The header search suggests a few of every kind and opens the goal's screen on a pick.
 - [ ] Narrow the window: the New Goal bar puts the kind segment on a second row instead of pushing the input off the panel; widen it and the bar returns to one row.
 - [ ] `/fp status` reports "N in the client's faction table".
+- [ ] (0.16.1) With the Auction House open on Auctionator's Shopping tab, Shift-click a shopping-list row: Auctionator searches for the item and the status bar says "<item> linked". With a chat box open the link lands there instead. With neither, the link is printed to chat. The same works on the crafting requirements, the tree, the dashboard, the tracker and the Equipment screen; a plain click still does what it did.
 
 ### Reporting
 Include: client build (`/dump GetBuildInfo()`), `/fp status` output, the step

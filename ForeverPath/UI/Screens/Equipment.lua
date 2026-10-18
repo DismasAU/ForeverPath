@@ -41,6 +41,7 @@ local function createSlotRow(parent, screen)
   row:SetScript("OnClick", function(self)
     if self.slotKey then screen:Select(self.slotKey) end
   end)
+  Widgets.ShiftClickLinks(row, function(self) return self.itemID end)
   Widgets.SetItemTooltip(row, function(self) return self.itemID end)
   function row:SetSelected(selected)
     if selected then

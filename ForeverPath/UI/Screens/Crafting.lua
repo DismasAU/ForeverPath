@@ -114,6 +114,7 @@ local function createMaterialRow(content, index)
     end
     return lines
   end)
+  Widgets.ShiftClickLinks(row, function(self) return self.itemID end)
   return row
 end
 

@@ -920,6 +920,24 @@ function Widgets.SetTooltip(frame, title, lines)
   frame:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
 end
 
+-- Shift-click on an item row sends its link to the chat box or the Auction
+-- House search (MainFrame.LinkItem); a plain click keeps the row's own
+-- handler. Marks the frame so its tooltip can say so.
+function Widgets.ShiftClickLinks(frame, getItemID)
+  local previous = frame:GetScript("OnClick")
+  frame.shiftLinks = true
+  frame:SetScript("OnClick", function(self, button, ...)
+    if type(IsShiftKeyDown) == "function" and IsShiftKeyDown() then
+      local itemID = getItemID(self)
+      if itemID then
+        ns.UI.MainFrame.LinkItem(itemID)
+        return
+      end
+    end
+    if previous then previous(self, button, ...) end
+  end)
+end
+
 function Widgets.SetItemTooltip(frame, getItemID, extraLines)
   frame:SetScript("OnEnter", function(self)
     if not GameTooltip then return end
@@ -940,6 +958,9 @@ function Widgets.SetItemTooltip(frame, getItemID, extraLines)
         GameTooltip:AddLine(Theme.ColorText("tooltipHeader", "ForeverPath"))
         for _, line in ipairs(lines) do GameTooltip:AddLine(line, 0.9, 0.9, 0.9, true) end
       end
+    end
+    if self.shiftLinks then
+      GameTooltip:AddLine(Theme.ColorText("text3", "Shift-click: link in chat or the Auction House search"))
     end
     GameTooltip:Show()
   end)

@@ -45,6 +45,7 @@ is built to take them without a rewrite (see `ARCHITECTURE.md`).
 | 0.15.0 enchant goals (enchants and tinkers in the catalogue, Shift-click from the Enchanting window, formula or trainer plus reagents per cast, auto-complete as you cast; Enchanting skill goals plan enchants) | Implemented, offline-tested, **not yet verified in game** |
 | 0.15.1 quests that give reputation feed the Quests screen for reputation goals | Implemented, offline-tested, **not yet verified in game** |
 | 0.16.0 type-ahead suggestions for every goal kind (New Goal bar and header search); reputation goals for factions not met yet, from the client's faction table; the New Goal bar reflows when narrow | Implemented, offline-tested, **not yet verified in game** |
+| 0.16.1 Shift-click any item row to link it in chat or the Auction House search | Implemented, offline-tested, **not yet verified in game** |
 
 `TESTING.md` has the in-game checklist for 0.2.0. `API_COMPATIBILITY.md`
 lists the API evidence and the remaining open questions.
@@ -116,7 +117,11 @@ and says so in the UI.
 4. **Tracker.** A compact frame near the minimap pages through tracked goals
    and shows the next step; drag it anywhere, collapse it with "-", open the
    goal with "+". `/fp tracker` hides or shows it.
-5. **Bank items** count as owned once you have opened your bank on that
+5. **Shift-click any item row** (shopping list, requirements, tree,
+   dashboard, tracker, equipment) to put its link where the game puts
+   Shift-clicked links: the chat box, or the Auction House search when the
+   Auction House is open (Auctionator's shopping search included).
+6. **Bank items** count as owned once you have opened your bank on that
    character; the inventory note says whether the figure is live, a snapshot,
    or unknown.
 

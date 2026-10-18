@@ -67,6 +67,7 @@ local function createRow(content, index)
   name:SetPoint("LEFT", icon, "RIGHT", 6, 0)
   name:SetPoint("RIGHT", counter, "LEFT", -6, 0)
   row.icon, row.name, row.counter = icon, name, counter
+  Widgets.ShiftClickLinks(row, function(self) return self.itemID end)
   Widgets.SetItemTooltip(row, function(self) return self.itemID end)
   return row
 end
