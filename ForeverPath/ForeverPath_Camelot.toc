@@ -1,0 +1,61 @@
+## Interface: 16001
+## Title: ForeverPath
+## Notes: Goal-driven progression planner for World of Warcraft: Forever. Plan crafting and item goals and see what you still need and where it comes from.
+## Author: Jacob
+## Version: 0.10.4
+## IconTexture: Interface\AddOns\ForeverPath\Media\ForeverPath-Mark.png
+## SavedVariables: ForeverPathDB
+## SavedVariablesPerCharacter: ForeverPathCharDB
+## AddonCompartmentFunc: ForeverPath_OnAddonCompartmentClick
+## X-Category: Professions
+## X-License: MIT
+
+# Load order matters: Core -> Domain -> Providers -> Data -> services -> UI -> command and bootstrap wiring.
+Core\Namespace.lua
+Core\Util.lua
+Core\Log.lua
+Core\Compat.lua
+Core\Events.lua
+Core\Database.lua
+Domain\Status.lua
+Domain\RecipeModel.lua
+Domain\GoalModel.lua
+Domain\GoalStore.lua
+Domain\CraftingEngine.lua
+Domain\Allocation.lua
+Domain\DependencyResolver.lua
+Domain\Planner.lua
+Domain\Overview.lua
+Domain\ShoppingList.lua
+Domain\CraftWise.lua
+Providers\ItemProvider.lua
+Providers\ProfessionProvider.lua
+Providers\InventoryProvider.lua
+Providers\CharacterProvider.lua
+Providers\VendorProvider.lua
+Providers\TrainerProvider.lua
+Providers\SourceProvider.lua
+Providers\AttuneProvider.lua
+Providers\PriceProvider.lua
+Providers\AuctionPriceProvider.lua
+Data\RecipeCatalogue.lua
+Data\Recipes.lua
+Data\ItemClasses.lua
+Core\GoalService.lua
+Core\GoalCompletion.lua
+UI\Theme.lua
+UI\Widgets.lua
+UI\Screens\Dashboard.lua
+UI\Screens\Goals.lua
+UI\Screens\CraftingTree.lua
+UI\Screens\CraftWise.lua
+UI\Screens\Crafting.lua
+UI\Screens\Preview.lua
+UI\Screens\Characters.lua
+UI\Screens\Shopping.lua
+UI\Screens\Attunements.lua
+UI\MainFrame.lua
+UI\Tracker.lua
+UI\Toast.lua
+Core\SlashCommands.lua
+Core\Bootstrap.lua

@@ -1,0 +1,6 @@
+# Build products of the catalogue generator. Only ForeverPath/Data/RecipeCatalogue.lua ships.
+external/
+definitions/
+bin/
+obj/
+last-run.json

@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Reads the recipe tables out of the local World of Warcraft: Forever client
+    (CASC store + hotfix cache) and writes ForeverPath/Data/RecipeCatalogue.lua.
+    Run through scripts/extract_db.ps1, which fetches and patches CascLib first.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net7.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>DbExtract</RootNamespace>
+    <NoWarn>SYSLIB0014;CS8632</NoWarn>
+    <!-- The CascLib checkout lives under external/; keep its sources out of this project. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);external/**;definitions/**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DBCD" Version="2.3.1" />
+    <PackageReference Include="DBCD.IO" Version="2.3.1" />
+    <ProjectReference Include="external\CascLib\CascLib\CascLib.csproj" />
+  </ItemGroup>
+
+</Project>

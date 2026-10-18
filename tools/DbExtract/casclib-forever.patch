@@ -1,0 +1,29 @@
+diff --git a/CascLib/CascLib.csproj b/CascLib/CascLib.csproj
+index 40a847c..129d9ff 100644
+--- a/CascLib/CascLib.csproj
++++ b/CascLib/CascLib.csproj
+@@ -1,7 +1,7 @@
+ ﻿<Project Sdk="Microsoft.NET.Sdk">
+ 
+   <PropertyGroup>
+-    <TargetFrameworks>netstandard2.0;net8.0;net9.0;net10.0</TargetFrameworks>
++    <TargetFrameworks>netstandard2.0;net7.0</TargetFrameworks>
+     <Copyright>Copyright © TOM_RUS 2014-2022</Copyright>
+     <LangVersion>latest</LangVersion>
+     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+diff --git a/CascLib/RootHandlers/WowRootHandler.cs b/CascLib/RootHandlers/WowRootHandler.cs
+index bf33e62..ac15ccd 100644
+--- a/CascLib/RootHandlers/WowRootHandler.cs
++++ b/CascLib/RootHandlers/WowRootHandler.cs
+@@ -211,8 +211,10 @@ namespace CASCLib
+ 
+                 numFilesRead += count;
+ 
++                // Newer roots (Forever 1.60 / 12.x engine) carry blocks with no locale
++                // flags; TACTSharp skips them by locale, so keep them instead of throwing.
+                 if (localeFlags == LocaleFlags.None)
+-                    throw new InvalidDataException("block.LocaleFlags == LocaleFlags.None");
++                    Console.WriteLine($"[root] block with LocaleFlags.None: count {count} contentFlags {contentFlags} version {version}");
+ 
+                 if (contentFlags != ContentFlags.None && (contentFlags & (ContentFlags.HighResTexture | ContentFlags.Windows | ContentFlags.MacOS | ContentFlags.Alternate | ContentFlags.F00020000 | ContentFlags.F00080000 | ContentFlags.F00100000 | ContentFlags.F00200000 | ContentFlags.F00400000 | ContentFlags.F02000000 | ContentFlags.NotCompressed | ContentFlags.NoNameHash | ContentFlags.F20000000)) == 0)
+                     throw new InvalidDataException("block.ContentFlags != ContentFlags.None");

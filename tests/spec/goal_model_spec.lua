@@ -1,0 +1,111 @@
+local H = require("harness")
+
+describe("GoalModel", function()
+  local ns, GoalModel
+  before_each(function()
+    ns = H.fresh()
+    GoalModel = ns.GoalModel
+  end)
+
+  it("creates a craft goal with plain data", function()
+    local goal, err = GoalModel.New("CRAFT_ITEM", { itemID = 2996, quantity = 2 }, { now = 100 })
+    assert_nil(err)
+    assert_eq(goal.type, "CRAFT_ITEM")
+    assert_eq(goal.status, "ACTIVE")
+    assert_eq(goal.target.itemID, 2996)
+    assert_eq(goal.target.quantity, 2)
+    assert_eq(goal.createdAt, 100)
+    assert_match(goal.id, "^fp%-100%-%d+%-%d%d%d%d$")
+    assert_true(ns.Util.IsPlainData(goal))
+  end)
+
+  it("copies the target so later edits do not leak", function()
+    local target = { itemID = 1, quantity = 1 }
+    local goal = GoalModel.New("CRAFT_ITEM", target)
+    target.quantity = 50
+    assert_eq(goal.target.quantity, 1)
+  end)
+
+  it("rejects invalid targets", function()
+    local _, err = GoalModel.New("CRAFT_ITEM", { itemID = 0, quantity = 1 })
+    assert_match(err, "itemID")
+    _, err = GoalModel.New("CRAFT_ITEM", { itemID = "2996", quantity = 1 })
+    assert_match(err, "itemID")
+    _, err = GoalModel.New("CRAFT_ITEM", { itemID = 2996, quantity = 0 })
+    assert_match(err, "quantity")
+    _, err = GoalModel.New("CRAFT_ITEM", { itemID = 2996, quantity = 1.5 })
+    assert_match(err, "quantity")
+    _, err = GoalModel.New("CRAFT_ITEM", nil)
+    assert_match(err, "target")
+    _, err = GoalModel.New("NOT_A_TYPE", {})
+    assert_match(err, "unknown goal type")
+  end)
+
+  it("generates unique ids within the same second", function()
+    local seen = {}
+    for _ = 1, 200 do
+      local goal = GoalModel.New("CRAFT_ITEM", { itemID = 1, quantity = 1 }, { now = 5 })
+      assert_nil(seen[goal.id], "duplicate id " .. goal.id)
+      seen[goal.id] = true
+    end
+  end)
+
+  it("knows which goal types are supported", function()
+    assert_true(GoalModel.IsSupported("CRAFT_ITEM"))
+    assert_true(GoalModel.IsSupported("OBTAIN_ITEM"))
+    assert_true(GoalModel.IsSupported("COMPLETE_ATTUNEMENT"))
+    local attuneGoal = GoalModel.New("COMPLETE_ATTUNEMENT", { attuneID = "40", name = "Onyxia's Lair" })
+    assert_eq(GoalModel.Title(attuneGoal), "Complete attunement: Onyxia's Lair")
+    assert_eq(GoalModel.Name(attuneGoal), "Onyxia's Lair")
+    assert_nil((GoalModel.New("COMPLETE_ATTUNEMENT", { name = "x" })), "attuneID required")
+    assert_false(GoalModel.IsSupported("COMPLETE_QUEST"))
+    assert_false(GoalModel.IsSupported("NOPE"))
+    local goal = GoalModel.New("COMPLETE_QUEST", { questID = 10 })
+    assert_not_nil(goal, "unsupported types can still be represented")
+  end)
+
+  it("validates saved goals", function()
+    local good = GoalModel.New("CRAFT_ITEM", { itemID = 1, quantity = 1 })
+    assert_true(GoalModel.Validate(good))
+    assert_false(GoalModel.Validate(nil))
+    assert_false(GoalModel.Validate({ type = "CRAFT_ITEM", target = { itemID = 1, quantity = 1 } }))
+    assert_false(GoalModel.Validate({ id = "x", type = "BOGUS", target = {} }))
+    assert_false(GoalModel.Validate({ id = "x", type = "CRAFT_ITEM", target = { itemID = -1, quantity = 1 } }))
+    assert_false(GoalModel.Validate({ id = "x", type = "CRAFT_ITEM", target = { itemID = 1, quantity = 1 }, status = "WEIRD" }))
+  end)
+
+  it("updates quantity and timestamps", function()
+    local goal = GoalModel.New("CRAFT_ITEM", { itemID = 1, quantity = 1 }, { now = 1 })
+    assert_true(GoalModel.SetQuantity(goal, 7, 50))
+    assert_eq(goal.target.quantity, 7)
+    assert_eq(goal.updatedAt, 50)
+    local ok, err = GoalModel.SetQuantity(goal, 0)
+    assert_false(ok)
+    assert_match(err, "quantity")
+  end)
+
+  it("tracks status transitions and tracking flags", function()
+    local goal = GoalModel.New("CRAFT_ITEM", { itemID = 1, quantity = 1 }, { now = 1 })
+    assert_true(goal.tracked)
+    assert_true(GoalModel.IsOpen(goal))
+    assert_true(GoalModel.SetStatus(goal, "COMPLETED", 9))
+    assert_eq(goal.completedAt, 9)
+    assert_false(GoalModel.IsOpen(goal))
+    assert_true(GoalModel.SetStatus(goal, "PAUSED", 10))
+    assert_nil(goal.completedAt)
+    local ok, err = GoalModel.SetStatus(goal, "BOGUS")
+    assert_false(ok)
+    assert_match(err, "status")
+    goal.tracked = "yes"
+    assert_false(GoalModel.Validate(goal))
+    goal.tracked = false
+    goal.priority = "1"
+    assert_false(GoalModel.Validate(goal))
+  end)
+
+  it("builds readable titles", function()
+    local goal = GoalModel.New("CRAFT_ITEM", { itemID = 2996, quantity = 3 })
+    assert_eq(GoalModel.Title(goal), "Craft 3x Item 2996")
+    assert_eq(GoalModel.Title(goal, function() return "Bolt of Linen Cloth" end), "Craft 3x Bolt of Linen Cloth")
+  end)
+end)
