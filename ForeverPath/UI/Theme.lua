@@ -28,6 +28,9 @@ local palette = {
   primaryText = "#FBEBC0", closeText = "#F0D0B0",
   coinGold = "#E6C25A", coinSilver = "#C3C8CC", coinCopper = "#C07A45",
   tooltipHeader = "#FFD100",
+  -- Quest level difficulty, as the default UI colours them.
+  questTrivial = "#9D9D9D", questEasy = "#40C040", questStandard = "#FFD100", questHard = "#FF8040", questImpossible = "#FF2020",
+  questReadyBg = "#1C2A1E", questReadyBorder = "#3E6A48",
 }
 
 Theme.Colors = {}

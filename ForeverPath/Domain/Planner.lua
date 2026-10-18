@@ -38,6 +38,7 @@ function Planner.DefaultDeps()
     sources = ns.SourceProvider,
     price = ns.PriceProvider,
     attune = ns.AttuneProvider,
+    quest = ns.QuestProvider,
     settings = ns.db and ns.db.settings or {},
   }
 end
@@ -145,6 +146,9 @@ function Planner.Evaluate(goal, deps)
   end
   if goal.type == "REACH_SKILL" then
     return Planner.EvaluateSkill(view, goal, deps)
+  end
+  if goal.type == "COMPLETE_QUEST" then
+    return Planner.EvaluateQuest(view, goal, deps)
   end
 
   local itemID = goal.target.itemID
@@ -652,6 +656,88 @@ function Planner.EvaluateSkill(view, goal, deps)
     view.nextStep = "Open the " .. skill.professionName .. " window"
   else
     view.nextStep = "Find a recipe for " .. current .. "+"
+  end
+  return view
+end
+
+-- Quest goals: the chain to do (journal prerequisites, then the quest) with
+-- each quest's live state. Progress counts completed quests in the chain
+-- plus the objectives of the one in the log. The view carries
+-- `quest = { entry, state, chain, next, levelBlocked, playerLevel }`.
+function Planner.EvaluateQuest(view, goal, deps)
+  local QP = deps.quest
+  local target = goal.target
+  local questID = target.questID
+  view.item = { name = target.name or ("Quest " .. tostring(questID)), icon = target.icon or (QP and QP.ICON) or nil, quality = 1, loaded = true, exists = true }
+  if not QP or not QP.IsAvailable() then
+    view.status = Status.PROVIDER_UNAVAILABLE
+    view.message = "This client does not expose the quest API ForeverPath needs (C_QuestLog)."
+    return view
+  end
+  local entry = QP.Get(questID)
+  local name = QP.Name(questID)
+  view.item.name = name
+  local chain, nextStep = QP.Chain(questID)
+  local state = chain[#chain].state
+  local playerLevel = QP.PlayerLevel()
+  local requires = entry and entry.requires or nil
+  local quest = {
+    questID = questID, entry = entry, state = state, chain = chain, next = nextStep, playerLevel = playerLevel,
+    levelBlocked = requires ~= nil and requires > playerLevel, requires = requires,
+    label = QP.StateLabel(state, entry, playerLevel),
+  }
+  view.quest = quest
+  if state.ready then view.item.icon = QP.ICON_READY end
+
+  local done, partial = 0, 0
+  for _, step in ipairs(chain) do
+    if step.state.completed then done = done + 1
+    elseif step == nextStep and step.state.inLog then partial = step.state.fraction end
+  end
+  local percent = #chain > 0 and math.floor((done + partial) * 100 / #chain + 0.5) or 0
+  if state.completed then percent = 100 end
+  view.progress = { percent = percent, ownedUnits = done, requiredUnits = #chain, materialsHave = done, materialsTotal = #chain }
+  view.plan = Planner.StepPlan(state.completed)
+
+  local function where(step)
+    local e = step.entry
+    if not e then return nil end
+    if e.pickup then return e.pickup end
+    if e.start and e.start.label then return e.start.label end
+    return e.location
+  end
+  if state.completed then
+    view.message = string.format("%s is completed.", name)
+    view.nextStep = "Mark the goal complete"
+  elseif quest.levelBlocked then
+    view.message = string.format("Needs level %d; you are %d.", requires, playerLevel)
+    view.nextStep = string.format("Reach level %d", requires)
+  elseif nextStep and nextStep ~= chain[#chain] then
+    local s = nextStep.state
+    if s.ready then
+      view.message = string.format("First turn in %s%s.", nextStep.name, nextStep.entry and nextStep.entry.turnin and (" at " .. nextStep.entry.turnin) or "")
+      view.nextStep = "Turn in " .. nextStep.name
+    elseif s.inLog then
+      local progress = QP.ObjectiveText(s)
+      view.message = string.format("First finish %s%s.", nextStep.name, progress ~= "" and (": " .. progress) or "")
+      view.nextStep = "Finish " .. nextStep.name
+    else
+      local pickup = where(nextStep)
+      view.message = string.format("First pick up %s%s (required before %s).", nextStep.name, pickup and (" from " .. pickup) or "", name)
+      view.nextStep = "Pick up " .. nextStep.name
+    end
+  elseif state.ready then
+    view.message = string.format("Ready to turn in%s.", entry and entry.turnin and (" at " .. entry.turnin) or "")
+    view.nextStep = "Turn in " .. name
+  elseif state.inLog then
+    local progress = QP.ObjectiveText(state)
+    view.message = string.format("In your log%s.", progress ~= "" and (": " .. progress) or (entry and entry.objective and (": " .. entry.objective) or ""))
+    view.nextStep = "Finish " .. name
+  else
+    local pickup = where(chain[#chain])
+    view.message = string.format("Pick up %s%s.", name, pickup and (" from " .. pickup) or "")
+    if entry and entry.objective then view.message = view.message .. " " .. entry.objective end
+    view.nextStep = "Pick up " .. name
   end
   return view
 end

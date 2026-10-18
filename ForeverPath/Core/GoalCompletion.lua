@@ -104,6 +104,10 @@ function GoalCompletion.Check(reason)
       if progress and progress.complete then
         finish(goal, progress)
       end
+    elseif goal.type == "COMPLETE_QUEST" then
+      if ns.QuestProvider and ns.QuestProvider.IsAvailable() and ns.QuestProvider.State(goal.target.questID).completed then
+        finish(goal, { quest = true })
+      end
     elseif goal.type == "LEARN_RECIPE" then
       if ns.ProfessionProvider and ns.ProfessionProvider.IsLearned(goal.target.spellID) then
         finish(goal, { learned = true })
@@ -143,10 +147,12 @@ function GoalCompletion.Celebrate(goal, info)
     detail = "Learned: " .. name
   elseif goal.type == "REACH_SKILL" then
     detail = name .. " reached"
+  elseif goal.type == "COMPLETE_QUEST" then
+    detail = "Quest done: " .. name
   else
     detail = string.format("%s %dx %s", verb, quantity, name)
   end
-  local TITLES = { COMPLETE_ATTUNEMENT = "Attunement complete", LEARN_RECIPE = "Recipe learned", REACH_SKILL = "Skill reached" }
+  local TITLES = { COMPLETE_ATTUNEMENT = "Attunement complete", LEARN_RECIPE = "Recipe learned", REACH_SKILL = "Skill reached", COMPLETE_QUEST = "Quest complete" }
   Log.Print("Goal complete: %s. %d goal%s done.", detail, doneCount, doneCount == 1 and "" or "s")
   if setting("completeSound", true) and type(PlaySound) == "function" then
     local kit = (type(SOUNDKIT) == "table" and SOUNDKIT.LEVELUP) or GoalCompletion.SOUND
@@ -193,7 +199,7 @@ function GoalCompletion.Init()
       if ns.UI and ns.UI.MainFrame then ns.UI.MainFrame.RequestRefresh() end
     end)
   end)
-  -- Attunement steps move on quests and levels.
+  -- Attunement steps and quest goals move on quests and levels.
   for _, event in ipairs({ "QUEST_TURNED_IN", "QUEST_LOG_UPDATE", "PLAYER_LEVEL_UP", "QUEST_ACCEPTED" }) do
     Events.RegisterWoW(event, function()
       Events.Debounce("attunement-check", 1, function()

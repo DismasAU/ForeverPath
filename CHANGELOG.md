@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.12.0 (2026-10-18) - quest goals and the Quests screen
+
+### Added
+- **Quest goals** (`/fp quest <name or id>`, the Quest segment on My Goals,
+  "+ Add goal" on the Quests screen). `Providers/QuestProvider.lua` indexes
+  the quests other Forever addons ship: ForeverDungeonJournal's dungeon
+  quests (level, required level, faction, objective, pick-up and turn-in,
+  rewards, XP) with their prerequisite chains (`QUEST_PREREQ_CHAINS`) and
+  quest-giver pins (`QUEST_START_MAPS`), and Attune's attunement quests
+  (names, required level, group size, quest givers, rewards). Quests in
+  your log are read from `C_QuestLog` whether or not an addon knows them;
+  other titles are loaded by id (`RequestLoadQuestByID`). A quest goal's
+  plan is its chain: prerequisites first, each with its live state
+  (completed flag, in log with objectives, ready to turn in), then the
+  quest. The view says what to do next ("Pick up X from Y", "Finish X:
+  3/20 ...", "Turn in X at Y", "Needs level 15") and the goal completes on
+  the turn-in (toast "Quest complete"). Progress counts completed quests of
+  the chain plus the objectives of the one in the log.
+- **Quests screen** (no longer a preview). By zone (dungeon, attunement or
+  quest-log zone), by goal (quests whose rewards an open goal is missing,
+  plus quest goals) or completed; the "only quests that feed a goal"
+  filter; rows with the quest marker, the level in difficulty colours, the
+  goals fed and a state badge (Ready, In log, Available, Locked, Done); a
+  details panel with level, place and giver, live objectives with bars or
+  the objective text, the chain, a "ready to turn in" callout, reward icons
+  and text, which goals the rewards feed, and Add goal / Open goal, Link
+  (quest link into chat) and Watch (objective tracker) buttons; footer with
+  the quests feeding goals and the log capacity.
+- `/fp quests` prints the quests that feed your goals with their state.
+- `Status.PROFESSION_MISSING` joins `StatusLabel`; `GoalModel.COMPLETE_QUEST`
+  is supported (target `{ questID, name, level, instance, icon }`).
+
+### Changed
+- The Overview, Dashboard, My Goals, tracker and Crafting screens handle
+  quest goals (the Crafting screen points to the Quests screen, as it does
+  for attunements). `FP_QUESTS_UPDATED` (debounced from the quest events)
+  refreshes the window.
+
 ## 0.11.0 (2026-10-18) - learn-recipe and reach-skill goals
 
 Two goal types that the catalogue and the trainer recorder made cheap.

@@ -336,6 +336,82 @@ function GoalService.SetRank(id, rank)
   return store:SetRank(id, rank)
 end
 
+---------------------------------------------------------------------------
+-- Quest goals
+---------------------------------------------------------------------------
+function GoalService.FindQuestGoal(questID)
+  local store = GoalService.Store()
+  if not store then return nil end
+  for _, goal in ipairs(store:List()) do
+    if goal.type == "COMPLETE_QUEST" and goal.target and goal.target.questID == questID then
+      return goal
+    end
+  end
+  return nil
+end
+
+-- Creates (or selects) a quest goal. Returns goal, message, isNew.
+function GoalService.AddQuestGoal(questID)
+  local store = GoalService.Store()
+  if not store then
+    return nil, "ForeverPath is still loading."
+  end
+  local QP = ns.QuestProvider
+  if not QP or not QP.IsAvailable() then
+    return nil, "Quest goals need the quest API (C_QuestLog), which this client lacks."
+  end
+  local existing = GoalService.FindQuestGoal(questID)
+  if existing then
+    if not GoalModel.IsOpen(existing) then
+      store:SetStatus(existing.id, GoalModel.Statuses.ACTIVE)
+    end
+    store:Select(existing.id)
+    return existing, string.format("Already a goal: %s", GoalService.Title(existing)), false
+  end
+  local entry = QP.Get(questID)
+  local goal, err = store:Create("COMPLETE_QUEST", {
+    questID = questID, name = QP.Name(questID), level = entry and entry.level or nil, instance = entry and entry.instance or nil, icon = QP.ICON,
+  })
+  if not goal then
+    return nil, err
+  end
+  store:Select(goal.id)
+  for _, reward in ipairs(entry and entry.rewards or {}) do ItemProvider.Prefetch(reward.itemID) end
+  return goal, string.format("Added goal: %s", GoalService.Title(goal)), true
+end
+
+-- Quest goal from free text: a quest id, or a name searched in the known
+-- quests (dungeon and attunement quests, and your quest log). Returns ok, message, goal.
+function GoalService.AddQuestFromInput(text)
+  text = Util.Trim(text or "")
+  if text == "" then
+    return false, "Type a quest name (or its id)."
+  end
+  local QP = ns.QuestProvider
+  if not QP or not QP.IsAvailable() then
+    return false, "Quest goals need the quest API (C_QuestLog), which this client lacks."
+  end
+  local questID = Util.ParseInt(text)
+  local note = ""
+  if not questID then
+    local hits = QP.Search(text, 5)
+    if #hits == 0 then
+      return false, string.format("No quest called \"%s\" is known (dungeon quests, attunement quests, your quest log).", text)
+    end
+    questID = hits[1].questID
+    if #hits > 1 then
+      local others = {}
+      for i = 2, #hits do others[#others + 1] = hits[i].name end
+      note = string.format(" (using %s - %s; also matched: %s)", hits[1].name, hits[1].where or "?", Util.Join(others))
+    end
+  end
+  local goal, message = GoalService.AddQuestGoal(questID)
+  if not goal then
+    return false, message
+  end
+  return true, message .. note, goal
+end
+
 function GoalService.AddObtainGoal(itemID, quantity)
   return GoalService.AddItemGoal(itemID, quantity, "OBTAIN_ITEM")
 end

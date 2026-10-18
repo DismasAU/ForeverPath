@@ -1,4 +1,4 @@
--- Preview modules: Equipment, Quests, Reputations, Attunements.
+-- Preview modules: Equipment and Reputations.
 -- Each shows the "coming in a later version" empty state from the handoff.
 local _, ns = ...
 
@@ -8,7 +8,6 @@ ns.UI.Screens = ns.UI.Screens or {}
 
 local PREVIEWS = {
   equipment = { label = "Equipment", text = "Equipped gear, best-in-slot targets and upgrade goals per slot." },
-  quests = { label = "Quests", text = "Quests that feed your goals, grouped by zone, with turn-in state and rewards." },
   reputations = { label = "Reputations", text = "Reputation goals with standing progress and the turn-ins that move them." },
 }
 

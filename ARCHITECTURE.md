@@ -47,7 +47,8 @@ ForeverPath/
     Screens/CraftingTree.lua screen 03: dependency tree tab (tree panel + selected node)
     Screens/CraftWise.lua    screen 04: strategy cards, breakdown table, "Use this plan"
     Screens/Crafting.lua     screen 02: hero panel, tabs, requirements table
-    Screens/Preview.lua      preview modules with "later version" states
+    Screens/Quests.lua       quests by zone / goal / completed, details, chain, rewards
+    Screens/Preview.lua      preview modules with "later version" states (Equipment, Reputations)
     Screens/Characters.lua   screen 07: character cards, coverage banner, account-wide scope
     Screens/Shopping.lua     screen 05: goal chips, summary, filter tabs, bought ticks, send to chat
     Screens/Attunements.lua  screen 06: picker, header, step timeline, current step
@@ -243,10 +244,31 @@ The ledger draws bags, then bank, then alts, and only touches alts when
 
 `GoalModel.Types` registers CRAFT_ITEM, OBTAIN_ITEM, COMPLETE_ATTUNEMENT
 (targets `{ attuneID, name, icon }`), LEARN_RECIPE (`{ spellID, name,
-professionName, professionID, icon }`) and REACH_SKILL (`{ professionID,
-professionName, rank, startRank, icon }`) as supported, plus COMPLETE_QUEST
-and REACH_REPUTATION (represented, not yet planned). `target` is type
-specific.
+professionName, professionID, icon }`), REACH_SKILL (`{ professionID,
+professionName, rank, startRank, icon }`) and COMPLETE_QUEST (`{ questID,
+name, level, instance, icon }`) as supported, plus REACH_REPUTATION
+(represented, not yet planned). `target` is type specific.
+
+**Quest planning.** `Providers/QuestProvider.lua` builds a static index
+(`Index()`, lazily, dropped on `FP_READY`) from ForeverDungeonJournal
+(`DB[dungeon].quests`, `QUEST_PREREQ_CHAINS`, `QUEST_START_MAPS`,
+`FOREVER_QUEST_XP_FALLBACK`; chain prerequisites that are not dungeon
+quests get `source = "chain"` entries) and Attune (`Attune_Data.quests`,
+`questGivers`, `questRewards`, the step that uses the quest for the
+attunement name and location). Live state is `State(questID)`: completed
+flag, in log, ready (`C_QuestLog.IsComplete`), log index, title and level
+from `GetInfo`, objectives from `GetQuestObjectives`, and a 0..1 fraction.
+`LogEntries()` walks the log with its zone headers; `Name()` falls back to
+`GetTitleForQuestID` after `RequestLoadQuestByID` (`QUEST_DATA_LOAD_RESULT`
+fills `titles`); `Chain()` is the prerequisites then the quest, each with
+its state, and the first incomplete one; `StateLabel()` gives Ready / In
+log / Available / Locked / Done; `FeedsGoals(goals, views)` maps quests to
+the open goals whose missing leaves they reward. `Planner.EvaluateQuest`
+carries `quest = { entry, state, chain, next, label, levelBlocked }`,
+`nextStep`, a `StepPlan` and progress = completed chain quests plus the
+objective fraction of the one in the log. The quest events (accepted,
+turned in, removed, log update) fire `FP_QUESTS_UPDATED` (debounced);
+`GoalCompletion` completes the goal when the flag is set.
 
 **Learn-recipe planning.** `Planner.EvaluateLearn` looks the recipe up
 (`Planner.RecipeByID`: catalogue, then a recorded window), checks

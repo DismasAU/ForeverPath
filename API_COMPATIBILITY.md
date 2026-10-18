@@ -59,6 +59,29 @@ client. Behaviour (return values, timing) is only verified where stated.
 | `GameTooltip:SetItemByID` | Widgets | Retail API | Guarded with pcall; falls back to a plain name tooltip |
 | `Enum.CraftingReagentType.Basic` (=1), `Enum.BankType.Character` (=0), `Enum.BagIndex.ReagentBag` (=5) | Compat | `Enum.BagIndex` in dump; the other two from Retail 12.x docs | Fallback constants used when the enum is missing |
 
+## 0.12.0
+
+Quest goals and the Quests screen read `C_QuestLog` (all behind `pcall`,
+each absent function degrades to "unknown"):
+
+| Function | Used for | Evidence |
+|---|---|---|
+| `C_QuestLog.IsQuestFlaggedCompleted`, `IsOnQuest` | completed / in log (already used for attunements) | Attune, RXPGuides, ForeverDungeonJournal |
+| `C_QuestLog.IsComplete(questID)` | ready to turn in | EllesmereUIQuestTracker, RXPGuides |
+| `C_QuestLog.GetNumQuestLogEntries()`, `GetInfo(index)` | the log with its zone headers (`title`, `questID`, `level`, `isHeader`) | EllesmereUIQuestTracker, RXPGuides |
+| `C_QuestLog.GetLogIndexForQuestID(questID)` | log index for `GetInfo` and `GetQuestLink` | EllesmereUIQuestTracker |
+| `C_QuestLog.GetQuestObjectives(questID)` | objectives (`text`, `finished`, `numFulfilled`, `numRequired`) | RXPGuides |
+| `C_QuestLog.GetTitleForQuestID(questID)`, `RequestLoadQuestByID(questID)`, event `QUEST_DATA_LOAD_RESULT` | titles of quests not in the log | RXPGuides, ForeverDungeonJournal |
+| `C_QuestLog.AddQuestWatch(questID)` | the Watch button | Retail API; guarded |
+| `C_QuestLog.GetMaxNumQuestsCanAccept()` | log capacity (falls back to 20) | Retail API; guarded |
+| `GetQuestLink(logIndex)` | the Link button | ForeverDungeonJournal |
+
+Events: `QUEST_ACCEPTED`, `QUEST_TURNED_IN`, `QUEST_LOG_UPDATE` (already
+used), plus `QUEST_REMOVED` and `QUEST_DATA_LOAD_RESULT`. Static quest data
+comes from `ForeverDungeonJournal_NS.DB[...].quests`, `QUEST_PREREQ_CHAINS`,
+`QUEST_START_MAPS`, `FOREVER_QUEST_XP_FALLBACK` and `Attune_Data.quests` /
+`questGivers` / `questRewards`, read as data and never written.
+
 ## 0.11.0
 
 No new API calls. Learn-recipe goals complete through the existing
@@ -207,7 +230,7 @@ All verified present in the Forever API event list (Atraeau docs, build 70170):
 `ADDON_LOADED`, `PLAYER_LOGIN`, `PLAYER_ENTERING_WORLD`, `PLAYER_REGEN_ENABLED`,
 `BAG_UPDATE_DELAYED`, `BANKFRAME_OPENED`, `BANKFRAME_CLOSED`,
 `PLAYERBANKSLOTS_CHANGED`, `BANK_TABS_CHANGED`, `TRADE_SKILL_LIST_UPDATE`,
-`TRADE_SKILL_SHOW`, `TRADE_SKILL_DATA_SOURCE_CHANGED`, `NEW_RECIPE_LEARNED`,
+`TRADE_SKILL_SHOW`, `TRADE_SKILL_DATA_SOURCE_CHANGED`, `NEW_RECIPE_LEARNED`, `QUEST_REMOVED`, `QUEST_DATA_LOAD_RESULT`,
 `ITEM_DATA_LOAD_RESULT`, `GET_ITEM_INFO_RECEIVED`.
 
 Not used because they do not exist on this client: `TRADE_SKILL_UPDATE`,

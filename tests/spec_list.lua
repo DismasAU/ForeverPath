@@ -25,6 +25,7 @@ return {
   "craftwise_spec",
   "goal_completion_spec",
   "goal_types_spec",
+  "quest_goals_spec",
   "bootstrap_spec",
   "ui_spec",
 }

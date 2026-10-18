@@ -35,9 +35,9 @@ describe("Planner", function()
   local goal = { id = "g", type = "CRAFT_ITEM", target = { itemID = 2996, quantity = 3 } }
 
   it("flags unsupported goal types", function()
-    local view = Planner.Evaluate({ id = "q", type = "COMPLETE_QUEST", target = {} }, deps())
+    local view = Planner.Evaluate({ id = "q", type = "REACH_REPUTATION", target = {} }, deps())
     assert_eq(view.status, Status.UNSUPPORTED_GOAL)
-    assert_match(view.message, "Complete quest")
+    assert_match(view.message, "Reach reputation")
   end)
 
   it("flags invalid items", function()

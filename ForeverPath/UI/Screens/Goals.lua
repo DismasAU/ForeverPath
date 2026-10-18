@@ -35,14 +35,15 @@ local function createNewGoalBar(screen)
     item = "Shift-click an item link, or type an item ID or name",
     recipe = "Type a recipe name (Bolt of Woolen Cloth, Sulfuron Hammer...)",
     skill = "Type a profession and the skill to reach (Tailoring 225)",
+    quest = "Type a quest name (dungeon and attunement quests, or your log)",
     attunement = "Type an attunement name (Onyxia, Molten Core...)",
   }
   local segment = Widgets.Segment(body, {
     { key = "item", label = "Item" },
     { key = "recipe", label = "Recipe" },
     { key = "skill", label = "Skill" },
+    { key = "quest", label = "Quest" },
     { key = "attunement", label = "Attunement" },
-    { key = "quest", label = "Quest", disabled = true },
     { key = "reputation", label = "Reputation", disabled = true },
   }, function(key)
     if input and input.placeholder then
@@ -401,6 +402,8 @@ local function Create(parent)
       ok, message = ns.GoalService.AddRecipeFromInput(text)
     elseif kind == "skill" then
       ok, message = ns.GoalService.AddSkillFromInput(text)
+    elseif kind == "quest" then
+      ok, message = ns.GoalService.AddQuestFromInput(text)
     else
       ok, message = ns.GoalService.AddFromInput(text, newGoal.stepper:GetValue())
     end
@@ -482,6 +485,8 @@ local function Create(parent)
         elseif view and view.skill then
           local s = view.skill
           row.sub:SetText(s.reached and "Reached" or string.format("%d of %d - %s", s.current, s.target, view.nextStep or ""))
+        elseif view and view.quest then
+          row.sub:SetText((view.quest.label or "") .. (view.nextStep and (" - " .. view.nextStep) or ""))
         elseif view and view.learn then
           row.sub:SetText(view.learn.learned and "Learned" or ((view.learn.recipe.professionName or "") .. (view.nextStep and (" - " .. view.nextStep) or "")))
         elseif view and view.plan then

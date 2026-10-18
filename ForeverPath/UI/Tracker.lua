@@ -289,7 +289,10 @@ function Tracker.Refresh()
     if view.skill then
       frame.sub:SetText(string.format("%d%% - %s %d of %d", percent or 0, view.skill.professionName, view.skill.current, view.skill.target))
     end
-    if view.nextStep and (view.learn or view.skill) and (view.plan.isComplete or #view.plan.materials == 0) then
+    if view.quest then
+      frame.sub:SetText(string.format("%d%% - %s", percent or 0, view.quest.label or ""))
+    end
+    if view.nextStep and (view.learn or view.skill or view.quest) and (view.plan.isComplete or #view.plan.materials == 0) then
       frame.nextText:SetText(view.nextStep)
     elseif view.plan.isComplete and view.plan.obtain then
       frame.nextText:SetText(string.format("All %d x %s on hand", view.plan.quantityWanted or 0, ns.GoalService.Name(goal)))

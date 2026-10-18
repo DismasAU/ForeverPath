@@ -28,9 +28,9 @@ MainFrame.Nav = {
   { key = "shopping", label = "Shopping List" },
   { key = "characters", label = "Characters" },
   { key = "attunements", label = "Attunements" },
+  { key = "quests", label = "Quests" },
   { divider = true, label = "Preview modules" },
   { key = "equipment", label = "Equipment", preview = true },
-  { key = "quests", label = "Quests", preview = true },
   { key = "reputations", label = "Reputations", preview = true },
 }
 
@@ -505,7 +505,8 @@ function MainFrame.OpenGoal(goalID)
   ns.GoalService.Select(goalID)
   MainFrame.Show()
   local goal = ns.GoalService.Store() and ns.GoalService.Store():Get(goalID)
-  MainFrame.ShowScreen(goal and goal.type == "COMPLETE_ATTUNEMENT" and "attunements" or "crafting")
+  local SCREEN_FOR = { COMPLETE_ATTUNEMENT = "attunements", COMPLETE_QUEST = "quests" }
+  MainFrame.ShowScreen(goal and SCREEN_FOR[goal.type] or "crafting")
 end
 
 local function refreshChrome(frame)
@@ -775,7 +776,7 @@ function MainFrame.OnCharactersUpdated()
 end
 
 function MainFrame.Init()
-  for _, message in ipairs({ "FP_GOALS_CHANGED", "FP_RECIPES_UPDATED", "FP_INVENTORY_UPDATED", "FP_ITEM_LOADED" }) do
+  for _, message in ipairs({ "FP_GOALS_CHANGED", "FP_RECIPES_UPDATED", "FP_INVENTORY_UPDATED", "FP_ITEM_LOADED", "FP_QUESTS_UPDATED" }) do
     Events.On(message, MainFrame.RequestRefresh)
   end
   Events.On("FP_CHARACTERS_UPDATED", MainFrame.OnCharactersUpdated)

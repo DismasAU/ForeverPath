@@ -48,6 +48,7 @@ What is covered:
 | `price_provider_spec` | Auctionator adapter (price, age, mean, listings, scan time), cheapest-of-sources with alternatives, freshness grades, status texts, `/fp prices`, missing addon / scan / database |
 | `goal_completion_spec` | Baseline and peak gain, crafting goal completes on the gained quantity, consumed-at-once crafts, obtain goals on hand, settings off, reopen re-bases, old goals baseline first, toast queue and click, `/fp celebrate` |
 | `goal_types_spec` | SkillPlanner (chance and difficulty per point, segments with learned recipes first, expected crafts rounded up, gaps, learnable recipes only with a known requirement, price-aware choice); learn-recipe goals (model and titles, catalogue search and profession lookup, a trainer recipe as a train-step tree blocked by profession or skill, trainer visit filling in trainer and cost, alts who know it, completion on learning with its toast, a pattern recipe as the pattern to get then to read, combine and unknown spells refused); reach-skill goals (default target, unknown and missing professions, the Tailoring 100-150 plan over the real catalogue: segments, skill root and `forSkill` tree, merged materials, shopping rows without outputs, Overview craft step, CraftWise, progress and completion on the skill-up, reopening with a higher target above the cap, unscanned profession, `/fp skill`, `/fp learn`, every screen and the tracker rendering both kinds) |
+| `quest_goals_spec` | QuestProvider (index from the journal and Attune: chains, prerequisite entries, starts, rewards, faction filter, search, difficulty colours; log, objectives, readiness, zone headers, capacity, titles loaded by id, `Describe`); quest goals (a six-quest chain planned step by step: locked, level gate, pick up, finish, turn in, available, in log, ready; progress; Overview steps; completion on the turn-in with its toast; log-only quests; refusals); feeds (`FeedsGoals`, `/fp quests`, `/fp quest`) and the Quests screen (selection from the goal, details, feeds, rewards, groups, filter, By goal and Completed tabs, Link and Watch, Add goal, other screens and the tracker) |
 | `craftwise_spec` | Buy vs craft vs hybrid per component, savings and recommendation, unknown prices stay unknown, owned and alt stock free, route plan and presets, obtain trees |
 | `source_provider_spec` | Class heuristics, hint dropped once a recipe exists unless it only refines a lower tier (raw materials: leather tiers, essences vs bolts, cured hides, smelting), a plan whose Medium Leather stays a leaf with crafting as a one-tier opt-in, vendor > AtlasLoot > heuristic ordering, AtlasLoot on-demand index and cap, planner default route, DungeonJournal boss/trash/shared loot and quest rewards, AtlasLoot duplicates folded, `/fp vendors` status |
 | `character_provider_spec` | Login/logout/change snapshots, serializability, a second character reading alts' stock (bags + bank), crafters, sources, coverage, freshness aging, forget, planner with and without includeAlts |
@@ -254,6 +255,16 @@ Needs two characters on the account. Log in on the alt first, then on your main.
 - [ ] The Dashboard's next step is "Craft N x <recipe> (skill a-b)" once the first recipe's reagents are on hand, "Obtain ..." otherwise.
 - [ ] Every skill-up moves the hero bar and the tracker; reaching the target completes the goal with the "Skill reached" toast.
 - [ ] A target above the cap says the cap must be raised; a profession whose window was never recorded asks for it.
+
+### 21. 0.12.0 quest goals and the Quests screen (not yet run in game)
+
+- [ ] The Quests screen lists dungeon quests (ForeverDungeonJournal) and attunement quests (Attune) by instance, plus every quest in your log under its zone; levels are coloured like the default UI; the footer shows "Quest log N / 20".
+- [ ] Clicking a quest shows level, place and giver, the objective text (or live objectives with bars when the quest is in your log), the prerequisite chain with done marks, reward icons and text.
+- [ ] A quest in your log: Link puts the quest link in the chat box, Watch adds it to the objective tracker.
+- [ ] `/fp quest leaders of the fang` (or the Quest segment on My Goals) adds the goal; the Dashboard's next step says which prerequisite to pick up first and from whom; the tracker shows the same.
+- [ ] Accepting, progressing and turning in quests of the chain updates the goal within a second (no `/reload`); turning in the final quest completes the goal with the "Quest complete" toast.
+- [ ] With an obtain goal for a quest reward (e.g. Slick Deviate Leggings), the By goal tab lists Deviate Hides under that goal and the details say "1 missing for ...".
+- [ ] A quest the addons do not know: `/fp quest <name>` finds it in your log; a quest id nobody knows shows "Quest <id>" until the client loads its title.
 
 ### Reporting
 Include: client build (`/dump GetBuildInfo()`), `/fp status` output, the step

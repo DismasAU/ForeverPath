@@ -12,8 +12,8 @@
 --   COMPLETE_ATTUNEMENT        { attuneID, name, icon }
 --   LEARN_RECIPE               { spellID, name, professionName, professionID, icon }
 --   REACH_SKILL                { professionID, professionName, rank, startRank, icon }
--- COMPLETE_QUEST and REACH_REPUTATION are registered so saved data, UI and
--- planners can grow into them.
+--   COMPLETE_QUEST             { questID, name, level, instance, icon }
+-- REACH_REPUTATION is registered so saved data, UI and planners can grow into it.
 local _, ns = ...
 
 local GoalModel = {}
@@ -24,7 +24,7 @@ local Util = ns.Util
 GoalModel.Types = {
   CRAFT_ITEM = { label = "Craft item", badge = "Crafting", supported = true, targetKind = "item" },
   OBTAIN_ITEM = { label = "Obtain item", badge = "Item", supported = true, targetKind = "item" },
-  COMPLETE_QUEST = { label = "Complete quest", badge = "Quest", supported = false, targetKind = "quest" },
+  COMPLETE_QUEST = { label = "Complete quest", badge = "Quest", supported = true, targetKind = "quest" },
   REACH_REPUTATION = { label = "Reach reputation", badge = "Reputation", supported = false, targetKind = "faction" },
   LEARN_RECIPE = { label = "Learn recipe", badge = "Recipe", supported = true, targetKind = "recipe" },
   COMPLETE_ATTUNEMENT = { label = "Complete attunement", badge = "Attunement", supported = true, targetKind = "attunement" },
@@ -96,12 +96,23 @@ local function validateSkillTarget(target)
   return true
 end
 
+local function validateQuestTarget(target)
+  if type(target) ~= "table" then
+    return false, "target missing"
+  end
+  if not Util.IsPositiveInt(target.questID) then
+    return false, "questID must be a positive integer"
+  end
+  return true
+end
+
 local validators = {
   CRAFT_ITEM = validateItemTarget,
   OBTAIN_ITEM = validateItemTarget,
   COMPLETE_ATTUNEMENT = validateAttunementTarget,
   LEARN_RECIPE = validateRecipeTarget,
   REACH_SKILL = validateSkillTarget,
+  COMPLETE_QUEST = validateQuestTarget,
 }
 
 function GoalModel.IsSupported(goalType)

@@ -36,6 +36,7 @@ for _, event in ipairs({
   "NEW_RECIPE_LEARNED", "SKILL_LINES_CHANGED",
   "ITEM_DATA_LOAD_RESULT", "GET_ITEM_INFO_RECEIVED",
   "QUEST_TURNED_IN", "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "PLAYER_LEVEL_UP",
+  "QUEST_REMOVED", "QUEST_DATA_LOAD_RESULT",
 }) do
   Mock.knownEvents[event] = true
 end
@@ -345,9 +346,11 @@ function Mock.InstallAtlasLoot(modules, opts)
 end
 
 -- A minimal ForeverDungeonJournal namespace. db = { [dungeon] = { bosses = { { name, npcID, trash, loot = { { itemID, name, slot, quality, mob } } } },
--- quests = { { id, name, faction, rewardChoice, rewardItems = { { itemID, name, quality } } } } } }; shared = SHARED_BY_BOSS.
-function Mock.InstallDungeonJournal(db, shared)
-  _G.ForeverDungeonJournal_NS = { DB = db, SHARED_BY_BOSS = shared or {} }
+-- quests = { { id, name, faction, level, requires, objective, pickup, turnin, rewards, rewardChoice, rewardItems = { { itemID, name, quality } } } } } }; shared = SHARED_BY_BOSS.
+-- opts.chains = QUEST_PREREQ_CHAINS, opts.starts = QUEST_START_MAPS, opts.xp = FOREVER_QUEST_XP_FALLBACK.
+function Mock.InstallDungeonJournal(db, shared, opts)
+  opts = opts or {}
+  _G.ForeverDungeonJournal_NS = { DB = db, SHARED_BY_BOSS = shared or {}, QUEST_PREREQ_CHAINS = opts.chains or {}, QUEST_START_MAPS = opts.starts or {}, FOREVER_QUEST_XP_FALLBACK = opts.xp or {} }
 end
 
 -- A minimal Auctionator: prices = { [itemID] = { price = copper, age = days|nil, mean = copper|nil, available = n|nil } },
@@ -385,19 +388,74 @@ function Mock.InstallAuctionator(prices, opts)
   _G.AUCTIONATOR_SAVEDVARS = { TimeOfLastBrowseScan = lastScan }
 end
 
--- A minimal Attune: data = { attunes, steps, quests, npcs }; opts.lang = { ["Q1_<id>"] = name }, opts.toons = Attune_DB.toons.
+-- A minimal Attune: data = { attunes, steps, quests, npcs, questGivers, questRewards }; opts.lang = { ["Q1_<id>"] = name }, opts.toons = Attune_DB.toons.
 function Mock.InstallAttune(data, opts)
   opts = opts or {}
-  _G.Attune_Data = { attunes = data.attunes or {}, steps = data.steps or {}, quests = data.quests or {}, npcs = data.npcs or {} }
+  _G.Attune_Data = { attunes = data.attunes or {}, steps = data.steps or {}, quests = data.quests or {}, npcs = data.npcs or {},
+    questGivers = data.questGivers, questRewards = data.questRewards }
   local lang = opts.lang or {}
   _G.AttuneLang = setmetatable({}, { __index = function(_, key) return lang[key] or key end })
   _G.Attune_DB = { toons = opts.toons or {} }
+end
+
+-- The quest log as C_QuestLog.GetInfo lists it: zone headers then quests, in acceptance order.
+local function questLogEntries()
+  local entries, zones, byZone = {}, {}, {}
+  for _, questID in ipairs(Mock.quests.order) do
+    local d = Mock.quests.details[questID] or {}
+    local zone = d.zone or "Quests"
+    if not byZone[zone] then
+      byZone[zone] = {}
+      zones[#zones + 1] = zone
+    end
+    table.insert(byZone[zone], questID)
+  end
+  for _, zone in ipairs(zones) do
+    entries[#entries + 1] = { title = zone, isHeader = true }
+    for _, questID in ipairs(byZone[zone]) do
+      local d = Mock.quests.details[questID] or {}
+      entries[#entries + 1] = { title = d.title or ("Quest " .. questID), questID = questID, level = d.level, isHeader = false }
+    end
+  end
+  return entries
+end
+Mock.QuestLogEntries = questLogEntries
+
+-- Puts a quest in the log. def = { title, level, zone, objectives = { { text, numFulfilled, numRequired, finished } }, ready }
+function Mock.AcceptQuest(questID, def)
+  def = def or {}
+  Mock.quests.log[questID] = true
+  Mock.quests.details[questID] = { title = def.title, level = def.level, zone = def.zone, objectives = def.objectives or {}, ready = def.ready == true }
+  local listed = false
+  for _, id in ipairs(Mock.quests.order) do if id == questID then listed = true end end
+  if not listed then table.insert(Mock.quests.order, questID) end
+  Mock.FireEvent("QUEST_ACCEPTED", questID)
+  Mock.FireEvent("QUEST_LOG_UPDATE")
+end
+
+-- Updates one objective; the quest becomes ready when every objective is finished.
+function Mock.SetQuestObjective(questID, index, fulfilled, finished)
+  local d = Mock.quests.details[questID]
+  if not d then return end
+  local o = d.objectives[index]
+  if o then
+    o.numFulfilled = fulfilled
+    if finished ~= nil then o.finished = finished else o.finished = (o.numRequired or 0) > 0 and fulfilled >= o.numRequired end
+  end
+  local ready = #d.objectives > 0
+  for _, obj in ipairs(d.objectives) do if not obj.finished then ready = false end end
+  d.ready = ready
+  Mock.FireEvent("QUEST_LOG_UPDATE")
 end
 
 -- Marks a quest completed and fires the turn-in events.
 function Mock.CompleteQuest(questID)
   Mock.quests.completed[questID] = true
   Mock.quests.log[questID] = nil
+  Mock.quests.details[questID] = nil
+  for i = #Mock.quests.order, 1, -1 do
+    if Mock.quests.order[i] == questID then table.remove(Mock.quests.order, i) end
+  end
   Mock.FireEvent("QUEST_TURNED_IN", questID)
   Mock.FireEvent("QUEST_LOG_UPDATE")
 end
@@ -554,7 +612,49 @@ function Mock.install()
   _G.C_QuestLog = {
     IsQuestFlaggedCompleted = function(questID) return Mock.quests.completed[questID] == true end,
     IsOnQuest = function(questID) return Mock.quests.log[questID] == true end,
+    IsComplete = function(questID)
+      local d = Mock.quests.details[questID]
+      return d ~= nil and d.ready == true
+    end,
+    GetNumQuestLogEntries = function()
+      local entries = questLogEntries()
+      return #entries, #Mock.quests.order
+    end,
+    GetInfo = function(index)
+      local entry = questLogEntries()[index]
+      if not entry then return nil end
+      return { title = entry.title, questID = entry.questID, level = entry.level, isHeader = entry.isHeader }
+    end,
+    GetLogIndexForQuestID = function(questID)
+      for index, entry in ipairs(questLogEntries()) do
+        if entry.questID == questID then return index end
+      end
+      return nil
+    end,
+    GetQuestObjectives = function(questID)
+      local d = Mock.quests.details[questID]
+      local out = {}
+      for i, o in ipairs(d and d.objectives or {}) do
+        out[i] = { text = o.text, type = o.type or "monster", finished = o.finished == true, numFulfilled = o.numFulfilled or 0, numRequired = o.numRequired or 0 }
+      end
+      return out
+    end,
+    GetTitleForQuestID = function(questID)
+      local d = Mock.quests.details[questID]
+      return (d and d.title) or Mock.quests.titles[questID]
+    end,
+    RequestLoadQuestByID = function(questID)
+      table.insert(Mock.quests.requests, questID)
+      Mock.FireEvent("QUEST_DATA_LOAD_RESULT", questID, Mock.quests.titles[questID] ~= nil)
+    end,
+    AddQuestWatch = function(questID) Mock.quests.watched[questID] = true return true end,
+    GetMaxNumQuestsCanAccept = function() return 20 end,
   }
+  _G.GetQuestLink = function(index)
+    local entry = questLogEntries()[index]
+    if not entry or entry.isHeader then return nil end
+    return string.format("|cffffff00|Hquest:%d:%d|h[%s]|h|r", entry.questID, entry.level or 0, entry.title)
+  end
   _G.UnitClass = function() return Mock.character.class, Mock.character.classFile end
   _G.UnitRace = function() return Mock.character.race end
   _G.GetRealmName = function() return Mock.character.realm end
@@ -793,7 +893,7 @@ function Mock.reset()
   _G.AUCTIONATOR_SAVEDVARS = nil
   Mock.auctionatorCalls = {}
   Mock.sounds = {}
-  Mock.quests = { completed = {}, log = {} }
+  Mock.quests = { completed = {}, log = {}, details = {}, order = {}, titles = {}, requests = {}, watched = {} }
   _G.Attune_Data = nil
   _G.AttuneLang = nil
   _G.Attune_DB = nil

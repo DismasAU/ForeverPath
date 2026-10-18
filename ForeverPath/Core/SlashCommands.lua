@@ -14,6 +14,8 @@ Commands.help = {
   { "/fp obtain <item> [qty]", "Add an obtain-item goal (drops, vendors, quests) even if a recipe exists." },
   { "/fp learn <recipe>", "Add a learn-recipe goal by recipe name (catalogue) or spell id: plans to get, or the trainer to visit." },
   { "/fp skill <profession> [rank]", "Add a reach-skill goal (default: the next cap): which recipes to craft, how often, and their materials." },
+  { "/fp quest <name or id>", "Add a quest goal (dungeon quests, attunement quests, or anything in your log): chain, pick-up, objectives, rewards." },
+  { "/fp quests", "List the quests ForeverPath knows that feed your goals, with their state." },
   { "/fp goals", "List open goals." },
   { "/fp select <n>", "Select goal number n (opens it in Crafting)." },
   { "/fp remove <n>", "Remove goal number n." },
@@ -151,6 +153,44 @@ end
 function handlers.skill(rest)
   if not requireLoaded() then return end
   addTypedGoal(ns.GoalService.AddSkillFromInput(rest))
+end
+
+function handlers.quest(rest)
+  if not requireLoaded() then return end
+  local ok, message = ns.GoalService.AddQuestFromInput(rest)
+  Log.Print("%s", message)
+  if ok and ns.UI.MainFrame.IsShown() then
+    ns.UI.MainFrame.SetStatus(message, "ok")
+    ns.UI.MainFrame.ShowScreen("quests")
+  end
+end
+
+function handlers.quests()
+  if not requireLoaded() then return end
+  local QP = ns.QuestProvider
+  Log.Print("%s", QP.Status())
+  local goals = ns.GoalService.List({ open = true })
+  local views = ns.Planner.EvaluateAll(goals)
+  local feeds = QP.FeedsGoals(goals, views, ns.GoalService.Name)
+  local ids = {}
+  for questID in pairs(feeds) do ids[#ids + 1] = questID end
+  table.sort(ids)
+  for _, questID in ipairs(ids) do
+    local feed = feeds[questID]
+    local names = {}
+    for _, g in ipairs(feed.goals) do names[#names + 1] = g.name end
+    local label = QP.StateLabel(QP.State(questID), feed.entry)
+    Log.output(string.format("  %s [%s] - %s - feeds %s", feed.entry.name, label, feed.entry.instance or "?", Util.Join(names)))
+  end
+  if #ids == 0 then
+    Log.output("  No known quest rewards an item your goals are missing.")
+  end
+  for _, goal in ipairs(goals) do
+    if goal.type == "COMPLETE_QUEST" then
+      local view = views[goal.id]
+      Log.output(string.format("  Goal: %s - %s", ns.GoalService.Name(goal), view and view.message or ""))
+    end
+  end
 end
 
 local function resolveOrComplain(rest)
