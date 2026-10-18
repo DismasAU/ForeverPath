@@ -14,12 +14,17 @@ local SIDE = 262
 
 local STATE_BADGE = { done = { "Done", "ok" }, current = { "Current", "gold" }, locked = { "Locked", "text" } }
 
-local function createStepRow(content, index)
+local function createStepRow(content, index, screen)
   local row = Widgets.Frame(content, nil, { frameType = "Button" })
   row:SetHeight(ROW)
   row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(index - 1) * ROW)
   row:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -(index - 1) * ROW)
   Widgets.HoverFill(row, C.white, 0.03)
+  row.selected = Widgets.Texture(row, C.gold, 0, "BACKGROUND")
+  row.selected:SetAllPoints(row)
+  row:SetScript("OnClick", function(self)
+    if self.step and screen then screen:SelectStep(self.step.key) end
+  end)
   -- Timeline: a connector line and a node.
   row.connector = Widgets.Texture(row, Theme.RGB("#4A4335"), 1)
   row.connector:SetWidth(2)
@@ -128,7 +133,7 @@ local function Create(parent)
   scroll:SetPoint("TOPLEFT", chain.body, "TOPLEFT", 0, -4)
   scroll:SetPoint("BOTTOMRIGHT", chain.body, "BOTTOMRIGHT", 0, 4)
   chain.scroll = scroll
-  chain.pool = Widgets.Pool(scroll.content, createStepRow)
+  chain.pool = Widgets.Pool(scroll.content, function(content, index) return createStepRow(content, index, screen) end)
   screen.chain = chain
 
   -- Current step panel
@@ -160,6 +165,23 @@ local function Create(parent)
   local alsoText = Widgets.Text(sb, "small", "", { wrap = true })
   alsoText:SetPoint("TOPLEFT", alsoLabel, "BOTTOMLEFT", 0, -4)
   alsoText:SetPoint("RIGHT", sb, "RIGHT", -12, 0)
+  local openQuest = Widgets.Button(sb, "Quests >", { onClick = function()
+    if not side.questID then return end
+    ns.UI.MainFrame.ShowScreen("quests")
+    local quests = ns.UI.MainFrame.screens.quests
+    if quests and quests.Select then quests:Select(side.questID) end
+  end })
+  openQuest:SetPoint("BOTTOMRIGHT", sb, "BOTTOMRIGHT", -12, 10)
+  openQuest:Hide()
+  local waypoint = Widgets.Button(sb, "Waypoint", { onClick = function()
+    if not side.questID then return end
+    local ok, message = ns.QuestProvider.SetWaypoint(ns.QuestProvider.Waypoint(side.questID))
+    ns.UI.MainFrame.SetStatus(message, ok and "ok" or "error")
+  end })
+  waypoint:SetPoint("RIGHT", openQuest, "LEFT", -6, 0)
+  waypoint:Hide()
+  Widgets.SetTooltip(waypoint, "Set a map waypoint", { "Pins the quest giver (or the turn-in once the quest is ready) on your map.", "Only when a position has been recorded for it." })
+  side.openQuest, side.waypoint = openQuest, waypoint
   side.icon, side.title, side.meta, side.chips, side.text, side.alsoLabel, side.alsoText = sIcon, sTitle, sMeta, sChips, sText, alsoLabel, alsoText
   side.empty = Widgets.EmptyState(sb, "Attuned", "Every step is done.")
   side.empty:SetPoint("TOPLEFT", sb, "TOPLEFT", 0, -30)
@@ -182,11 +204,19 @@ local function Create(parent)
   end
 
   function screen:Select(attuneID)
+    if attuneID ~= self.attuneID then self.stepKey = nil end
     self.attuneID = attuneID
     if ns.chardb then
       ns.chardb.ui = ns.chardb.ui or {}
       ns.chardb.ui.attunement = attuneID
     end
+    self:Refresh()
+  end
+
+  -- Shows a step's summary in the side panel; clicking the shown step
+  -- again goes back to the current one.
+  function screen:SelectStep(key)
+    if self.stepKey == key then self.stepKey = nil else self.stepKey = key end
     self:Refresh()
   end
 
@@ -279,6 +309,7 @@ local function Create(parent)
         Widgets.SetColor(row.connector, Theme.RGB("#4A4335"), 1)
       end
       row:SetAlpha(step.state == "locked" and 0.7 or 1)
+      Widgets.SetColor(row.selected, C.gold, self.stepKey == step.key and 0.08 or 0)
       if index == 1 then row.connector:SetPoint("TOP", row, "LEFT", 22, 0) else row.connector:SetPoint("TOP", row, "TOPLEFT", 22, 0) end
       if index == #progress.steps then row.connector:SetPoint("BOTTOM", row, "LEFT", 22, 0) else row.connector:SetPoint("BOTTOM", row, "BOTTOMLEFT", 22, 0) end
     end
@@ -286,10 +317,21 @@ local function Create(parent)
     chain.scroll:SetContentHeight(#progress.steps * ROW)
     chain.count:SetText(string.format("%d / %d", progress.done, progress.total))
 
-    -- Current step
-    local step = progress.next
+    -- The selected step, else the current one
+    local step, stepNumber
+    if self.stepKey then
+      local n = 0
+      for _, s in ipairs(progress.steps) do
+        if s.type ~= "End" then n = n + 1 end
+        if s.key == self.stepKey then step, stepNumber = s, n break end
+      end
+      if not step then self.stepKey = nil end
+    end
+    step = step or progress.next
+    side:SetTitle(self.stepKey and step and string.format("Step %d of %d", stepNumber or 0, progress.total) or "Current step")
+    side.questID = nil
     if not step then
-      for _, w in ipairs({ side.icon, side.title, side.meta, side.text, side.alsoLabel, side.alsoText }) do w:Hide() end
+      for _, w in ipairs({ side.icon, side.title, side.meta, side.text, side.alsoLabel, side.alsoText, side.openQuest, side.waypoint }) do w:Hide() end
       for _, chip in ipairs(side.chips) do chip:Hide() end
       side.empty:Show()
       return
@@ -298,7 +340,7 @@ local function Create(parent)
     for _, w in ipairs({ side.icon, side.title, side.meta, side.text, side.alsoLabel, side.alsoText }) do w:Show() end
     side.icon:SetItem(step.icon, 1)
     side.title:SetText(step.name)
-    side.meta:SetText(step.typeLabel .. (step.location and (" - " .. step.location) or ""))
+    side.meta:SetText(step.typeLabel .. (step.location and (" - " .. step.location) or "") .. (step.state == "done" and " - done" or (step.state == "locked" and " - locked" or "")))
     local sideChips = {}
     if step.groupSize and step.groupSize > 1 then
       sideChips[#sideChips + 1] = { "info", (step.groupSize > 5 and "Raid quest - " or "Group quest - ") .. step.groupSize .. " players" }
@@ -316,12 +358,81 @@ local function Create(parent)
       Item = "Get this item into your bags.", Kill = "Kill this creature (Attune records it).", Interact = "Speak with this NPC (Attune records it).",
       Click = "Use this object (Attune records it).", Level = "Keep levelling.", Rep = "Raise the reputation.", Attune = "Finish the other attunement first.",
     }
-    side.text:SetText(explain[step.type] or "")
+    local summary = screen:StepSummary(step)
+    side.text:SetText(#summary > 0 and table.concat(summary, "\n") or (explain[step.type] or ""))
+    local questID = step.questID
+    side.questID = questID
+    if questID then side.openQuest:Show() else side.openQuest:Hide() end
+    if questID and ns.QuestProvider.Waypoint(questID) then side.waypoint:Show() else side.waypoint:Hide() end
     local others = {}
     for _, s in ipairs(progress.current) do
       if s ~= step then others[#others + 1] = s.name .. (s.side and " (side)" or "") end
     end
     side.alsoText:SetText(#others > 0 and table.concat(others, ", ") or Theme.ColorText("text3", "nothing else is open yet"))
+  end
+
+  -- What a step asks of the player, one line per fact: a quest's state,
+  -- objectives, giver, turn-in, items to bring and rewards; an item's bag
+  -- count and sources; a level step's distance.
+  function screen:StepSummary(step)
+    local lines = {}
+    local function add(label, value)
+      lines[#lines + 1] = Theme.Hex.text2 .. label .. ":|r " .. value
+    end
+    local QP = ns.QuestProvider
+    local questID = tonumber(string.match(tostring(step.wowheadID or ""), "^(%d+)"))
+    if (step.type == "Quest" or step.type == "Pick Up" or step.type == "Turn In") and questID and QP and QP.IsAvailable() then
+      step.questID = questID
+      local entry = QP.Get(questID)
+      local state = QP.State(questID)
+      local label, kind = QP.StateLabel(state, entry)
+      -- The chain knows what the journal does not: earlier steps still block this one.
+      if label == "Available" and step.state == "locked" then label, kind = "Locked", "text" end
+      add("State", Theme.ColorText(kind == "ok" and "ok" or (kind == "info" and "gold" or "text"), label))
+      if state.inLog and #state.objectives > 0 then
+        for _, o in ipairs(state.objectives) do
+          lines[#lines + 1] = "  - " .. (o.finished and Theme.Hex.text3 or Theme.Hex.text) .. (o.text or "") .. (o.finished and " (done)" or "") .. "|r"
+        end
+      elseif entry and entry.objective then
+        add("Objective", entry.objective)
+      end
+      local giver = QP.Giver(questID)
+      if giver then add("Pick up", giver.label) end
+      local turnin = QP.Turnin(questID)
+      if turnin then add("Turn in", turnin.label) end
+      for _, item in ipairs(QP.RequiredItems(questID)) do
+        local name = item.name or (item.itemID and ns.ItemProvider.GetName(item.itemID)) or "?"
+        local have = item.itemID and (ns.InventoryProvider.GetCounts(item.itemID).bags or 0) or (item.have or 0)
+        add("Bring", string.format("%d x %s (%d/%d)%s", item.count, name, math.min(have, item.count), item.count,
+          item.source and (" - " .. (item.source:match("^([^,]+)") or item.source)) or ""))
+      end
+      if entry and #entry.rewards > 0 then
+        local names = {}
+        for _, reward in ipairs(entry.rewards) do
+          names[#names + 1] = (reward.count and reward.count > 1 and (reward.count .. " x ") or "") .. (reward.name or ns.ItemProvider.GetName(reward.itemID))
+        end
+        add(entry.rewardChoice and "Reward (choose one)" or "Rewards", table.concat(names, ", "))
+      end
+      local facts = QP.Facts(questID)
+      if facts and facts.note then add("Note", facts.note) end
+    elseif step.type == "Item" then
+      local itemID = tonumber(step.wowheadID)
+      if itemID then
+        local counts = ns.InventoryProvider.GetCounts(itemID)
+        add("In bags", string.format("%d of %d", counts.bags or 0, step.count or 1))
+        for _, hint in ipairs(ns.SourceProvider.Sources(itemID)) do
+          if hint.kind ~= "buy" and hint.label then
+            add("Source", hint.label .. (hint.detail and (" - " .. hint.detail) or ""))
+            break
+          end
+        end
+      end
+    elseif step.type == "Level" then
+      local level = ns.QuestProvider and ns.QuestProvider.PlayerLevel() or 0
+      local target = tonumber(step.wowheadID) or 0
+      add("You are", level >= target and ("level " .. level .. " - done") or string.format("level %d - %d to go", level, target - level))
+    end
+    return lines
   end
 
   return screen

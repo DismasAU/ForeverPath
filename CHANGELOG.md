@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.17.3 (2026-10-18) - click any attunement step for its summary
+
+### Added
+- On the Attunements screen every step of the chain is clickable. The
+  side panel then shows that step instead of the current one ("Step 6 of
+  8"): for a quest its state, live objectives (or the journal's text), who
+  gives it and where, who takes it back, what to bring with bag counts and
+  where it drops, and the rewards; for an item step the bag count and a
+  source; for a level step how far to go. "Waypoint" pins the giver or
+  turn-in when a position is known; "Quests >" opens the quest on the
+  Quests screen. Clicking the shown step again returns to the current one.
+
 ## 0.17.2 (2026-10-18) - source tags fit their column
 
 ### Fixed

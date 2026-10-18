@@ -461,6 +461,67 @@ describe("Questlines", function()
     assert_eq(hints[1].short, "Drop: Stonevault troggs and Dustbelcher ogres")
   end)
 
+  it("summarises any step clicked on the Attunements screen", function()
+    shaman()
+    local MainFrame = ns.UI.MainFrame
+    MainFrame.Show()
+    Mock.RunTimers()
+    ns.Data.QuestCatalogue[STORM] = { giver = { name = "Prate Cloudseer", mapID = 1441, x = 0.536, y = 0.428, zone = "Thousand Needles" },
+      turnin = { name = "Prate Cloudseer", mapID = 1441, x = 0.536, y = 0.428, zone = "Thousand Needles" },
+      items = { { itemID = FIRE, name = "Twisted Fire Totem", count = 5, source = "Stonevault troggs, Agmond's End, Badlands" },
+                { itemID = EARTH, name = "Twisted Earth Totem", count = 5, source = "Lost Ones, Swamp of Sorrows" } } }
+    Mock.SetBag(0, 16, { { EARTH, 2 } })
+    Mock.FireEvent("BAG_UPDATE_DELAYED")
+    Mock.RunTimers()
+    MainFrame.ShowScreen("attunements")
+    Mock.RunTimers()
+    local att = MainFrame.screens.attunements
+    att:Select("5235")
+    assert_eq(att.side.title:GetText(), "Call of Air", "the current step by default")
+    assert_eq(att.side.panel and att.side.title and att.side.header and att.side.title:GetText(), "Call of Air")
+    assert_false(att.side.waypoint:IsShown(), "no position for the first giver")
+    assert_true(att.side.openQuest:IsShown())
+    -- Click the sixth step: Storm, Earth, and Fire.
+    local rows = att.chain.pool.rows
+    assert_match(rows[6].name:GetText(), "Storm, Earth, and Fire")
+    rows[6]:Click()
+    assert_eq(att.stepKey, "5235-50")
+    assert_eq(att.side.title:GetText(), "Storm, Earth, and Fire")
+    assert_match(att.side.meta:GetText(), "^Quest %- Thousand Needles %- locked")
+    local text = att.side.text:GetText()
+    assert_match(text, "State:|r .*Locked")
+    assert_match(text, "Pick up:|r Prate Cloudseer %- Thousand Needles")
+    assert_match(text, "Turn in:|r Prate Cloudseer %- Thousand Needles")
+    assert_match(text, "Bring:|r 5 x Twisted Fire Totem %(0/5%) %- Stonevault troggs")
+    assert_match(text, "Bring:|r 5 x Twisted Earth Totem %(2/5%) %- Lost Ones")
+    assert_true(att.side.waypoint:IsShown())
+    att.side.waypoint:Click()
+    assert_eq(Mock.waypoint.uiMapID, 1441)
+    assert_eq(Mock.waypoint.position.x, 0.536)
+    -- The last quest lists its rewards; a level step says how far to go.
+    rows[8]:Click()
+    assert_eq(att.side.title:GetText(), "The Tempest's Weapons")
+    assert_match(att.side.text:GetText(), "Reward %(choose one%):|r Rune of the Storm, Rage of the Storm, Tidebringer's Claw, Lightning's Grasp")
+    rows[1]:Click()
+    assert_match(att.side.text:GetText(), "You are:|r level 60 %- done")
+    assert_false(att.side.openQuest:IsShown())
+    -- Clicking the shown step again returns to the current one; a quest in the log shows its objectives.
+    rows[1]:Click()
+    assert_nil(att.stepKey)
+    assert_eq(att.side.title:GetText(), "Call of Air")
+    Mock.AcceptQuest(CALL_A, { title = "Call of Air", level = 30, zone = "Thousand Needles", objectives = { { text = "Speak with Prate Cloudseer", type = "event", numRequired = 0 } } })
+    Mock.RunTimers()
+    att:Refresh()
+    assert_match(att.side.text:GetText(), "State:|r .*In log|r\n  %- .*Speak with Prate Cloudseer")
+    -- "Quests >" lands on the Quests screen with the quest selected.
+    rows[6]:Click()
+    att.side.openQuest:Click()
+    Mock.RunTimers()
+    assert_eq(MainFrame.currentScreen, "quests")
+    assert_eq(MainFrame.screens.quests.questID, STORM)
+    assert_eq(MainFrame.screens.quests.side.title:GetText(), "Storm, Earth, and Fire")
+  end)
+
   it("cuts source tags to their column instead of running past the table", function()
     local Widgets = ns.UI.Widgets
     local cell = CreateFrame("Frame")
