@@ -786,6 +786,7 @@ function Widgets.SearchField(parent, opts)
   box:SetScript("OnEditFocusLost", function(self)
     updatePlaceholder(self)
     Widgets.SetBackdrop(self, C.inset, C.lineDark)
+    if opts.onFocusLost then ns.Log.Call(opts.onFocusLost, self) end
   end)
   box:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
   if opts.onEnter then

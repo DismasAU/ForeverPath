@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.16.0 (2026-10-18) - type-ahead and unmet factions
+
+Typing "Cenarion Circle Exalted" into New Goal did nothing visible: the
+Reputation kind only searched the character's own reputation pane, which
+lists a faction only after it has been met, and the error went to the
+status bar.
+
+### Added
+- **Suggestions as you type.** The New Goal input on My Goals shows a
+  popup of matches for the selected kind after two characters: items,
+  recipes, enchants, professions (with your skill), quests, factions (with
+  your standing, or "Not met yet") and attunements. A click adds the goal,
+  with the stepper's quantity for items and enchants; a trailing standing
+  ("cenarion ex") or rank ("tailoring 225") is kept. The header search
+  suggests a few of every kind and opens the goal's screen on a pick
+  (`GoalService.Suggest(kind, text, limit)`, `MainFrame.ShowSuggestions`).
+- **Factions you have not met.** The catalogue now carries the client's
+  faction table (`Catalogue.factions`: name, parent, pane index, and the
+  starting reputation per race and class slot). `ReputationProvider.Get`
+  and `Search` fall back to it with `unmet = true`, at the starting
+  standing for the character's race and class (Timbermaw Hold Unfriendly,
+  Stormwind Friendly for a Human and Hated for an Orc, Cenarion Circle
+  2000 for druids), so a goal can be set before the faction appears in
+  the pane; the planner's message says "not met yet". `/fp status` counts
+  the table.
+
+### Changed
+- The New Goal bar drops the kind segment to a second row when the window
+  is too narrow for it beside a usable input (it used to overflow).
+
 ## 0.15.1 (2026-10-18) - reputation quests feed the Quests screen
 
 ### Changed

@@ -13,6 +13,8 @@
 //             Eye of Sulfuras -> Sulfuras or three lesser essences -> greater
 //   items     names and quality for every item the catalogue refers to
 //   professions  skill line names and categories
+//   factions  every reputation faction (Faction table): name, parent, pane
+//             index and the starting reputation per race mask
 //
 // Nothing here comes from another addon or a website; it is the game's own
 // data for the exact build installed. Re-run after each client patch.
@@ -126,6 +128,14 @@ namespace DbExtract
         public List<(int item, int count)> Reagents = new List<(int, int)>();
     }
 
+    class Faction
+    {
+        public int Id, Parent, Index, Expansion;
+        public string Name;
+        // One slot per ReputationBase entry: races (64-bit mask as two halves), classes, starting reputation.
+        public List<(long raceLow, long raceHigh, long classMask, long baseRep)> Bases = new List<(long, long, long, long)>();
+    }
+
     class Combine
     {
         public int SpellId, ItemId, Quantity;
@@ -150,6 +160,7 @@ namespace DbExtract
             { "ItemXItemEffect", 3177687 },
             { "ItemSparse", 1572924 },
             { "Item", 841626 },
+            { "Faction", 1361972 },
         };
 
         // Skill line categories worth cataloguing: 11 primary professions, 9 secondary.
@@ -168,6 +179,55 @@ namespace DbExtract
         };
 
         static int I(object o) => Convert.ToInt32(o, CultureInfo.InvariantCulture);
+        static long L(object o) => Convert.ToInt64(o, CultureInfo.InvariantCulture);
+        // Faction.ReputationRaceMask: one 64-bit array in older layouts, four
+        // ReputationRaceMasks<i> fields of two 32-bit halves (low, high) in newer ones.
+        static long[] RaceMasks(DBCDRow row)
+        {
+            try
+            {
+                var a = row["ReputationRaceMask"];
+                if (a is Array arr) return arr.Cast<object>().Select(L).ToArray();
+            }
+            catch (Exception) { }
+            var list = new List<long>();
+            for (int i = 0; i < 4; i++)
+            {
+                try
+                {
+                    var v = row["ReputationRaceMasks" + i];
+                    if (v is Array parts)
+                    {
+                        var p = parts.Cast<object>().Select(L).ToArray();
+                        long low = p.Length > 0 ? (p[0] & 0xFFFFFFFFL) : 0;
+                        long high = p.Length > 1 ? (p[1] & 0xFFFFFFFFL) : 0;
+                        list.Add(low | (high << 32));
+                    }
+                    else list.Add(L(v));
+                }
+                catch (Exception) { break; }
+            }
+            return list.ToArray();
+        }
+
+        // An array field, or the same values spread over numbered scalar fields (newer layouts).
+        static long[] Longs(DBCDRow row, string arrayField, string scalarPrefix, int count)
+        {
+            try
+            {
+                var a = row[arrayField];
+                if (a is Array arr) return arr.Cast<object>().Select(L).ToArray();
+                if (a != null) return new[] { L(a) };
+            }
+            catch (Exception) { }
+            var list = new List<long>();
+            for (int i = 0; i < count; i++)
+            {
+                try { list.Add(L(row[scalarPrefix + i])); }
+                catch (Exception) { break; }
+            }
+            return list.ToArray();
+        }
         static int[] Ints(object o) => ((Array)o).Cast<object>().Select(I).ToArray();
         static Dictionary<int, DBCDRow> Rows(IDBCDStorage s) => new Dictionary<int, DBCDRow>((IDictionary<int, DBCDRow>)s);
 
@@ -229,6 +289,7 @@ namespace DbExtract
             // rows into the hotfix cache as items are seen), Item is complete.
             var itemTable = Rows(Load("Item"));
             var clientItems = new HashSet<int>(itemTable.Keys);
+            var factionTable = Rows(Load("Faction"));
 
             // Spell -> items it creates (first effect first).
             var creates = new Dictionary<int, List<(int item, int qty)>>();
@@ -420,12 +481,32 @@ namespace DbExtract
             foreach (var r in recipes.Values)
                 if (!professions.ContainsKey(r.SkillLine)) professions[r.SkillLine] = lines[r.SkillLine];
 
+            // Factions that can appear in the reputation pane (ReputationIndex >= 0),
+            // with the starting reputation per race mask so an unmet faction's
+            // standing is known before the player encounters it.
+            var factions = new SortedDictionary<int, Faction>();
+            foreach (var row in factionTable.Values)
+            {
+                int index = I(row["ReputationIndex"]);
+                string name = Convert.ToString(row["Name_lang"]);
+                if (index < 0 || string.IsNullOrWhiteSpace(name)) continue;
+                var faction = new Faction { Id = I(row["ID"]), Name = name, Index = index };
+                try { faction.Parent = I(row["ParentFactionID"]); } catch (Exception) { }
+                try { faction.Expansion = I(row["Expansion"]); } catch (Exception) { }
+                var masks = RaceMasks(row);
+                var classes = Longs(row, "ReputationClassMask", "ReputationClassMask", 4);
+                var bases = Longs(row, "ReputationBase", "ReputationBase", 4);
+                for (int i = 0; i < Math.Min(masks.Length, bases.Length); i++)
+                    faction.Bases.Add((masks[i] & 0xFFFFFFFFL, (masks[i] >> 32) & 0xFFFFFFFFL, i < classes.Length ? classes[i] & 0xFFFFL : 0, bases[i]));
+                factions[faction.Id] = faction;
+            }
+
             Directory.CreateDirectory(o.Out);
             var outPath = Path.Combine(o.Out, "RecipeCatalogue.lua");
             var generated = DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-            WriteLua(outPath, config, o, hotfix, generated, professions, recipes, combines, items);
+            WriteLua(outPath, config, o, hotfix, generated, professions, recipes, combines, items, factions);
             int enchantCount = recipes.Values.Count(r => r.ItemId == 0);
-            Console.WriteLine($"Wrote {outPath}: {recipes.Count} recipes ({enchantCount} enchants), {combines.Count} combines, {items.Count} items, {professions.Count} professions");
+            Console.WriteLine($"Wrote {outPath}: {recipes.Count} recipes ({enchantCount} enchants), {combines.Count} combines, {items.Count} items, {professions.Count} professions, {factions.Count} factions");
             foreach (var p in professions.OrderByDescending(p => recipes.Values.Count(r => r.SkillLine == p.Key)))
                 Console.WriteLine($"  {p.Value.name}: {recipes.Values.Count(r => r.SkillLine == p.Key)}");
             Console.WriteLine($"  skipped: {skipped.notInClient.Count} whose item or reagents no longer exist on this client, {skipped.noReagents.Count} without reagents, {skipped.noName.Count} without a name; {skipped.extraOutputs.Count} create more than one item (first kept); {unnamed.Count} items without a cached name (the client names them at runtime)");
@@ -434,6 +515,9 @@ namespace DbExtract
                 Console.WriteLine($"  check Sulfuron Hammer: {sample.Name} skill {sample.MinSkill}/{sample.GreenSkill}/{sample.GreySkill} -> item {sample.ItemId} x{sample.Quantity}, taught by {string.Join(",", sample.TeachItems)}, reagents {string.Join(" ", sample.Reagents.Select(r => r.item + "x" + r.count))}");
             if (recipes.TryGetValue(20034, out var sampleEnchant))
                 Console.WriteLine($"  check Enchant Weapon - Crusader: {sampleEnchant.Name} skill {sampleEnchant.MinSkill}/{sampleEnchant.GreenSkill}/{sampleEnchant.GreySkill} -> item {sampleEnchant.ItemId}, taught by {string.Join(",", sampleEnchant.TeachItems)}, reagents {string.Join(" ", sampleEnchant.Reagents.Select(r => r.item + "x" + r.count))}");
+            foreach (int id in new[] { 72, 609, 576, 87 })
+                if (factions.TryGetValue(id, out var f))
+                    Console.WriteLine($"  check faction {id}: {f.Name} parent {f.Parent} index {f.Index} bases {string.Join(" ", f.Bases.Select(b => b.raceLow + "/" + b.raceHigh + "/" + b.classMask + ":" + b.baseRep))}");
             if (combines.TryGetValue(21160, out var sampleCombine))
                 Console.WriteLine($"  check Eye of Sulfuras: {sampleCombine.Name} -> {sampleCombine.ItemId} from {string.Join(" ", sampleCombine.Reagents.Select(r => r.item + "x" + r.count))} (use item consumed: {sampleCombine.Consumes})");
 
@@ -444,7 +528,7 @@ namespace DbExtract
                 {
                     build = config.VersionName, buildName = config.BuildName, product = o.Product, locale = o.Locale, generated,
                     hotfixBuild = hotfix?.BuildId ?? 0, hotfixRows = hotfixed,
-                    counts = new { recipes = recipes.Count, enchants = enchantCount, combines = combines.Count, items = items.Count, professions = professions.Count },
+                    counts = new { recipes = recipes.Count, enchants = enchantCount, combines = combines.Count, items = items.Count, professions = professions.Count, factions = factions.Count },
                     perProfession = professions.ToDictionary(p => p.Value.name, p => recipes.Values.Count(r => r.SkillLine == p.Key)),
                     skippedNotInClient = skipped.notInClient, skippedNoReagents = skipped.noReagents, skippedNoName = skipped.noName, multipleOutputs = skipped.extraOutputs, unnamedItems = unnamed,
                 };
@@ -478,7 +562,8 @@ namespace DbExtract
 
         static void WriteLua(string path, CASCConfig config, Options o, HotfixReader hotfix, string generated,
             SortedDictionary<int, (string name, int category, int parent)> professions, SortedDictionary<int, Recipe> recipes,
-            SortedDictionary<int, Combine> combines, SortedDictionary<int, (string name, int quality, int bind, int classId, int subclassId)> items)
+            SortedDictionary<int, Combine> combines, SortedDictionary<int, (string name, int quality, int bind, int classId, int subclassId)> items,
+            SortedDictionary<int, Faction> factions)
         {
             var w = new StringBuilder();
             w.AppendLine("-- Generated by tools/DbExtract from the World of Warcraft: Forever client database. Do not edit.");
@@ -497,6 +582,10 @@ namespace DbExtract
             w.AppendLine("-- items[itemID]     = { name, quality, bind, classID, subclassID }   (bind: 1 binds when picked up, 2 when equipped, 3 when used, 4 quest item, 0 none)");
             w.AppendLine("--   name is \"\" (and quality / bind 0) when the client had no cached row for the item; it is named at runtime. Class and subclass are always known.");
             w.AppendLine("-- professions[skillLine] = { name, category, parentSkillLine }   (category 11 primary, 9 secondary)");
+            w.AppendLine("-- factions[factionID] = { name, parentFactionID, reputationIndex, expansion, { raceMaskLow, raceMaskHigh, classMask, startingReputation, ... } }");
+            w.AppendLine("--   every faction the reputation pane can show. Slots are tried in order: the first whose race mask (bit raceID-1, split");
+            w.AppendLine("--   into the low and high 32 bits) includes the player's race and whose class mask is 0 or includes the class gives the");
+            w.AppendLine("--   starting reputation before the faction is met. A slot with race mask 0 is unused.");
             w.AppendLine("local _, ns = ...");
             w.AppendLine();
             w.AppendLine("ns.Data = ns.Data or {}");
@@ -507,7 +596,7 @@ namespace DbExtract
             w.AppendLine($"  locale = {Q(o.Locale)},");
             w.AppendLine($"  hotfixBuild = {hotfix?.BuildId ?? 0},");
             w.AppendLine($"  generated = {Q(generated)},");
-            w.AppendLine($"  counts = {{ recipes = {recipes.Count}, enchants = {recipes.Values.Count(r => r.ItemId == 0)}, combines = {combines.Count}, items = {items.Count}, professions = {professions.Count} }},");
+            w.AppendLine($"  counts = {{ recipes = {recipes.Count}, enchants = {recipes.Values.Count(r => r.ItemId == 0)}, combines = {combines.Count}, items = {items.Count}, professions = {professions.Count}, factions = {factions.Count} }},");
             w.AppendLine("}");
             w.AppendLine("ns.Data.Catalogue = Catalogue");
             w.AppendLine();
@@ -536,6 +625,15 @@ namespace DbExtract
             w.AppendLine("Catalogue.items = {");
             foreach (var it in items)
                 w.AppendLine($"  [{it.Key}] = {{ {Q(it.Value.name)}, {it.Value.quality}, {it.Value.bind}, {it.Value.classId}, {it.Value.subclassId} }},");
+            w.AppendLine("}");
+            w.AppendLine();
+
+            w.AppendLine("Catalogue.factions = {");
+            foreach (var f in factions.Values)
+            {
+                string bases = "{ " + string.Join(", ", f.Bases.Select(b => string.Join(", ", new[] { b.raceLow, b.raceHigh, b.classMask, b.baseRep }.Select(x => x.ToString(CultureInfo.InvariantCulture))))) + " }";
+                w.AppendLine($"  [{f.Id}] = {{ {Q(f.Name)}, {f.Parent}, {f.Index}, {f.Expansion}, {bases} }},");
+            }
             w.AppendLine("}");
 
             File.WriteAllText(path, w.ToString(), new UTF8Encoding(false));

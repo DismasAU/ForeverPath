@@ -34,6 +34,7 @@ addon or a website.
 | `ItemEffect` + `ItemXItemEffect` | trigger 6 "learn": the plans / pattern that teaches a spell; trigger 0 "on use": item-use combines |
 | `ItemSparse` | item names, quality, binding, and the skill a plans item requires |
 | `Item` | every item id the client still has (recipes whose item or reagents are gone are dropped), plus class and subclass for every referenced item |
+| `Faction` | every faction the reputation pane can show: name, parent, pane index, and the starting reputation per race / class slot (for factions the character has not met) |
 
 Two things the client does not know and the catalogue therefore does not
 carry: the skill a **trainer** requires for a recipe (server-side; such recipes

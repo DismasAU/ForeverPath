@@ -300,6 +300,14 @@ Needs two characters on the account. Log in on the alt first, then on your main.
 - [ ] `/fp skill enchanting` plans enchants you know (reagents only, nothing to buy for the enchant itself); the dashboard says "Cast N x Enchant ..." once the reagents are in the bags.
 - [ ] Engineering tinkers (Tinker: Nitro Boosts) behave as enchants.
 
+### 25. 0.16.0 type-ahead and unmet factions (not yet run in game)
+
+- [ ] On My Goals, pick a kind and type two or more characters: a popup lists matches with a note on the right (Item, "Tailoring recipe", "You are at 150", "Neutral", "Not met yet", a dungeon name); clicking one adds the goal and clears the input. The popup hides when the input loses focus or a kind is picked.
+- [ ] Reputation: "cenarion ex" suggests "Cenarion Circle - Exalted" marked "Not met yet" for a character who has never met them; the goal plans from Neutral 0 (2000 for a druid) and the Reputations panel copes with it. Once the faction appears in your pane the live standing takes over.
+- [ ] The header search suggests a few of every kind and opens the goal's screen on a pick.
+- [ ] Narrow the window: the New Goal bar puts the kind segment on a second row instead of pushing the input off the panel; widen it and the bar returns to one row.
+- [ ] `/fp status` reports "N in the client's faction table".
+
 ### Reporting
 Include: client build (`/dump GetBuildInfo()`), `/fp status` output, the step
 that failed, chat output with `/fp debug` enabled, and `/fp errors`.

@@ -944,8 +944,8 @@ function Planner.EvaluateReputation(view, goal, deps)
   for _, quest in ipairs(quests) do
     if not quest.state.completed and not openQuest then openQuest = quest end
   end
-  view.message = string.format("%d more reputation to %s with %s (you are %s, %d / %d into it).", progress.remaining, progress.targetLabel, record.name,
-    record.standingLabel, record.into or 0, record.span or 0)
+  view.message = string.format("%d more reputation to %s with %s (you are %s, %d / %d into it%s).", progress.remaining, progress.targetLabel, record.name,
+    record.standingLabel, record.into or 0, record.span or 0, record.unmet and "; not met yet" or "")
   if openQuest then
     view.message = view.message .. string.format(" Quest %s gives +%d.", openQuest.name, openQuest.amount)
     view.nextStep = string.format("%s (+%d)", openQuest.name, openQuest.amount)

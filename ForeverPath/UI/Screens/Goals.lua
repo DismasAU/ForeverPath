@@ -18,17 +18,26 @@ local function sortLabel(key)
   return SORTS[1].label
 end
 
+local ONE_ROW, TWO_ROWS = 50, 84
+local MIN_INPUT = 200
+
 local function createNewGoalBar(screen)
   local bar = Widgets.Panel(screen, nil, { pad = 0 })
-  bar:SetHeight(50)
+  bar:SetHeight(ONE_ROW)
   bar:SetPoint("TOPLEFT", screen, "TOPLEFT", 0, 0)
   bar:SetPoint("TOPRIGHT", screen, "TOPRIGHT", 0, 0)
   local body = bar.body
-  local label = Widgets.Text(body, "panelHeading", "New goal", { caps = true })
-  label:SetPoint("LEFT", body, "LEFT", 14, 0)
-  local add = Widgets.Button(body, "+ Add goal", { primary = true, width = 100, onClick = function() screen:Submit() end })
-  add:SetPoint("RIGHT", body, "RIGHT", -12, 0)
-  local stepper = Widgets.Stepper(body, nil)
+  -- Everything but the kind segment lives on the first row, so the segment
+  -- can drop to a second row when the window is narrow.
+  local row1 = CreateFrame("Frame", nil, body)
+  row1:SetHeight(ONE_ROW)
+  row1:SetPoint("TOPLEFT", body, "TOPLEFT", 0, 0)
+  row1:SetPoint("TOPRIGHT", body, "TOPRIGHT", 0, 0)
+  local label = Widgets.Text(row1, "panelHeading", "New goal", { caps = true })
+  label:SetPoint("LEFT", row1, "LEFT", 14, 0)
+  local add = Widgets.Button(row1, "+ Add goal", { primary = true, width = 100, onClick = function() screen:Submit() end })
+  add:SetPoint("RIGHT", row1, "RIGHT", -12, 0)
+  local stepper = Widgets.Stepper(row1, nil)
   stepper:SetPoint("RIGHT", add, "LEFT", -10, 0)
   local input
   local PLACEHOLDERS = {
@@ -53,17 +62,45 @@ local function createNewGoalBar(screen)
       input.placeholder:SetText(PLACEHOLDERS[key] or PLACEHOLDERS.item)
     end
     if stepper.SetEnabledState then stepper:SetEnabledState(key == "item" or key == "enchant") end
+    ns.UI.MainFrame.HideSuggestions()
   end)
-  segment:SetPoint("RIGHT", stepper, "LEFT", -10, 0)
-  input = Widgets.SearchField(body, {
+  input = Widgets.SearchField(row1, {
     name = "ForeverPathNewGoalInput",
     placeholder = "Shift-click an item link, or type an item ID or name",
     onEnter = function() screen:Submit() end,
+    onChange = function(_, userInput) if userInput then screen:UpdateSuggestions() end end,
+    onFocusLost = function()
+      if ns.Compat.After then ns.Compat.After(0.2, function() ns.UI.MainFrame.HideSuggestions() end) else ns.UI.MainFrame.HideSuggestions() end
+    end,
   })
   input:SetPoint("LEFT", label, "RIGHT", 14, 0)
-  input:SetPoint("RIGHT", segment, "LEFT", -10, 0)
-  bar.input, bar.stepper, bar.add, bar.segment = input, stepper, add, segment
+  bar.input, bar.stepper, bar.add, bar.segment, bar.row1 = input, stepper, add, segment, row1
   table.insert(ns.UI.MainFrame.linkTargets, input)
+
+  -- One row when the segment fits beside a usable input, two rows otherwise.
+  function bar:Layout(forceWidth)
+    local width = forceWidth or body:GetWidth() or 0
+    local needed = 14 + (label:GetStringWidth() or 70) + 14 + MIN_INPUT + 10 + (segment:GetWidth() or 0) + 10 + (stepper:GetWidth() or 80) + 10 + (add:GetWidth() or 100) + 12
+    local twoRows = width > 0 and width < needed
+    if self.twoRows == twoRows then return twoRows end
+    self.twoRows = twoRows
+    input:ClearAllPoints()
+    segment:ClearAllPoints()
+    input:SetPoint("LEFT", label, "RIGHT", 14, 0)
+    if twoRows then
+      self:SetHeight(TWO_ROWS)
+      input:SetPoint("RIGHT", stepper, "LEFT", -10, 0)
+      segment:SetPoint("TOPLEFT", input, "BOTTOMLEFT", 0, -8)
+    else
+      self:SetHeight(ONE_ROW)
+      segment:SetPoint("RIGHT", stepper, "LEFT", -10, 0)
+      input:SetPoint("RIGHT", segment, "LEFT", -10, 0)
+    end
+    return twoRows
+  end
+  bar:Layout(nil)
+  if bar.twoRows == nil then bar:Layout(999999) end
+  bar:SetScript("OnSizeChanged", function(self) ns.Log.Call(self.Layout, self) end)
   return bar
 end
 
@@ -391,7 +428,29 @@ local function Create(parent)
   screen.empty:SetPoint("TOPRIGHT", header, "BOTTOMRIGHT", 0, -40)
   screen.empty:SetHeight(80)
 
+  -- Type-ahead for the selected kind; a pick adds the goal with the stepper's quantity.
+  function screen:UpdateSuggestions()
+    local MainFrame = ns.UI.MainFrame
+    local text = Util.Trim(newGoal.input:GetText() or "")
+    local kind = newGoal.segment and newGoal.segment.selected or "item"
+    if #text < 2 or text:find("|H", 1, true) or (kind == "item" and Util.ParseInt(text)) then
+      MainFrame.HideSuggestions()
+      return
+    end
+    MainFrame.ShowSuggestions(newGoal.input, ns.GoalService.Suggest(kind, text, 6), {
+      quantity = function() return newGoal.stepper:GetValue() end,
+      onAdd = function(ok)
+        if not ok then return end
+        newGoal.input:SetText("")
+        newGoal.input:ClearFocus()
+        newGoal.stepper:SetValue(1)
+        screen:Refresh()
+      end,
+    })
+  end
+
   function screen:Submit()
+    ns.UI.MainFrame.HideSuggestions()
     local text = newGoal.input:GetText() or ""
     local kind = newGoal.segment and newGoal.segment.selected or "item"
     if Util.Trim(text) == "" then

@@ -2,7 +2,10 @@
 -- the legacy GetFactionInfo), the standing thresholds, and the ways to earn
 -- it that other addons know: dungeon quests that reward reputation
 -- (ForeverDungeonJournal's reward texts) and the items each standing unlocks
--- (AtlasLootClassic_Factions, loaded on demand).
+-- (AtlasLootClassic_Factions, loaded on demand). Factions the character has
+-- not met yet come from the client's own faction table in the catalogue
+-- (Data/RecipeCatalogue.lua), at the starting standing for the character's
+-- race and class.
 local _, ns = ...
 
 local Util = ns.Util
@@ -142,6 +145,67 @@ function ReputationProvider.Invalidate()
   ReputationProvider.cache = nil
 end
 
+---------------------------------------------------------------------------
+-- Unmet factions: the client's faction table
+---------------------------------------------------------------------------
+local function catalogueFactions()
+  local c = ns.Data and ns.Data.Catalogue
+  return c and type(c.factions) == "table" and c.factions or nil
+end
+
+-- Bit `index` (0-based) of a 64-bit mask stored as two 32-bit halves.
+local function hasBit(low, high, index)
+  local word, bitIndex = tonumber(low) or 0, index
+  if index >= 32 then word, bitIndex = tonumber(high) or 0, index - 32 end
+  return math.floor(word / 2 ^ bitIndex) % 2 == 1
+end
+
+-- The character's race and class ids (the third returns of UnitRace / UnitClass).
+function ReputationProvider.PlayerIDs()
+  local raceID = select(3, call(_G.UnitRace, "player"))
+  local classID = select(3, call(_G.UnitClass, "player"))
+  return tonumber(raceID), tonumber(classID)
+end
+
+-- Starting reputation with a catalogue faction row for a race and class:
+-- the first slot whose race mask includes the race and whose class mask is
+-- 0 or includes the class (the client's own rule); 0 when none matches.
+function ReputationProvider.StartingValue(row, raceID, classID)
+  local slots = type(row) == "table" and row[5] or {}
+  for i = 1, #slots, 4 do
+    local low, high, classMask, base = slots[i], slots[i + 1], slots[i + 2], slots[i + 3]
+    local raceOK = raceID ~= nil and hasBit(low, high, raceID - 1)
+    local classOK = (tonumber(classMask) or 0) == 0 or (classID ~= nil and hasBit(classMask, 0, classID - 1))
+    if raceOK and classOK then return tonumber(base) or 0 end
+  end
+  return 0
+end
+
+function ReputationProvider.CatalogueCount()
+  local count = 0
+  for _ in pairs(catalogueFactions() or {}) do count = count + 1 end
+  return count
+end
+
+-- A faction the character has not met, from the catalogue: a record at its
+-- starting standing with `unmet = true`; nil when the table lacks it.
+function ReputationProvider.Unmet(factionID)
+  local rows = catalogueFactions()
+  factionID = tonumber(factionID)
+  local row = rows and factionID and rows[factionID] or nil
+  if not row then return nil end
+  local raceID, classID = ReputationProvider.PlayerIDs()
+  local base = ReputationProvider.StartingValue(row, raceID, classID)
+  local standing = ReputationProvider.StandingFor(base)
+  local record = normalize({ name = row[1], factionID = factionID, reaction = standing, currentStanding = base,
+    currentReactionThreshold = ReputationProvider.StandingMin[standing], nextReactionThreshold = ReputationProvider.StandingMax[standing] })
+  if not record then return nil end
+  record.unmet = true
+  local parent = rows[row[2] or 0]
+  record.header = parent and parent[1] or nil
+  return record
+end
+
 -- One faction by id: the by-id API first, else the list.
 function ReputationProvider.Get(factionID)
   factionID = tonumber(factionID)
@@ -166,7 +230,7 @@ function ReputationProvider.Get(factionID)
   for _, listed in ipairs(ReputationProvider.List()) do
     if listed.factionID == factionID then return listed end
   end
-  return nil
+  return ReputationProvider.Unmet(factionID)
 end
 
 -- Factions by name: exact, then prefix, then substring.
@@ -174,16 +238,28 @@ function ReputationProvider.Search(text, limit)
   if type(text) ~= "string" then return {} end
   local needle = string.lower(Util.Trim(text))
   if needle == "" then return {} end
-  local hits = {}
+  local hits, seen = {}, {}
   for _, record in ipairs(ReputationProvider.List()) do
     local lower = string.lower(record.name)
     local position = lower:find(needle, 1, true)
     if position then
       hits[#hits + 1] = { factionID = record.factionID, name = record.name, record = record, rank = lower == needle and 0 or (position == 1 and 1 or 2) }
+      if record.factionID then seen[record.factionID] = true end
+    end
+  end
+  -- Factions not met yet, from the client's table.
+  for factionID, row in pairs(catalogueFactions() or {}) do
+    if not seen[factionID] and type(row[1]) == "string" then
+      local lower = string.lower(row[1])
+      local position = lower:find(needle, 1, true)
+      if position then
+        hits[#hits + 1] = { factionID = factionID, name = row[1], unmet = true, rank = lower == needle and 0 or (position == 1 and 1 or 2) }
+      end
     end
   end
   table.sort(hits, function(a, b)
     if a.rank ~= b.rank then return a.rank < b.rank end
+    if (a.unmet or false) ~= (b.unmet or false) then return not a.unmet end
     return a.name < b.name
   end)
   if limit and #hits > limit then
@@ -379,7 +455,8 @@ function ReputationProvider.Status()
   local list = ReputationProvider.List()
   local quests = 0
   for _, entries in pairs(ReputationProvider.QuestRewards()) do quests = quests + #entries end
-  return string.format("Reputations: %d faction%s listed; %d quest reward%s known; faction rewards %s.", #list, #list == 1 and "" or "s", quests, quests == 1 and "" or "s",
+  return string.format("Reputations: %d faction%s listed, %d in the client's faction table; %d quest reward%s known; faction rewards %s.", #list, #list == 1 and "" or "s",
+    ReputationProvider.CatalogueCount(), quests, quests == 1 and "" or "s",
     ReputationProvider.HasAtlasLoot() and "from AtlasLoot" or "unavailable (AtlasLoot Factions not installed)")
 end
 

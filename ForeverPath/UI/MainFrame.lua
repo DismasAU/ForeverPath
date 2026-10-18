@@ -670,16 +670,13 @@ function MainFrame.SubmitSearch(box)
   end
 end
 
--- Type-ahead suggestions under the search box.
-function MainFrame.UpdateSuggestions(box)
+-- Type-ahead popup under an input. hits come from GoalService.Suggest;
+-- clicking a row adds its goal. opts.quantity() supplies the quantity for
+-- item and enchant goals, opts.onAdd(ok, message, goal) runs after a pick.
+function MainFrame.ShowSuggestions(box, hits, opts)
   local frame = MainFrame.frame
-  local text = Util.Trim(box:GetText() or "")
-  if #text < 2 or text:find("|H", 1, true) or Util.ParseInt(text) then
-    MainFrame.HideSuggestions()
-    return
-  end
-  local hits = ns.ItemProvider.SearchByName(text, 6)
-  if #hits == 0 then
+  opts = opts or {}
+  if not frame or type(hits) ~= "table" or #hits == 0 then
     MainFrame.HideSuggestions()
     return
   end
@@ -687,11 +684,13 @@ function MainFrame.UpdateSuggestions(box)
   if not popup then
     popup = Widgets.Frame(frame, nil, { bg = C.sidebar, border = C.bronzeDim })
     popup:SetFrameLevel(frame:GetFrameLevel() + 20)
-    popup:SetPoint("TOPLEFT", box, "BOTTOMLEFT", 0, -2)
-    popup:SetPoint("TOPRIGHT", box, "BOTTOMRIGHT", 0, -2)
     popup.rows = {}
     frame.suggestions = popup
   end
+  popup:ClearAllPoints()
+  popup:SetPoint("TOPLEFT", box, "BOTTOMLEFT", 0, -2)
+  popup:SetPoint("TOPRIGHT", box, "BOTTOMRIGHT", 0, -2)
+  popup.box = box
   for index, hit in ipairs(hits) do
     local row = popup.rows[index]
     if not row then
@@ -700,22 +699,23 @@ function MainFrame.UpdateSuggestions(box)
       row:SetPoint("TOPLEFT", popup, "TOPLEFT", 1, -1 - (index - 1) * 26)
       row:SetPoint("TOPRIGHT", popup, "TOPRIGHT", -1, -1 - (index - 1) * 26)
       Widgets.HoverFill(row, C.raised, 1)
+      row.meta = Widgets.Text(row, "small", "", { color = C.text3, justify = "RIGHT" })
+      row.meta:SetPoint("RIGHT", row, "RIGHT", -8, 0)
       row.text = Widgets.Text(row, "button", "", { color = C.text })
       row.text:SetPoint("LEFT", row, "LEFT", 8, 0)
-      row.text:SetPoint("RIGHT", row, "RIGHT", -40, 0)
-      row.meta = Widgets.Text(row, "small", "Item", { justify = "RIGHT" })
-      row.meta:SetPoint("RIGHT", row, "RIGHT", -8, 0)
+      row.text:SetPoint("RIGHT", row.meta, "LEFT", -6, 0)
       popup.rows[index] = row
     end
-    row.text:SetText(hit.name)
+    row.text:SetText(hit.text or "")
+    row.meta:SetText(hit.meta or "")
+    row.hit = hit
     row.itemID = hit.itemID
     row:SetScript("OnClick", function(self)
       MainFrame.HideSuggestions()
-      local ok, message = ns.GoalService.AddItemGoal(self.itemID, 1)
+      local quantity = opts.quantity and opts.quantity() or 1
+      local ok, message, goal = self.hit.add(quantity)
       MainFrame.SetStatus(message, ok and "ok" or "error")
-      box:SetText("")
-      box:ClearFocus()
-      MainFrame.ShowScreen("crafting")
+      if opts.onAdd then ns.Log.Call(opts.onAdd, ok, message, goal) end
     end)
     row:Show()
   end
@@ -724,6 +724,23 @@ function MainFrame.UpdateSuggestions(box)
   end
   popup:SetHeight(#hits * 26 + 2)
   popup:Show()
+end
+
+-- Header search: a few suggestions of every kind; a pick opens the goal's screen.
+function MainFrame.UpdateSuggestions(box)
+  local text = Util.Trim(box:GetText() or "")
+  if #text < 2 or text:find("|H", 1, true) or Util.ParseInt(text) then
+    MainFrame.HideSuggestions()
+    return
+  end
+  MainFrame.ShowSuggestions(box, ns.GoalService.Suggest("all", text, 8), {
+    onAdd = function(ok, _, goal)
+      if not ok then return end
+      box:SetText("")
+      box:ClearFocus()
+      if goal and MainFrame.OpenGoal then MainFrame.OpenGoal(goal.id) else MainFrame.ShowScreen("crafting") end
+    end,
+  })
 end
 
 function MainFrame.HideSuggestions()

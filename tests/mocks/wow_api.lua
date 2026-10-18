@@ -751,8 +751,8 @@ function Mock.install()
     if not entry or entry.isHeader then return nil end
     return string.format("|cffffff00|Hquest:%d:%d|h[%s]|h|r", entry.questID, entry.level or 0, entry.title)
   end
-  _G.UnitClass = function() return Mock.character.class, Mock.character.classFile end
-  _G.UnitRace = function() return Mock.character.race end
+  _G.UnitClass = function() return Mock.character.class, Mock.character.classFile, Mock.character.classID end
+  _G.UnitRace = function() return Mock.character.race, string.upper(Mock.character.race or ""), Mock.character.raceID end
   _G.GetRealmName = function() return Mock.character.realm end
   _G.GetMoney = function() return Mock.character.money end
   _G.RAID_CLASS_COLORS = { WARRIOR = { r = 0.78, g = 0.61, b = 0.43 }, SHAMAN = { r = 0, g = 0.44, b = 0.87 } }
@@ -1010,7 +1010,7 @@ function Mock.reset()
   _G.Attune_Data = nil
   _G.AttuneLang = nil
   _G.Attune_DB = nil
-  Mock.character = { name = "Thandrel", level = 60, class = "Warrior", classFile = "WARRIOR", race = "Human", realm = "Stormhold", money = 2143600 }
+  Mock.character = { name = "Thandrel", level = 60, class = "Warrior", classFile = "WARRIOR", classID = 1, race = "Human", raceID = 1, realm = "Stormhold", money = 2143600 }
   Mock.trainer = nil
   Mock.tradeskill = {
     open = nil, recipes = {}, npc = false, guild = false, linked = false,

@@ -59,6 +59,16 @@ client. Behaviour (return values, timing) is only verified where stated.
 | `GameTooltip:SetItemByID` | Widgets | Retail API | Guarded with pcall; falls back to a plain name tooltip |
 | `Enum.CraftingReagentType.Basic` (=1), `Enum.BankType.Character` (=0), `Enum.BagIndex.ReagentBag` (=5) | Compat | `Enum.BagIndex` in dump; the other two from Retail 12.x docs | Fallback constants used when the enum is missing |
 
+## 0.16.0
+
+| Function | Used for | Evidence |
+|---|---|---|
+| `UnitRace("player")` third return (race id), `UnitClass("player")` third return (class id) | the starting standing of an unmet faction from the client's Faction table | Retail 12.x API; both already used by Forever addons for names. **Unverified** that the ids are returned on Forever; a missing id means every unmet faction starts at 0 (Neutral) |
+
+The Faction table (`Faction.db2`, layout 6D443C38 for build 1.60.1) is
+read by `tools/DbExtract` like the recipe tables; `ReputationRaceMasks0..3`
+are two 32-bit halves each on this layout.
+
 ## 0.15.0
 
 Enchant goals add one event and rely on the profession schematic for

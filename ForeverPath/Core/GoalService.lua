@@ -652,6 +652,111 @@ function GoalService.AddFromInput(text, quantity, goalType)
   return true, message .. note, goal
 end
 
+---------------------------------------------------------------------------
+-- Type-ahead: what partial text in a goal input could mean
+---------------------------------------------------------------------------
+-- Suggestions for one goal kind ("item", "recipe", "enchant", "skill",
+-- "quest", "reputation", "attunement") or "all" (a few of each, for the
+-- header search). Each hit: { kind, text, meta, add = function(quantity) ->
+-- ok, message, goal } plus the id it stands for.
+function GoalService.Suggest(kind, text, limit)
+  text = Util.Trim(text or "")
+  limit = limit or 6
+  local out = {}
+  if #text < 2 or text:find("|H", 1, true) then return out end
+  local function push(hit)
+    if #out < limit then out[#out + 1] = hit end
+  end
+  local function result(goal, message)
+    if not goal then return false, message end
+    return true, message, goal
+  end
+  local catalogue = ns.Data and ns.Data.Recipes
+  local function items(n)
+    for _, hit in ipairs(ItemProvider.SearchByName(text, n)) do
+      local itemID = hit.itemID
+      push({ kind = "item", text = hit.name, meta = "Item", itemID = itemID, add = function(quantity) return result(GoalService.AddItemGoal(itemID, quantity)) end })
+    end
+  end
+  local function recipes(n, which)
+    for _, hit in ipairs(catalogue and catalogue.Search and catalogue.Search(text, n, nil, which) or {}) do
+      local spellID = hit.spellID
+      if which == "enchant" then
+        push({ kind = "enchant", text = hit.name, meta = hit.professionName or "Enchant", spellID = spellID, add = function(quantity) return result(GoalService.AddEnchantGoal(spellID, quantity)) end })
+      else
+        push({ kind = "recipe", text = hit.name, meta = (hit.professionName or "Recipe") .. " recipe", spellID = spellID, add = function() return result(GoalService.AddRecipeGoal(spellID)) end })
+      end
+    end
+  end
+  local function skills(n)
+    local name, rank = text:match("^(.-)%s+(%d+)$")
+    local needle = string.lower(Util.Trim(name or text))
+    local count = 0
+    for _, p in ipairs(catalogue and catalogue.Professions and catalogue.Professions() or {}) do
+      if count < n and needle ~= "" and string.find(string.lower(p.name or ""), needle, 1, true) then
+        count = count + 1
+        local target = rank and tonumber(rank) or nil
+        local standing = ns.Planner and ns.Planner.CurrentSkill and ns.Planner.CurrentSkill(ns.Planner.DefaultDeps(), p.name, p.id) or nil
+        push({ kind = "skill", text = p.name .. (target and (" " .. target) or ""), meta = standing and string.format("You are at %d", standing.skillLevel or 0) or "Profession",
+          professionName = p.name, add = function() return result(GoalService.AddSkillGoal(p.name, target)) end })
+      end
+    end
+  end
+  local function quests(n)
+    local QP = ns.QuestProvider
+    if not QP or not QP.IsAvailable or not QP.IsAvailable() then return end
+    for _, hit in ipairs(QP.Search(text, n)) do
+      local questID = hit.questID
+      push({ kind = "quest", text = hit.name, meta = hit.where or "Quest", questID = questID, add = function() return result(GoalService.AddQuestGoal(questID)) end })
+    end
+  end
+  local function factions(n)
+    local RP = ns.ReputationProvider
+    if not RP or not RP.IsAvailable() then return end
+    local name, standing = text, nil
+    local head, tail = text:match("^(.-)%s+(%a+)$")
+    if head and RP.StandingByName(tail) then name, standing = head, RP.StandingByName(tail) end
+    for _, hit in ipairs(RP.Search(Util.Trim(name), n)) do
+      local factionID = hit.factionID
+      local record = hit.record or RP.Get(factionID)
+      push({ kind = "reputation", text = hit.name .. (standing and (" - " .. RP.StandingLabel(standing)) or ""), factionID = factionID,
+        meta = hit.unmet and "Not met yet" or (record and record.standingLabel or "Faction"),
+        add = function() return result(GoalService.AddReputationGoal(factionID, standing)) end })
+    end
+  end
+  local function attunements(n)
+    local AP = ns.AttuneProvider
+    if not AP or not AP.IsAvailable() then return end
+    local needle = string.lower(text)
+    local count = 0
+    for _, attune in ipairs(AP.List()) do
+      if count < n and string.find(string.lower(attune.name or ""), needle, 1, true) then
+        count = count + 1
+        local id = attune.id
+        push({ kind = "attunement", text = attune.name, meta = (attune.group and attune.group ~= "") and attune.group or "Attunement", attuneID = id,
+          add = function() return result(GoalService.AddAttunementGoal(id)) end })
+      end
+    end
+  end
+  if kind == "item" then items(limit)
+  elseif kind == "recipe" then recipes(limit, "item")
+  elseif kind == "enchant" then recipes(limit, "enchant")
+  elseif kind == "skill" then skills(limit)
+  elseif kind == "quest" then quests(limit)
+  elseif kind == "reputation" then factions(limit)
+  elseif kind == "attunement" then attunements(limit)
+  else
+    items(3)
+    recipes(2, "item")
+    recipes(1, "enchant")
+    factions(2)
+    quests(2)
+    attunements(1)
+    skills(1)
+  end
+  return out
+end
+
 function GoalService.Remove(id)
   local store = GoalService.Store()
   if not store then return nil end

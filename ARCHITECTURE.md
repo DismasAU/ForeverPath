@@ -421,6 +421,15 @@ goals on load and reports the count.
   declared in `MainFrame.Nav`; `MainFrame.OpenGoal` maps a goal type to
   the screen that plans it (attunements, quests, reputations), everything
   else (items, recipes, skills, enchants) opens on Crafting.
+- **Type-ahead**: `GoalService.Suggest(kind, text, limit)` returns hits
+  `{ kind, text, meta, add(quantity) }` for one goal kind or "all";
+  `MainFrame.ShowSuggestions(box, hits, { quantity, onAdd })` renders the
+  popup under any input (the header search and the New Goal bar use it).
+- **Unmet factions**: `Catalogue.factions[id] = { name, parent, index,
+  expansion, { raceLow, raceHigh, classMask, base, ... } }` from the
+  client's Faction table; `ReputationProvider.StartingValue(row, raceID,
+  classID)` applies the client's slot rule, `Unmet(factionID)` builds a
+  record with `unmet = true`, and `Get` / `Search` fall back to it.
 - **Links**: `MainFrame.InstallLinkHook` accepts item, enchant and spell
   links; `GoalService.SpellIDFromText` reads the spell id and
   `AddFromInput` routes an enchant to `AddEnchantGoal` and an item recipe
