@@ -185,6 +185,7 @@ function Overview.Build(entries, opts)
               end
               local hint = top.hint
               if top.learn and top.learnFor then hint = "Teaches " .. top.learnFor .. (hint and (" - " .. hint) or "") end
+              if top.farm then hint = top.farm.text .. (hint and (" - " .. hint) or "") end
               step = {
                 title = title,
                 detail = (hint and (hint .. " - ") or "") .. string.format("For %s - %d of %d dependencies resolved", goalName, tree.summary.resolved, tree.summary.nodes),

@@ -33,6 +33,7 @@ Commands.help = {
   { "/fp recipe <item>", "How an item is made: every catalogue recipe and combine, with skill, plans and reagents." },
   { "/fp catalogue", "Recipe catalogue status (client build it was generated from, counts)." },
   { "/fp trainers", "Trainer requirements recorded from profession trainer windows (recipes, trainers)." },
+  { "/fp train [profession]", "What your professions can train now (unlearned trainer recipes at or below your skill) with the trainer, zone and total cost, and what opens up in the next 25 points." },
   { "/fp prices [item]", "Auction House price status (Auctionator), or every known price for an item." },
   { "/fp celebrate [on|off|test|auto on|off]", "Completion toasts and sound; 'auto' toggles auto-completing goals." },
   { "/fp attunements", "List the attunements Attune knows for your faction, with progress." },
@@ -406,6 +407,36 @@ function handlers.trainers()
   end
   if #trainers == 0 then
     Log.output("  Open any profession trainer: every recipe on offer is recorded with the skill it needs, its cost and the trainer's location.")
+  end
+end
+
+function handlers.train(rest)
+  if not requireLoaded() then return end
+  local name = Util.Trim(rest or "")
+  local plans = ns.Planner.Trainable(nil, name ~= "" and name or nil)
+  if #plans == 0 then
+    Log.Print(name ~= "" and ("You do not have " .. name .. ".") or "This character has no profession with trainer recipes.")
+    return
+  end
+  local function money(copper) return ns.UI and ns.UI.Widgets and ns.UI.Widgets.Money(copper, true) or (copper .. "c") end
+  for _, plan in ipairs(plans) do
+    Log.Print("%s %d/%d: %d recipe%s to train now%s.", plan.profession, plan.skill, plan.max, #plan.now, #plan.now == 1 and "" or "s",
+      plan.cost > 0 and (" (" .. money(plan.cost) .. ")") or "")
+    for _, row in ipairs(plan.now) do
+      Log.output(string.format("  %d  %s - %s%s%s%s", row.rank, row.recipe.name or "?", row.cost > 0 and money(row.cost) or "free",
+        row.trainer and (" - " .. row.trainer) or "", row.zone and (" (" .. row.zone .. ")") or "", row.classic and " [classic data]" or ""))
+    end
+    if #plan.soon > 0 then
+      local names = {}
+      for i, row in ipairs(plan.soon) do
+        if i > 6 then names[#names + 1] = string.format("and %d more", #plan.soon - 6) break end
+        names[#names + 1] = string.format("%s (%d)", row.recipe.name or "?", row.rank)
+      end
+      Log.output("  Next: " .. table.concat(names, ", "))
+    end
+    if not plan.scanned then
+      Log.output("  Open your " .. plan.profession .. " window once so recipes you already know are left out.")
+    end
   end
 end
 

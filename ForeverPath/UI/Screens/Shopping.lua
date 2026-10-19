@@ -10,7 +10,7 @@ ns.UI.Screens = ns.UI.Screens or {}
 
 local ROW = 35
 local COLS = { total = 44, owned = 44, reserved = 56, missing = 54, cost = 74, source = 180 }
-local SORTS = { { key = "missing", label = "Sort: Missing" }, { key = "name", label = "Sort: Name" }, { key = "total", label = "Sort: Total" }, { key = "source", label = "Sort: Source" } }
+local SORTS = { { key = "missing", label = "Sort: Missing" }, { key = "name", label = "Sort: Name" }, { key = "total", label = "Sort: Total" }, { key = "source", label = "Sort: Source" }, { key = "zone", label = "Sort: Zone" } }
 local TABS = { { key = "all", label = "All" }, { key = "buy", label = "Auction House" }, { key = "vendor", label = "Vendors" }, { key = "gather", label = "Gathering" }, { key = "craft", label = "Craftable" }, { key = "learn", label = "To learn" }, { key = "alt", label = "From alts" } }
 local STEP_ICON = "Interface\\Icons\\INV_Misc_Book_09"
 local MAX_CHIPS = 4
@@ -401,7 +401,11 @@ local function Create(parent)
       local name = item.name or ("Item " .. tostring(r.itemID))
       if r.step then name = "Train: " .. name end
       row.name:SetText(r.bought and Theme.ColorText("text3", name .. (r.step and "  (done)" or "  (bought)")) or Theme.QualityText(name, item.quality))
-      row.note:SetText(#r.goals > 1 and string.format("%d goals: %s", #r.goals, table.concat(r.goals, ", ")) or (r.goals[1] or ""))
+      local noteParts = {}
+      if r.zone then noteParts[#noteParts + 1] = r.zone end
+      if r.farm then noteParts[#noteParts + 1] = r.farm.text end
+      noteParts[#noteParts + 1] = #r.goals > 1 and string.format("%d goals: %s", #r.goals, table.concat(r.goals, ", ")) or (r.goals[1] or "")
+      row.note:SetText(table.concat(noteParts, " - "))
       row.total:SetText(tostring(r.total))
       row.owned:SetText(tostring(r.owned))
       Widgets.SetTextColor(row.owned, Widgets.CountColor(r.owned, r.total))

@@ -32,6 +32,7 @@ return {
   "questline_spec",
   "classic_db_spec",
   "loot_learner_spec",
+  "farming_spec",
   "bootstrap_spec",
   "ui_spec",
 }

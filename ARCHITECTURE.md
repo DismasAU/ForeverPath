@@ -464,6 +464,13 @@ heuristic, and "New in Forever" when nothing else knows an item the client
 lists but classic-db does not (`ClassicDB.IsNewInForever`: the client item
 index against classic-db's item id ranges).
 
+Farming: `Farming.Estimate(hint, missing)` (pure) turns a hint's `chance`
+(1/100 %), `perLoot` and `target` into "~N kills of X"; `Summarize` puts it
+on each missing leaf (`farm`) and `ShoppingList.Build` on each row (with
+`zone` from the chosen hint), which the overview and the shopping screen
+show. `Planner.Trainable` walks `Recipes.ForProfession` for each of the
+character's professions and keeps unlearned recipes with a trainer record.
+
 Items: `ClassicDB.ItemHints(itemID)` turns `vendors`, `gathered`,
 `drops`, `skinned`, `fished`, `contained`, `pickpocketed` (rogues) and
 `worldDrops` into resolver hints (`classic = true`, a `short` label for

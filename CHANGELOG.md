@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.21.0 (2026-10-19) - farming estimates, shopping by zone, trainer planning
+
+### Added
+- **Farming estimates** (`Domain/Farming.lua`): from the chosen source's
+  chance (classic data, or what the loot learner saw, with units per loot),
+  how many kills, nodes, skins, loots or casts the missing units take:
+  "~16 kills of Wolf". Shown first in the overview's "Obtain" step and on
+  every shopping list row; carried on the tree's missing leaves (`farm`).
+- **Shopping list by zone**: rows know where their chosen source is
+  (`zone`), the note shows the zone and the estimate, and "Sort: Zone"
+  groups everything to farm or buy in one place together.
+- **Trainer planning**: `Planner.Trainable` and `/fp train [profession]`
+  list, per profession, the trainer recipes this character has not learned
+  at or below its skill (with the trainer, zone and total cost) and what
+  opens up in the next 25 points; recorded trainers and classic trainers
+  both count. Asks for a profession window when learned recipes are not
+  recorded yet.
+- Resolver options keep the hint's chance, units per loot, target, zone and
+  position.
+
 ## 0.20.0 (2026-10-19) - Forever first: the loot learner and every item name
 
 ### Added

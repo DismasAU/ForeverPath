@@ -46,6 +46,7 @@ is built to take them without a rewrite (see `ARCHITECTURE.md`).
 | 0.15.1 quests that give reputation feed the Quests screen for reputation goals | Implemented, offline-tested, **not yet verified in game** |
 | 0.16.0 type-ahead suggestions for every goal kind (New Goal bar and header search); reputation goals for factions not met yet, from the client's faction table; the New Goal bar reflows when narrow | Implemented, offline-tested, **not yet verified in game** |
 | 0.16.1 Shift-click any item row to link it in chat or the Auction House search | Implemented, offline-tested, **not yet verified in game** |
+| 0.21.0 farming estimates ("~16 kills of Wolf") on the overview and the shopping list, shopping list sorted by zone, `/fp train` lists what each profession can train now, where and for how much | Implemented, offline-tested, **not yet verified in game** |
 | 0.20.0 the loot learner (what you loot on Forever is recorded account-wide and listed before every database), every searchable item named from the client (11,094), "New in Forever" for items classic data does not know | Implemented, offline-tested, **not yet verified in game** |
 | 0.19.0 classic drops (with chances), world drops, gathering nodes, skinning, fishing, containers, vendors with prices and trainers with required skill and cost, all behind recorded Forever data | Implemented, offline-tested, **not yet verified in game** |
 | 0.18.0 classic-era data from CMaNGOS classic-db (the ForeverPath_ClassicDB addon): every classic quest with its giver, turn-in and map position, the items and kills it asks for, rewards, reputation and prerequisite chains, behind everything Forever-specific; ForeverPath is now GPL-3.0 | Implemented, offline-tested, **not yet verified in game** |
@@ -167,6 +168,7 @@ and says so in the UI.
 | `/fp obtain <item> [qty]` | Add an obtain-item goal (boss drop, quest reward, vendor stock) even if a recipe exists |
 | `/fp learn <recipe>` | Add a learn-recipe goal by recipe name or spell id: the pattern to get, or the trainer to visit |
 | `/fp enchant <enchant> [casts]` | Add an enchant goal by name, spell id or Shift-clicked link: the formula or trainer, the reagents for every cast; completes as you cast it |
+| `/fp train [profession]` | What your professions can train now (trainer, zone, total cost) and what opens up in the next 25 points |
 | `/fp skill <profession> [rank]` | Add a reach-skill goal (default: the next cap): which recipes to craft, how often, and their materials |
 | `/fp quest <name or id>` / `/fp quests` | Add a quest goal (dungeon and attunement quests, or anything in your log): the chain that leads to it, the giver, the turn-in, the items it asks for; list the quests that feed your goals |
 | `/fp equipment` | Every slot: what is worn, GearQuest Forever's best pick, and the goal that targets it |

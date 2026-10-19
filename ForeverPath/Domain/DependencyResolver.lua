@@ -113,7 +113,9 @@ local function buildOptions(itemID, opts, path)
     for _, hint in ipairs(hints) do
       if type(hint) == "table" and hint.kind and hint.kind ~= "craft" then
         options[#options + 1] = { kind = hint.kind, label = hint.label, short = hint.short, detail = hint.detail, name = hint.name, count = hint.count,
-          skill = hint.skill, gatherer = hint.gatherer, unavailable = hint.unavailable and true or nil }
+          skill = hint.skill, gatherer = hint.gatherer, unavailable = hint.unavailable and true or nil,
+          chance = hint.chance, perLoot = hint.perLoot, target = hint.target or hint.boss or hint.object, object = hint.object, zone = hint.zone,
+          mapID = hint.mapID, x = hint.x, y = hint.y, learned = hint.learned, classic = hint.classic }
       end
     end
   end
@@ -575,7 +577,8 @@ function DependencyResolver.Summarize(tree)
           entry = { itemID = node.itemID, step = node.step, name = node.step and node.step.name or nil, count = 0, route = node.route, nodes = {},
             professionName = node.craftOption and node.craftOption.professionName or nil,
             recipeLearned = node.craftOption and node.craftOption.learned or false,
-            hint = node.hint and node.hint.detail or nil, altName = node.hint and node.hint.name or nil,
+            hint = node.hint and node.hint.detail or nil, altName = node.hint and node.hint.name or nil, hintRef = node.hint,
+            zone = node.hint and node.hint.zone or nil,
             gatherer = node.hint and node.hint.gatherer or nil,
             learn = node.learn or nil, learnFor = node.learnFor, tool = node.tool or nil,
             soulbound = node.soulbound or nil, noRoute = node.noRoute or nil }
@@ -610,6 +613,12 @@ function DependencyResolver.Summarize(tree)
     node.childrenResolved = allChildrenResolved
   end
   walk(tree.root)
+  -- Kills / nodes / casts for what is still missing, from the chosen source's chance.
+  if ns.Farming then
+    for _, entry in ipairs(summary.missingLeaves) do
+      entry.farm = ns.Farming.Estimate(entry.hintRef, entry.count)
+    end
+  end
   table.sort(summary.missingLeaves, function(a, b)
     if a.count ~= b.count then return a.count > b.count end
     return (a.itemID or 0) < (b.itemID or 0)

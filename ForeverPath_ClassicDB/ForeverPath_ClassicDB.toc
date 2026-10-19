@@ -2,7 +2,7 @@
 ## Title: ForeverPath Classic Data
 ## Notes: Classic-era quests, quest givers, drops, vendors, trainers, NPC and object spawns for ForeverPath, from CMaNGOS classic-db. Loaded by ForeverPath when needed.
 ## Author: DismasAU
-## Version: 0.20.0
+## Version: 0.21.0
 ## IconTexture: Interface\AddOns\ForeverPath\Media\ForeverPath-Mark.png
 ## Dependencies: ForeverPath
 ## LoadOnDemand: 1

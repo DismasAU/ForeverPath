@@ -400,7 +400,7 @@ function ClassicDB.ItemHints(itemID, opts)
       local place = ClassicDB.PlaceOf(nil, { src.id })
       local skill = object.skill
       local gather = skill == "Herbalism" or skill == "Mining" or skill == "Fishing"
-      out[#out + 1] = { kind = gather and "gather" or "drop", skill = gather and skill or nil, classic = true, object = object.name,
+      out[#out + 1] = { kind = gather and "gather" or "drop", skill = gather and skill or nil, classic = true, object = object.name, zone = place and place.zone,
         mapID = place and place.mapID, x = place and place.x, y = place and place.y, chance = src.chance,
         label = (gather and "Gathered from " or "Found in ") .. object.name,
         short = (gather and "Gather: " or "Chest: ") .. object.name,
@@ -432,7 +432,7 @@ function ClassicDB.ItemHints(itemID, opts)
     local npc = ClassicDB.Npc(src.id)
     if npc then
       local place = ClassicDB.PlaceOf({ src.id })
-      out[#out + 1] = { kind = "gather", skill = "Skinning", classic = true, chance = src.chance, npcID = src.id,
+      out[#out + 1] = { kind = "gather", skill = "Skinning", classic = true, chance = src.chance, npcID = src.id, target = npc.name, zone = place and place.zone,
         mapID = place and place.mapID, x = place and place.x, y = place and place.y,
         label = "Skinned from " .. npc.name, short = "Skin: " .. npc.name,
         detail = string.format("%s - %s%s (classic data)", place and place.zone or "?", ClassicDB.ChanceText(src.chance), npcLevels(npc)) }
@@ -443,7 +443,7 @@ function ClassicDB.ItemHints(itemID, opts)
     if i > limits.fished then break end
     local d = data()
     local area = d.areas and d.areas[src.id] or ("area " .. src.id)
-    out[#out + 1] = { kind = "gather", skill = "Fishing", classic = true, chance = src.chance,
+    out[#out + 1] = { kind = "gather", skill = "Fishing", classic = true, chance = src.chance, target = area, zone = area,
       label = "Fished in " .. area, short = "Fish: " .. area, detail = string.format("%s (classic data)", ClassicDB.ChanceText(src.chance)) }
   end
   list = ClassicDB.Loot("contained", itemID)

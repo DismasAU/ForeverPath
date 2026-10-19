@@ -154,6 +154,8 @@ function ShoppingList.Build(entries, opts)
             if node.missing > 0 then
               local category = categoryFor(node)
               if not r.category then r.category = category end
+              if node.hint and not r.hint then r.hint = node.hint end
+              if node.hint and node.hint.zone and not r.zone then r.zone = node.hint.zone end
               if node.learn then r.learn = true end
               if node.step then
                 local label = stepLabel(node.step)
@@ -199,6 +201,7 @@ function ShoppingList.Build(entries, opts)
       local held = r.itemID and math.min(claimedByExcluded[r.itemID] or 0, math.max(0, (stock[r.itemID] or 0) - r.usable)) or 0
       r.owned = math.min(r.total, r.usable + held)
       r.reserved = r.owned - r.usable
+      r.farm = ns.Farming and ns.Farming.Estimate(r.hint, r.missing) or nil
       kept[#kept + 1] = r
       result.counts.all = result.counts.all + 1
       result.counts[r.category] = (result.counts[r.category] or 0) + 1
@@ -274,7 +277,8 @@ function ShoppingList.Build(entries, opts)
   return result
 end
 
--- Sorts rows in place: "missing" (default), "name", "total", "source".
+-- Sorts rows in place: "missing" (default), "name", "total", "source",
+-- "zone" (where the chosen source is; rows without a place last).
 function ShoppingList.Sort(rows, key, nameOf)
   nameOf = nameOf or function(itemID) return tostring(itemID) end
   local order = { buy = 1, vendor = 2, gather = 3, craft = 4, learn = 5, alt = 6 }
@@ -287,6 +291,12 @@ function ShoppingList.Sort(rows, key, nameOf)
     elseif key == "total" then
       if a.total ~= b.total then return a.total > b.total end
     elseif key == "source" then
+      local oa, ob = order[a.category] or 9, order[b.category] or 9
+      if oa ~= ob then return oa < ob end
+      if a.missing ~= b.missing then return a.missing > b.missing end
+    elseif key == "zone" then
+      local za, zb = a.zone or "~", b.zone or "~"
+      if za ~= zb then return za < zb end
       local oa, ob = order[a.category] or 9, order[b.category] or 9
       if oa ~= ob then return oa < ob end
       if a.missing ~= b.missing then return a.missing > b.missing end

@@ -202,7 +202,8 @@ function LootLearner.ItemHints(itemID)
     out[#out + 1] = {
       kind = kind, skill = skill, learned = true, boss = entry.kind == "creature" and name or nil, npcID = entry.kind == "creature" and id or nil,
       mapID = entry.mapID, x = entry.x, y = entry.y, zone = entry.zone, label = label, short = short,
-      chance = math.floor(seen.times * 10000 / looted + 0.5),
+      chance = math.floor(seen.times * 10000 / looted + 0.5), target = name, object = entry.kind == "object" and name or nil,
+      perLoot = seen.times > 0 and seen.quantity / seen.times or 1,
       detail = string.format("%s - seen %d time%s in %d loot%s on Forever", entry.zone or "?", seen.times, seen.times == 1 and "" or "s",
         looted, looted == 1 and "" or "s"),
     }
