@@ -376,6 +376,7 @@ Needs two characters on the account. Log in on the alt first, then on your main.
 - [ ] Dragging moves it around the edge; the spot survives `/reload` and logging another character in.
 - [ ] Hover shows the tooltip (version, open goals, the clicks).
 - [ ] `/fp minimap hide` removes it, `/fp minimap` brings it back; `/fp reset window` returns it to the lower left.
+- [ ] 0.24.1: with MinimapButtonButton (and EllesmereUI's minimap) running, the ForeverPath mark shows in the collected bar like the other addons' buttons, and left/right-click work from there.
 
 ### Reporting
 Include: client build (`/dump GetBuildInfo()`), `/fp status` output, the step

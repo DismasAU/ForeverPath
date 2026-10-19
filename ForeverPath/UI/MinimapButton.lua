@@ -1,7 +1,13 @@
 -- Minimap button with the ForeverPath mark. Left-click opens the window,
 -- right-click shows or hides the goal tracker, drag moves it around the
--- minimap edge. Built on the client's own minimap textures (no library);
--- the position (an angle in degrees) and visibility are account-wide.
+-- minimap edge. The position (an angle in degrees, minimapPos) and visibility
+-- (hide) are account-wide in ForeverPathDB.minimap.
+--
+-- When another addon has loaded LibDataBroker-1.1 and LibDBIcon-1.0 (AtlasLoot,
+-- Attune and most others embed them), the button is registered through
+-- LibDBIcon like every other addon's, so button collectors (MinimapButtonButton,
+-- EllesmereUI's minimap flyout, ElvUI...) treat it the same way. Without
+-- them a native button is drawn with the client's minimap textures.
 local _, ns = ...
 
 local MinimapButton = {}
@@ -28,11 +34,32 @@ local SHAPES = {
   ["TRICORNER-BOTTOMRIGHT"] = { true, true, true, false },
 }
 
+MinimapButton.NAME = "ForeverPath"
+
 local function settings()
   local db = ns.db
   if not db then return nil end
   db.minimap = db.minimap or {}
-  return db.minimap
+  local s = db.minimap
+  -- 0.24.0 stored the angle as "angle"; LibDBIcon reads "minimapPos".
+  if s.angle then
+    s.minimapPos, s.angle = s.angle, nil
+  end
+  s.minimapPos = s.minimapPos or MinimapButton.DEFAULT_ANGLE
+  return s
+end
+
+local function library(name)
+  local LibStub = _G.LibStub
+  if type(LibStub) ~= "table" or type(LibStub.GetLibrary) ~= "function" then return nil end
+  local ok, lib = pcall(LibStub.GetLibrary, LibStub, name, true)
+  return ok and lib or nil
+end
+
+local function dbIcon()
+  local icon = library("LibDBIcon-1.0")
+  if icon and type(icon.Register) == "function" and library("LibDataBroker-1.1") then return icon end
+  return nil
 end
 
 -- The offset from the minimap's centre for an angle: on the circle where the
@@ -56,7 +83,7 @@ function MinimapButton.UpdatePosition()
   local button, s = MinimapButton.button, settings()
   if not (button and s) then return end
   local shape = type(GetMinimapShape) == "function" and GetMinimapShape() or "ROUND"
-  local x, y = MinimapButton.Offset(s.angle, Minimap:GetWidth(), Minimap:GetHeight(), shape)
+  local x, y = MinimapButton.Offset(s.minimapPos, Minimap:GetWidth(), Minimap:GetHeight(), shape)
   button:ClearAllPoints()
   button:SetPoint("CENTER", Minimap, "CENTER", x, y)
 end
@@ -70,16 +97,50 @@ local function cursorAngle()
   return math.deg(math.atan2(py / scale - my, px / scale - mx)) % 360
 end
 
+function MinimapButton.TooltipLines(tooltip)
+  tooltip:AddLine("ForeverPath " .. tostring(ns.VERSION or ""), 0.84, 0.71, 0.42)
+  local goals = ns.goals and ns.goals:Count({ open = true }) or 0
+  tooltip:AddLine(string.format("%d open goal%s", goals, goals == 1 and "" or "s"), 1, 1, 1)
+  tooltip:AddLine("Left-click: open or close the window", 0.8, 0.8, 0.8)
+  tooltip:AddLine("Right-click: show or hide the goal tracker", 0.8, 0.8, 0.8)
+  tooltip:AddLine("Drag: move around the minimap", 0.8, 0.8, 0.8)
+end
+
+function MinimapButton.OnClick(mouseButton)
+  if mouseButton == "RightButton" then
+    ns.UI.Tracker.Toggle()
+  else
+    ns.UI.MainFrame.Toggle()
+  end
+end
+
 local function showTooltip(self)
   if not GameTooltip then return end
   GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-  GameTooltip:SetText("ForeverPath " .. tostring(ns.VERSION or ""), 0.84, 0.71, 0.42)
-  local goals = ns.goals and ns.goals:Count({ open = true }) or 0
-  GameTooltip:AddLine(string.format("%d open goal%s", goals, goals == 1 and "" or "s"), 1, 1, 1)
-  GameTooltip:AddLine("Left-click: open or close the window", 0.8, 0.8, 0.8)
-  GameTooltip:AddLine("Right-click: show or hide the goal tracker", 0.8, 0.8, 0.8)
-  GameTooltip:AddLine("Drag: move around the minimap", 0.8, 0.8, 0.8)
+  GameTooltip:ClearLines()
+  MinimapButton.TooltipLines(GameTooltip)
   GameTooltip:Show()
+end
+
+-- Registers the LibDataBroker launcher and its LibDBIcon button once.
+function MinimapButton.RegisterLibIcon(icon)
+  if MinimapButton.libIcon then return true end
+  local ldb = library("LibDataBroker-1.1")
+  if not (ldb and type(ldb.NewDataObject) == "function") then return false end
+  local object = (type(ldb.GetDataObjectByName) == "function" and ldb:GetDataObjectByName(MinimapButton.NAME))
+    or ldb:NewDataObject(MinimapButton.NAME, {
+      type = "launcher",
+      label = "ForeverPath",
+      icon = ns.UI.LOGO,
+      OnClick = function(_, mouseButton) MinimapButton.OnClick(mouseButton) end,
+      OnTooltipShow = function(tooltip) if tooltip and tooltip.AddLine then MinimapButton.TooltipLines(tooltip) end end,
+    })
+  if not object then return false end
+  local ok = pcall(icon.Register, icon, MinimapButton.NAME, object, settings())
+  if not ok then return false end
+  MinimapButton.libIcon = icon
+  MinimapButton.button = type(icon.GetMinimapButton) == "function" and icon:GetMinimapButton(MinimapButton.NAME) or nil
+  return true
 end
 
 function MinimapButton.Create()
@@ -109,13 +170,7 @@ function MinimapButton.Create()
   border:SetSize(50, 50)
   border:SetPoint("TOPLEFT", button, "TOPLEFT", 0, 0)
 
-  button:SetScript("OnClick", function(_, mouseButton)
-    if mouseButton == "RightButton" then
-      ns.UI.Tracker.Toggle()
-    else
-      ns.UI.MainFrame.Toggle()
-    end
-  end)
+  button:SetScript("OnClick", function(_, mouseButton) MinimapButton.OnClick(mouseButton) end)
   button:SetScript("OnMouseDown", function() icon:SetPoint("CENTER", button, "CENTER", 1, 0) end)
   button:SetScript("OnMouseUp", function() icon:SetPoint("CENTER", button, "CENTER", 0, 1) end)
   button:SetScript("OnEnter", showTooltip)
@@ -125,7 +180,7 @@ function MinimapButton.Create()
     self:SetScript("OnUpdate", function()
       local angle, s = cursorAngle(), settings()
       if angle and s then
-        s.angle = angle
+        s.minimapPos = angle
         MinimapButton.UpdatePosition()
       end
     end)
@@ -143,6 +198,11 @@ end
 function MinimapButton.Refresh()
   local s = settings()
   if not s then return end
+  if MinimapButton.libIcon or (not MinimapButton.button and dbIcon() and MinimapButton.RegisterLibIcon(dbIcon())) then
+    local icon = MinimapButton.libIcon
+    if s.hide then icon:Hide(MinimapButton.NAME) else icon:Show(MinimapButton.NAME) end
+    return
+  end
   if s.hide then
     if MinimapButton.button then MinimapButton.button:Hide() end
     return
@@ -164,10 +224,21 @@ end
 function MinimapButton.ResetPosition()
   local s = settings()
   if not s then return end
-  s.angle = MinimapButton.DEFAULT_ANGLE
+  s.minimapPos = MinimapButton.DEFAULT_ANGLE
+  if MinimapButton.libIcon then
+    if type(MinimapButton.libIcon.Refresh) == "function" then
+      MinimapButton.libIcon:Refresh(MinimapButton.NAME, s)
+    end
+    return
+  end
   MinimapButton.UpdatePosition()
 end
 
+-- Created at PLAYER_LOGIN, once every addon (and the LibDBIcon it may embed) has loaded.
 function MinimapButton.Init()
-  MinimapButton.Refresh()
+  if type(IsLoggedIn) == "function" and IsLoggedIn() then
+    MinimapButton.Refresh()
+  else
+    ns.Events.RegisterWoW("PLAYER_LOGIN", MinimapButton.Refresh)
+  end
 end

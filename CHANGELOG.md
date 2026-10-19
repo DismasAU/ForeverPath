@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.24.1 (2026-10-20) - minimap button works with button collectors
+
+### Fixed
+- The minimap button was invisible inside MinimapButtonButton's bar when
+  EllesmereUI's minimap module was also running: EllesmereUI zeroes the alpha
+  of every plain minimap child on each Show(), and the button kept that alpha
+  after MinimapButtonButton collected it. When LibDataBroker-1.1 and
+  LibDBIcon-1.0 are loaded (AtlasLoot, Attune and most addons embed them),
+  ForeverPath now registers a LibDBIcon launcher like every other addon, so
+  collectors handle it the same way; the native button is the fallback.
+- The button is created at PLAYER_LOGIN, once every addon has loaded.
+
+### Changed
+- The saved angle is `ForeverPathDB.minimap.minimapPos` (LibDBIcon's field);
+  0.24.0's `angle` is carried over.
+
 ## 0.24.0 (2026-10-20) - minimap button
 
 ### Added
