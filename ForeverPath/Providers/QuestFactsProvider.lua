@@ -64,8 +64,30 @@ end
 
 -- Shipped and learned facts merged: a learned position wins (it was seen on
 -- this build), item lists prefer whichever has every item id resolved.
+-- The first imported copy (Core/Share.lua) of a quest's facts, or nil.
+function QuestFacts.Imported(questID)
+  local found
+  if ns.Share then
+    ns.Share.EachImported("questFacts", function(_, store)
+      local entry = store[tonumber(questID) or 0]
+      if not found and type(entry) == "table" then found = entry end
+    end)
+  end
+  return found
+end
+
 function QuestFacts.Get(questID)
   local shipped, learned = QuestFacts.Shipped(questID), QuestFacts.Learned(questID)
+  local imported = QuestFacts.Imported(questID)
+  if imported then
+    -- Shared facts fill what this account has not learned itself.
+    if not learned then
+      learned, imported = imported, nil
+    else
+      learned = { giver = learned.giver or imported.giver, turnin = learned.turnin or imported.turnin,
+        items = (type(learned.items) == "table" and #learned.items > 0) and learned.items or imported.items, note = learned.note }
+    end
+  end
   if not shipped and not learned then return nil end
   local out = {}
   out.giver = copyPlace(learned and learned.giver) or copyPlace(shipped and shipped.giver)

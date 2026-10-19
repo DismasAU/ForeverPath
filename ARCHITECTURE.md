@@ -489,12 +489,26 @@ spawn on the smallest zone map (`UiMapAssignment.Region`) that contains it,
 `x = (maxY - y) / (maxY - minY)`, `y = (maxX - x) / (maxX - minX)`, scaled
 into `UiMin`..`UiMax`, stored in 0.1% steps; instance spawns keep `-mapID`.
 
+## Sharing
+
+`Core/Codec.lua` serialises plain data (no loadstring) and packs it as
+"FPX1:b:" (base64) or "FPX1:z:" (`C_EncodingUtil` compression).
+`Core/Share.lua` exports `lootSeen`, `questFacts`, `vendors`, `trainers`
+and `trainerNPCs` with an account token and imports into
+`ForeverPathDB.imported[token]` (replace on re-import). Providers read
+imports behind their own data: `LootLearner.Combined` sums own and imported
+counts per source, `QuestFacts.Get` uses `QuestFacts.Imported` for missing
+fields, `VendorProvider.VendorsFor` and `TrainerProvider.Requirement` fill
+unvisited NPCs. `Share.Changed` drops the learner index and decoded recipes.
+`UI/ShareFrame.lua` is the copy / paste window.
+
 ## SavedVariables
 
 - `ForeverPathDB` (account): `schemaVersion`, `settings` (`debug`,
   `includeBank`, `includeAlts`), `recipes`, `itemRecipes`, `itemNames`,
   `characters`, `vendors`, `trainers`, `trainerNPCs`, `questFacts`
-  (questID -> `{ giver, turnin, items, itemsAt }`).
+  (questID -> `{ giver, turnin, items, itemsAt }`), `lootSeen` (loot
+  learner), `imported` (shared data by author token), `shareToken`.
 - `ForeverPathCharDB` (character): `schemaVersion`, `goals`, `selectedGoalId`,
   `knownRecipes`, `professions`, `bankCache`, `window`, `tracker`, `ui`,
   `shopping` (`bought`, `included`, `sort`, `filter`).

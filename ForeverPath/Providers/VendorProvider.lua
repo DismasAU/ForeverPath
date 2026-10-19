@@ -101,11 +101,21 @@ end
 function VendorProvider.VendorsFor(itemID)
   local store = VendorProvider.Store()
   local out = {}
-  local byNPC = store and store[itemID]
-  if type(byNPC) ~= "table" then return out end
-  for npc, entry in pairs(byNPC) do
-    out[#out + 1] = { name = npc, price = entry.price, stack = entry.stack, zone = entry.zone, subzone = entry.subzone,
-      seenAt = entry.seenAt, limited = entry.limited, extended = entry.extended }
+  local seen = {}
+  local function add(byNPC, shared)
+    if type(byNPC) ~= "table" then return end
+    for npc, entry in pairs(byNPC) do
+      if type(npc) == "string" and type(entry) == "table" and not seen[npc] then
+        seen[npc] = true
+        out[#out + 1] = { name = npc, price = tonumber(entry.price), stack = entry.stack, zone = entry.zone, subzone = entry.subzone,
+          seenAt = entry.seenAt, limited = entry.limited, extended = entry.extended, shared = shared or nil }
+      end
+    end
+  end
+  add(store and store[itemID], false)
+  -- Merchants other players recorded and shared (Core/Share.lua) fill in the ones not visited here.
+  if ns.Share then
+    ns.Share.EachImported("vendors", function(_, vendors) add(vendors[itemID], true) end)
   end
   table.sort(out, function(a, b)
     local pa, pb = a.price or math.huge, b.price or math.huge

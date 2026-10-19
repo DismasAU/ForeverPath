@@ -33,6 +33,7 @@ return {
   "classic_db_spec",
   "loot_learner_spec",
   "farming_spec",
+  "share_spec",
   "bootstrap_spec",
   "ui_spec",
 }

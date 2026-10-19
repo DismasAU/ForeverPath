@@ -193,6 +193,15 @@ function TrainerProvider.Requirement(spellID)
   local store = TrainerProvider.Store()
   local recorded = store and store[spellID] or nil
   if recorded then return recorded end
+  -- A trainer another player recorded and shared (Core/Share.lua).
+  local shared
+  if ns.Share then
+    ns.Share.EachImported("trainers", function(_, trainers)
+      local entry = trainers[spellID]
+      if not shared and type(entry) == "table" then shared = entry end
+    end)
+  end
+  if shared then return shared end
   local CDB = ns.ClassicDB
   if CDB and CDB.IsAvailable() then
     local ok, record = pcall(CDB.Trainer, spellID)

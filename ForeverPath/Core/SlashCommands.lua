@@ -33,6 +33,9 @@ Commands.help = {
   { "/fp recipe <item>", "How an item is made: every catalogue recipe and combine, with skill, plans and reagents." },
   { "/fp catalogue", "Recipe catalogue status (client build it was generated from, counts)." },
   { "/fp trainers", "Trainer requirements recorded from profession trainer windows (recipes, trainers)." },
+  { "/fp export", "Copy everything this account has learned on Forever (loot, quest givers, vendors, trainers) as one string to share." },
+  { "/fp import", "Paste someone's /fp export: their loot, quest, vendor and trainer data fill in what you have not seen (yours always comes first)." },
+  { "/fp shared [remove <n>]", "List the imports (who, when, how much), or remove one." },
   { "/fp train [profession]", "What your professions can train now (unlearned trainer recipes at or below your skill) with the trainer, zone and total cost, and what opens up in the next 25 points." },
   { "/fp prices [item]", "Auction House price status (Auctionator), or every known price for an item." },
   { "/fp celebrate [on|off|test|auto on|off]", "Completion toasts and sound; 'auto' toggles auto-completing goals." },
@@ -103,6 +106,7 @@ function handlers.status()
   Log.output("  " .. ns.QuestFactsProvider.Status())
   Log.output("  " .. ns.ClassicDB.Status())
   Log.output("  " .. ns.LootLearner.Status())
+  Log.output("  " .. ns.Share.Status())
   Log.output("  " .. ns.EquipmentProvider.Status())
   Log.output("  " .. ns.ReputationProvider.Status())
 end
@@ -407,6 +411,48 @@ function handlers.trainers()
   end
   if #trainers == 0 then
     Log.output("  Open any profession trainer: every recipe on offer is recorded with the skill it needs, its cost and the trainer's location.")
+  end
+end
+
+function handlers.export()
+  if not requireLoaded() then return end
+  local text, counts = ns.UI.ShareFrame.ShowExport()
+  if text then
+    Log.Print("Export ready (%s): copy it from the window with Ctrl+C.", ns.Share.Describe(counts))
+  else
+    Log.Print("Nothing to export: %s", tostring(counts))
+  end
+end
+
+function handlers.import(rest)
+  if not requireLoaded() then return end
+  local text = Util.Trim(rest or "")
+  if text ~= "" then
+    local ok, message = ns.Share.Import(text)
+    Log.Print("%s", message)
+    return
+  end
+  ns.UI.ShareFrame.ShowImport()
+  Log.Print("Paste the export into the window and press Import.")
+end
+
+function handlers.shared(rest)
+  if not requireLoaded() then return end
+  local list = ns.Share.List()
+  local index = tonumber((rest or ""):match("^%s*remove%s+(%d+)%s*$"))
+  if index then
+    local entry = list[index]
+    if entry and ns.Share.Remove(entry.author) then
+      Log.Print("Removed %s's shared data.", entry.label)
+    else
+      Log.Print("No import number %d; /fp shared lists them.", index)
+    end
+    return
+  end
+  Log.Print("%s", ns.Share.Status())
+  for i, entry in ipairs(list) do
+    Log.output(string.format("  %d. %s - %s - exported %s, imported %s", i, entry.label, ns.Share.Describe(entry.counts),
+      Util.FormatAgo(entry.at), Util.FormatAgo(entry.importedAt)))
   end
 end
 

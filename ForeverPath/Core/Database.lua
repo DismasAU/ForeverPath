@@ -39,6 +39,7 @@ Database.DEFAULTS = {
     itemNames = {},    -- itemID -> name (cheap cache for display and name search)
     questFacts = {},   -- questID -> { giver, turnin, items } learned at quest windows (see Providers/QuestFactsProvider.lua)
     lootSeen = {},     -- "c:<npcID>" / "o:<objectID>" / "f:<zone>" -> what was looted there (see Providers/LootLearner.lua)
+    imported = {},     -- author token -> { label, at, importedAt, lootSeen, questFacts, vendors, trainers, trainerNPCs } (see Core/Share.lua)
   },
   char = {
     schemaVersion = ns.SCHEMA_VERSION,

@@ -154,10 +154,48 @@ function LootLearner.CloseLoot()
   LootLearner.session = (LootLearner.session or 0) + 1
 end
 
+-- Own observations plus every imported copy (Core/Share.lua), summed per
+-- source: key -> entry in the stored shape, with `shared` = imports used.
+function LootLearner.Combined()
+  local combined = {}
+  local function merge(key, entry, shared)
+    if type(entry) ~= "table" then return end
+    local c = combined[key]
+    if not c then
+      c = { kind = entry.kind, name = entry.name, zone = entry.zone, mapID = entry.mapID, x = entry.x, y = entry.y, looted = 0, items = {}, skinned = {}, shared = 0 }
+      combined[key] = c
+    end
+    c.name = c.name or entry.name
+    c.zone, c.mapID, c.x, c.y = c.zone or entry.zone, c.mapID or entry.mapID, c.x or entry.x, c.y or entry.y
+    c.looted = c.looted + (tonumber(entry.looted) or 0)
+    if shared then c.shared = c.shared + 1 end
+    for _, field in ipairs({ "items", "skinned" }) do
+      for itemID, seen in pairs(type(entry[field]) == "table" and entry[field] or {}) do
+        itemID = tonumber(itemID)
+        if itemID and type(seen) == "table" then
+          local target = c[field][itemID]
+          if not target then target = { times = 0, quantity = 0 } c[field][itemID] = target end
+          target.times = target.times + (tonumber(seen.times) or 0)
+          target.quantity = target.quantity + (tonumber(seen.quantity) or 0)
+        end
+      end
+    end
+  end
+  for key, entry in pairs(LootLearner.Store() or {}) do merge(key, entry, false) end
+  if ns.Share then
+    ns.Share.EachImported("lootSeen", function(_, store)
+      for key, entry in pairs(store) do
+        if type(key) == "string" and key:match("^[cof]:") then merge(key, entry, true) end
+      end
+    end)
+  end
+  return combined
+end
+
 -- itemID -> { { key, entry, times, quantity, skinned } }, built on demand.
 local function buildIndex()
   local index = {}
-  for key, entry in pairs(LootLearner.Store() or {}) do
+  for key, entry in pairs(LootLearner.Combined()) do
     for itemID, seen in pairs(entry.items or {}) do
       index[itemID] = index[itemID] or {}
       table.insert(index[itemID], { key = key, entry = entry, times = seen.times, quantity = seen.quantity })
@@ -204,8 +242,9 @@ function LootLearner.ItemHints(itemID)
       mapID = entry.mapID, x = entry.x, y = entry.y, zone = entry.zone, label = label, short = short,
       chance = math.floor(seen.times * 10000 / looted + 0.5), target = name, object = entry.kind == "object" and name or nil,
       perLoot = seen.times > 0 and seen.quantity / seen.times or 1,
-      detail = string.format("%s - seen %d time%s in %d loot%s on Forever", entry.zone or "?", seen.times, seen.times == 1 and "" or "s",
-        looted, looted == 1 and "" or "s"),
+      detail = string.format("%s - seen %d time%s in %d loot%s on Forever%s", entry.zone or "?", seen.times, seen.times == 1 and "" or "s",
+        looted, looted == 1 and "" or "s", (entry.shared or 0) > 0 and " (with shared data)" or ""),
+      shared = (entry.shared or 0) > 0 or nil,
     }
   end
   return out

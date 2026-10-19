@@ -59,6 +59,13 @@ client. Behaviour (return values, timing) is only verified where stated.
 | `GameTooltip:SetItemByID` | Widgets | Retail API | Guarded with pcall; falls back to a plain name tooltip |
 | `Enum.CraftingReagentType.Basic` (=1), `Enum.BankType.Character` (=0), `Enum.BagIndex.ReagentBag` (=5) | Compat | `Enum.BagIndex` in dump; the other two from Retail 12.x docs | Fallback constants used when the enum is missing |
 
+## 0.22.0
+
+| Function | Used for | Evidence |
+|---|---|---|
+| `C_EncodingUtil.CompressString`, `DecompressString`, `EncodeBase64`, `DecodeBase64` | shorter export strings | Retail 11.1+ API; **unverified** on Forever. Without it exports are plain base64 |
+| multi-line `EditBox` (`SetMultiLine`, `HighlightText`) in a `UIPanelScrollFrameTemplate` scroll frame | the export / import window | standard UI widgets |
+
 ## 0.20.0
 
 | Function | Used for | Evidence |

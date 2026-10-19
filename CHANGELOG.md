@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.22.0 (2026-10-19) - share what you have learned on Forever
+
+### Added
+- **`/fp export`** opens a window with one "FPX1:" string holding
+  everything this account has learned on Forever: what it looted and where
+  (`lootSeen`), quest givers, turn-ins and items (`questFacts`), merchants
+  (`vendors`) and trainers (`trainers`, `trainerNPCs`), with a random
+  account token, the exporting character's name and the time. Nothing a
+  goal or character holds is in it.
+- **`/fp import`** (window, or `/fp import <string>`) stores another
+  player's export under `ForeverPathDB.imported[token]`; importing the same
+  player again replaces the earlier copy, so nothing counts twice, and an
+  account's own export is refused. `/fp shared` lists imports (who, what,
+  when) and `/fp shared remove <n>` drops one; `/fp status` reports them.
+- Imported data fills gaps behind your own: the loot learner adds imported
+  loot counts per source ("... on Forever (with shared data)"), quest facts
+  use an imported giver / turn-in / item list where this account has none,
+  merchants and trainers you have not visited come from imports, and the
+  catalogue picks shared trainer requirements up.
+- `Core/Codec.lua`: plain-data serialisation with length-prefixed strings,
+  bounds checks and a nesting limit (nothing is ever executed), pure-Lua
+  base64, and the client's `C_EncodingUtil` compression when it exists.
+
 ## 0.21.0 (2026-10-19) - farming estimates, shopping by zone, trainer planning
 
 ### Added
