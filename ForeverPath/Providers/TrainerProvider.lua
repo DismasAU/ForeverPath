@@ -187,10 +187,18 @@ function TrainerProvider.ScanTrainer()
   return recorded
 end
 
--- Requirement recorded for a recipe spell, or nil.
+-- Requirement recorded for a recipe spell, else the classic trainer data
+-- (classic = true), or nil.
 function TrainerProvider.Requirement(spellID)
   local store = TrainerProvider.Store()
-  return store and store[spellID] or nil
+  local recorded = store and store[spellID] or nil
+  if recorded then return recorded end
+  local CDB = ns.ClassicDB
+  if CDB and CDB.IsAvailable() then
+    local ok, record = pcall(CDB.Trainer, spellID)
+    if ok and record then return record end
+  end
+  return nil
 end
 
 -- "Georgio Bolero (Stormwind City), needs Tailoring 125, 1g"
@@ -203,6 +211,7 @@ function TrainerProvider.Describe(spellID, moneyFn)
   if record.cost and record.cost > 0 then
     text = text .. ", " .. (moneyFn and moneyFn(record.cost) or (record.cost .. "c"))
   end
+  if record.classic then text = text .. " (classic data)" end
   return text
 end
 

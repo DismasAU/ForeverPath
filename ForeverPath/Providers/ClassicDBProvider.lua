@@ -8,8 +8,15 @@
 --                   enderObjects, items, kills, choiceRewards, rewards,
 --                   reputation, prerequisites, followUp, providedItem,
 --                   objectives, groupSize, skill, breadcrumbFor, type }
---   npcs[id]    = { name, subName, minLevel, maxLevel, npcFlags, spawns }
---   objects[id] = { name, type, spawns }
+--   npcs[id]    = { name, subName, minLevel, maxLevel, npcFlags, spawns,
+--                   side (0 both, 1 Alliance, 2 Horde, 3 hostile), rank }
+--   objects[id] = { name, type, spawns, lockSkill, skillValue }
+--   drops / skinned / pickpocketed / gathered / fished / contained
+--     [itemID] = { sourceCount, sourceID, chance, ... } (chance in 1/100 %,
+--     negative while on the quest only; the most likely sources first)
+--   worldDrops[itemID] = { minLevel, maxLevel }
+--   vendors[itemID] = { price per unit, stack, npcID, limited, ... }
+--   trainers[recipeSpellID] = { skillLine, skill, cost, npcID, ... }
 --   spawns      = { uiMapID, x, y, ... } with x, y in 0.1% of the zone map;
 --                 a negative uiMapID is an instance (-mapID).
 --   zones[uiMapID], instances[mapID] = names
@@ -64,6 +71,7 @@ function ClassicDB.Reset()
   ClassicDB.rewardIndex = nil
   ClassicDB.reputationIndex = nil
   ClassicDB.titleIndex = nil
+  if ns.Data and ns.Data.Recipes and ns.Data.Recipes.Invalidate then ns.Data.Recipes.Invalidate() end
 end
 
 ---------------------------------------------------------------------------
@@ -143,14 +151,26 @@ function ClassicDB.Npc(npcID)
   local d = data()
   local row = d and d.npcs[tonumber(npcID) or 0]
   if not row then return nil end
-  return { id = tonumber(npcID), name = row[1], subName = row[2], minLevel = row[3], maxLevel = row[4], npcFlags = row[5], spawns = ClassicDB.Spawns(row[6]) }
+  return { id = tonumber(npcID), name = row[1], subName = row[2], minLevel = row[3], maxLevel = row[4], npcFlags = row[5], spawns = ClassicDB.Spawns(row[6]),
+    side = row[7], rank = row[8] }
 end
+
+ClassicDB.LOCK_SKILLS = { "Herbalism", "Mining", "Fishing", "Lockpicking" }
 
 function ClassicDB.Object(objectID)
   local d = data()
   local row = d and d.objects and d.objects[tonumber(objectID) or 0]
   if not row then return nil end
-  return { id = tonumber(objectID), name = row[1], type = row[2], spawns = ClassicDB.Spawns(row[3]) }
+  return { id = tonumber(objectID), name = row[1], type = row[2], spawns = ClassicDB.Spawns(row[3]),
+    skill = row[4] and ClassicDB.LOCK_SKILLS[row[4]] or nil, skillValue = row[5] }
+end
+
+-- Can this character deal with the NPC (not hostile to its faction)?
+function ClassicDB.Friendly(npc, side)
+  if not npc or npc.side == nil then return true end
+  side = side or ClassicDB.PlayerSide()
+  if npc.side == 3 then return false end
+  return npc.side == 0 or not side or npc.side == side
 end
 
 -- A place for the first NPC (or object) in the list that has one:
@@ -255,6 +275,202 @@ end
 function ClassicDB.RequiredItems(questID)
   local entry = ClassicDB.Quest(questID)
   return entry and entry.items or {}
+end
+
+---------------------------------------------------------------------------
+-- Items: where they drop, who sells them, who teaches a recipe
+---------------------------------------------------------------------------
+-- "12%", "3.5%", "0.25%"
+function ClassicDB.ChanceText(chance)
+  chance = math.abs(chance or 0) / 100
+  if chance >= 10 then return string.format("%d%%", math.floor(chance + 0.5)) end
+  if chance >= 1 then return (string.format("%.1f%%", chance):gsub("%.0%%", "%%")) end
+  return (string.format("%.2f%%", chance):gsub("0+%%$", "%%"):gsub("%.%%", "%%"))
+end
+
+-- { { id, chance (1/100 %), quest } , total } for one loot list.
+local function sources(list)
+  local out = {}
+  if type(list) ~= "table" then return out, 0 end
+  for i = 2, #list, 2 do
+    out[#out + 1] = { id = list[i], chance = math.abs(list[i + 1] or 0), quest = (list[i + 1] or 0) < 0 }
+  end
+  return out, list[1] or #out
+end
+
+function ClassicDB.Loot(kind, itemID)
+  local d = data()
+  return sources(d and d[kind] and d[kind][tonumber(itemID) or 0])
+end
+
+function ClassicDB.WorldDrop(itemID)
+  local d = data()
+  local row = d and d.worldDrops and d.worldDrops[tonumber(itemID) or 0]
+  if not row then return nil end
+  return { minLevel = row[1], maxLevel = row[2] }
+end
+
+-- Vendors that sell itemID and deal with this character's faction:
+-- { { npc, place, price, stack, limited } }.
+function ClassicDB.Vendors(itemID, side)
+  local d = data()
+  local row = d and d.vendors and d.vendors[tonumber(itemID) or 0]
+  local out = {}
+  if not row then return out end
+  for i = 3, #row, 2 do
+    local npc = ClassicDB.Npc(row[i])
+    if npc and ClassicDB.Friendly(npc, side) then
+      out[#out + 1] = { npc = npc, place = ClassicDB.PlaceOf({ row[i] }), price = row[1], stack = row[2], limited = row[i + 1] == 1 }
+    end
+  end
+  return out
+end
+
+-- The cheapest classic vendor price this character can buy at, or nil.
+function ClassicDB.VendorPrice(itemID)
+  local vendors = ClassicDB.Vendors(itemID)
+  local best = vendors[1]
+  if best and best.price and best.price > 0 then return best.price, best end
+  return nil
+end
+
+-- Trainer requirement for a recipe in TrainerProvider's record shape:
+-- { skill (profession name), rank, cost, trainer, zone, classic = true }.
+function ClassicDB.Trainer(recipeSpellID, side)
+  local d = data()
+  local row = d and d.trainers and d.trainers[tonumber(recipeSpellID) or 0]
+  if not row then return nil end
+  local catalogue = ns.Data and ns.Data.Catalogue
+  local profession = catalogue and catalogue.professions and catalogue.professions[row[1]]
+  local record = { skill = profession and profession[1] or nil, skillLine = row[1], rank = row[2], cost = row[3], classic = true, trainers = {} }
+  for i = 4, #row do
+    local npc = ClassicDB.Npc(row[i])
+    if npc and ClassicDB.Friendly(npc, side) then
+      local place = ClassicDB.PlaceOf({ row[i] })
+      record.trainers[#record.trainers + 1] = place
+      if not record.trainer then
+        record.trainer, record.zone = npc.name, place and place.zone or nil
+        record.mapID, record.x, record.y = place and place.mapID, place and place.x, place and place.y
+      end
+    end
+  end
+  return record
+end
+
+local function npcLevels(npc)
+  if not npc.minLevel then return "" end
+  if npc.maxLevel and npc.maxLevel ~= npc.minLevel then return string.format(", level %d-%d", npc.minLevel, npc.maxLevel) end
+  return string.format(", level %d", npc.minLevel)
+end
+
+local RANKS = { [1] = "elite", [2] = "rare elite", [3] = "boss", [4] = "rare" }
+
+-- Resolver hints for an item from the classic tables (SourceProvider shape:
+-- { kind, label, short, detail, ... , classic = true }), in the order they
+-- are worth trying: vendors, gathering nodes, creature drops, skinning,
+-- fishing, containers, world drops (pickpocketing for rogues only).
+ClassicDB.HINT_LIMITS = { vendor = 2, gathered = 2, drops = 3, skinned = 2, fished = 1, contained = 1, pickpocketed = 1 }
+-- Drops rarer than this (1/100 %) are shown but never recommended as the
+-- route: farming a 0.2% drop is not a plan when the Auction House exists.
+ClassicDB.ROUTE_MIN_CHANCE = 100
+
+function ClassicDB.ItemHints(itemID, opts)
+  opts = opts or {}
+  local out = {}
+  if not data() then return out end
+  local limits = ClassicDB.HINT_LIMITS
+  local function money(copper)
+    return ns.UI and ns.UI.Widgets and ns.UI.Widgets.Money(copper, true) or (tostring(copper) .. "c")
+  end
+  if not opts.skipVendors then
+    for i, v in ipairs(ClassicDB.Vendors(itemID)) do
+      if i > limits.vendor then break end
+      local where = v.place and v.place.zone or "?"
+      out[#out + 1] = { kind = "vendor", name = v.npc.name, price = v.price, zone = v.place and v.place.zone, classic = true,
+        mapID = v.place and v.place.mapID, x = v.place and v.place.x, y = v.place and v.place.y,
+        label = "Buy from " .. v.npc.name,
+        detail = string.format("%s - %s each%s (classic data)", where, v.price and v.price > 0 and money(v.price) or "price unknown", v.limited and ", limited stock" or "") }
+    end
+  end
+  local list, total = ClassicDB.Loot("gathered", itemID)
+  for i, src in ipairs(list) do
+    if i > limits.gathered then break end
+    local object = ClassicDB.Object(src.id)
+    if object then
+      local place = ClassicDB.PlaceOf(nil, { src.id })
+      local skill = object.skill
+      local gather = skill == "Herbalism" or skill == "Mining" or skill == "Fishing"
+      out[#out + 1] = { kind = gather and "gather" or "drop", skill = gather and skill or nil, classic = true, object = object.name,
+        mapID = place and place.mapID, x = place and place.x, y = place and place.y, chance = src.chance,
+        label = (gather and "Gathered from " or "Found in ") .. object.name,
+        short = (gather and "Gather: " or "Chest: ") .. object.name,
+        detail = string.format("%s - %s%s%s (classic data)", place and place.zone or "?", ClassicDB.ChanceText(src.chance),
+          object.skillValue and object.skillValue > 1 and string.format(", needs %s %d", skill or "skill", object.skillValue) or "",
+          total > i and i == 1 and string.format(", %d sources", total) or "") }
+    end
+  end
+  list, total = ClassicDB.Loot("drops", itemID)
+  local shown = 0
+  for _, src in ipairs(list) do
+    if shown >= limits.drops then break end
+    local npc = ClassicDB.Npc(src.id)
+    if npc and not (opts.skipNames and opts.skipNames[string.lower(npc.name)]) then
+      shown = shown + 1
+      local place = ClassicDB.PlaceOf({ src.id })
+      out[#out + 1] = { kind = "drop", boss = npc.name, classic = true, chance = src.chance, quest = src.quest, npcID = src.id, rank = npc.rank,
+        unavailable = src.chance < ClassicDB.ROUTE_MIN_CHANCE or nil, rare = src.chance < ClassicDB.ROUTE_MIN_CHANCE or nil,
+        mapID = place and place.mapID, x = place and place.x, y = place and place.y, zone = place and place.zone,
+        label = "Dropped by " .. npc.name, short = "Drop: " .. npc.name,
+        detail = string.format("%s - %s%s%s%s%s (classic data)", place and place.zone or "?", ClassicDB.ChanceText(src.chance),
+          src.quest and " while on the quest" or "", npcLevels(npc), RANKS[npc.rank or 0] and (", " .. RANKS[npc.rank]) or "",
+          total > shown and shown == 1 and string.format(", %d mobs drop it", total) or "") }
+    end
+  end
+  list = ClassicDB.Loot("skinned", itemID)
+  for i, src in ipairs(list) do
+    if i > limits.skinned then break end
+    local npc = ClassicDB.Npc(src.id)
+    if npc then
+      local place = ClassicDB.PlaceOf({ src.id })
+      out[#out + 1] = { kind = "gather", skill = "Skinning", classic = true, chance = src.chance, npcID = src.id,
+        mapID = place and place.mapID, x = place and place.x, y = place and place.y,
+        label = "Skinned from " .. npc.name, short = "Skin: " .. npc.name,
+        detail = string.format("%s - %s%s (classic data)", place and place.zone or "?", ClassicDB.ChanceText(src.chance), npcLevels(npc)) }
+    end
+  end
+  list = ClassicDB.Loot("fished", itemID)
+  for i, src in ipairs(list) do
+    if i > limits.fished then break end
+    local d = data()
+    local area = d.areas and d.areas[src.id] or ("area " .. src.id)
+    out[#out + 1] = { kind = "gather", skill = "Fishing", classic = true, chance = src.chance,
+      label = "Fished in " .. area, short = "Fish: " .. area, detail = string.format("%s (classic data)", ClassicDB.ChanceText(src.chance)) }
+  end
+  list = ClassicDB.Loot("contained", itemID)
+  for i, src in ipairs(list) do
+    if i > limits.contained then break end
+    local name = ns.ItemProvider and ns.ItemProvider.GetName(src.id) or ("item " .. src.id)
+    out[#out + 1] = { kind = "drop", classic = true, chance = src.chance, container = src.id,
+      label = "Found in " .. name, short = "Open: " .. name, detail = string.format("%s (classic data)", ClassicDB.ChanceText(src.chance)) }
+  end
+  if opts.classID == 4 then
+    list = ClassicDB.Loot("pickpocketed", itemID)
+    for i, src in ipairs(list) do
+      if i > limits.pickpocketed then break end
+      local npc = ClassicDB.Npc(src.id)
+      if npc then
+        out[#out + 1] = { kind = "drop", classic = true, chance = src.chance, npcID = src.id,
+          label = "Pickpocketed from " .. npc.name, short = "Pickpocket: " .. npc.name,
+          detail = string.format("%s (classic data)", ClassicDB.ChanceText(src.chance)) }
+      end
+    end
+  end
+  local world = ClassicDB.WorldDrop(itemID)
+  if world then
+    out[#out + 1] = { kind = "drop", classic = true, world = true, unavailable = true, rare = true, label = "World drop", short = "World drop",
+      detail = string.format("mobs level %d-%d (classic data)", world.minLevel or 0, world.maxLevel or 0) }
+  end
+  return out
 end
 
 local function buildIndexes()
@@ -382,7 +598,11 @@ function ClassicDB.Status()
   end
   local quests, npcs, objects = ClassicDB.Counts()
   local meta = data().meta or {}
-  return string.format("Classic data: %d quests, %d NPCs, %d objects from %s %s.", quests, npcs, objects, meta.source or "CMaNGOS classic-db", string.sub(tostring(meta.commit or "?"), 1, 8))
+  local extra = ""
+  if meta.dropItems or meta.vendorItems or meta.trainerRecipes then
+    extra = string.format("; drop sources for %d items, vendors for %d, trainers for %d recipes", meta.dropItems or 0, meta.vendorItems or 0, meta.trainerRecipes or 0)
+  end
+  return string.format("Classic data: %d quests, %d NPCs, %d objects%s from %s %s.", quests, npcs, objects, extra, meta.source or "CMaNGOS classic-db", string.sub(tostring(meta.commit or "?"), 1, 8))
 end
 
 function ClassicDB.Init()

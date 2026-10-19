@@ -7,9 +7,16 @@ into the ForeverPath_ClassicDB addon:
   Quests.lua   quests: title, levels, side, classes, givers, turn-ins,
                prerequisites, follow-ups, items and kills required, rewards,
                reputation, objective text
-  Npcs.lua     NPCs those quests use, with spawn points on zone maps
-  Objects.lua  game objects those quests use, with spawn points
-  Maps.lua     zone map and instance names
+  Loot.lua     where items drop: creatures (with chances), world drops,
+               skinning, pickpocketing, gathering nodes and chests, fishing
+               zones, containers
+  Vendors.lua  which NPCs sell an item and for how much
+  Trainers.lua which trainers teach a profession recipe, cost and skill
+  Npcs.lua     NPCs all of the above use, with spawn points on zone maps,
+               level, rank and which faction they are friendly to
+  Objects.lua  game objects (quest objects, herb / ore nodes, chests) with
+               spawn points and the skill that opens them
+  Maps.lua     zone map, instance and area names
 
 World positions are placed on the client's zone maps with the bounds
 tools/DbExtract writes to maps.json (UiMapAssignment from the Forever client).
@@ -342,6 +349,223 @@ def compact_spawns(points):
 
 
 # ---------------------------------------------------------------------------
+# Loot
+# ---------------------------------------------------------------------------
+TOP_SOURCES = 5
+MIN_CHANCE = 0.01          # percent; rarer drops are not listed
+WORLD_REF_USERS = 25       # a reference table this many loot tables share is a world drop
+
+
+def loot_table(db, table):
+    t = {}
+    for r in rows(db, 'SELECT entry, item, ChanceOrQuestChance AS chance, groupid, mincountOrRef AS ref, maxcount FROM "%s"' % table):
+        t.setdefault(int(r["entry"]), []).append(r)
+    return t
+
+
+class LootResolver:
+    """Flattens loot entries into {itemID: (chance percent, quest)} per loot id,
+    expanding references; references shared by many tables are world drops."""
+
+    def __init__(self, refs, world_refs):
+        self.refs = refs
+        self.world_refs = world_refs
+        self.ref_cache = {}
+
+    def expand(self, entries, depth=0, world=None):
+        out = {}
+        groups = {}
+
+        def add(item, chance, quest):
+            prev = out.get(item)
+            if prev is None or chance > prev[0]:
+                out[item] = (min(100.0, chance), quest)
+
+        for r in entries:
+            ref = int(r["ref"] or 0)
+            chance = float(r["chance"] or 0)
+            if ref < 0:
+                ref_id = -ref
+                if depth > 3 or ref_id not in self.refs:
+                    continue
+                times = max(1, int(r["maxcount"] or 1))
+                if world is not None and ref_id in self.world_refs:
+                    for item, (c, q) in self.expand_ref(ref_id, depth).items():
+                        world.add(item)
+                    continue
+                for item, (c, q) in self.expand_ref(ref_id, depth).items():
+                    add(item, abs(chance) / 100.0 * c * times, q)
+            elif int(r["groupid"] or 0) > 0:
+                groups.setdefault(int(r["groupid"]), []).append(r)
+            else:
+                add(int(r["item"]), abs(chance), chance < 0)
+        for members in groups.values():
+            explicit = sum(abs(float(m["chance"] or 0)) for m in members)
+            zero = [m for m in members if float(m["chance"] or 0) == 0]
+            share = max(0.0, 100.0 - explicit) / len(zero) if zero else 0.0
+            for m in members:
+                c = float(m["chance"] or 0)
+                add(int(m["item"]), abs(c) if c != 0 else share, c < 0)
+        return out
+
+    def expand_ref(self, ref_id, depth):
+        if ref_id not in self.ref_cache:
+            self.ref_cache[ref_id] = self.expand(self.refs[ref_id], depth + 1)
+        return self.ref_cache[ref_id]
+
+
+def permyriad(chance, quest):
+    v = max(1, int(round(chance * 100)))
+    return -v if quest else v
+
+
+def top_sources(by_item, limit=TOP_SOURCES):
+    """by_item: {itemID: {sourceID: (chance, quest)}} -> {itemID: [total, id, chance, ...]}"""
+    out = {}
+    for item, sources in by_item.items():
+        ranked = sorted(sources.items(), key=lambda kv: (-kv[1][0], kv[0]))
+        flat = [len(ranked)]
+        for ident, (chance, quest) in ranked[:limit]:
+            flat += [ident, permyriad(chance, quest)]
+        out[item] = flat
+    return out
+
+
+def extract_loot(db, item_quality):
+    """-> drops, worldDrops, skinned, pickpocketed, gathered, fished, contained (+ npc / object ids used)."""
+    refs = loot_table(db, "reference_loot_template")
+    creature = loot_table(db, "creature_loot_template")
+    users = {}
+    for table in (creature, loot_table(db, "gameobject_loot_template"), loot_table(db, "item_loot_template")):
+        for lid, entries in table.items():
+            for r in entries:
+                if int(r["ref"] or 0) < 0:
+                    users.setdefault(-int(r["ref"]), set()).add(lid)
+    world_refs = {ref for ref, who in users.items() if len(who) >= WORLD_REF_USERS}
+    resolver = LootResolver(refs, world_refs)
+
+    def keep(item, chance, quest):
+        return (quest or item_quality.get(item, 0) >= 1) and chance >= MIN_CHANCE and item in item_quality
+
+    templates = list(rows(db, "SELECT Entry, MinLevel, MaxLevel, LootId, SkinningLootId, PickpocketLootId FROM creature_template"))
+    drops, skinned, picked = {}, {}, {}
+    world_levels = {}
+    for t in templates:
+        npc = int(t["Entry"])
+        for field, table, target, world in (("LootId", creature, drops, True), ("SkinningLootId", None, skinned, False), ("PickpocketLootId", None, picked, False)):
+            lid = int(t[field] or 0)
+            if not lid:
+                continue
+            if table is None:
+                table = loot_table.cache.setdefault(field, loot_table(db, "skinning_loot_template" if field == "SkinningLootId" else "pickpocketing_loot_template"))
+            entries = table.get(lid)
+            if not entries:
+                continue
+            worldset = set() if world else None
+            for item, (chance, quest) in resolver.expand(entries, world=worldset).items():
+                if keep(item, chance, quest):
+                    target.setdefault(item, {})[npc] = (chance, quest)
+            for item in worldset or ():
+                if item_quality.get(item, 0) >= 1:
+                    lo, hi = world_levels.get(item, (999, 0))
+                    world_levels[item] = (min(lo, int(t["MinLevel"] or 0)), max(hi, int(t["MaxLevel"] or 0)))
+
+    go_loot = loot_table(db, "gameobject_loot_template")
+    gathered = {}
+    for g in rows(db, "SELECT entry, type, data0, data1 FROM gameobject_template WHERE type IN (3, 25)"):
+        lid = int(g["data1"] or 0)
+        entries = go_loot.get(lid)
+        if not entries:
+            continue
+        for item, (chance, quest) in resolver.expand(entries).items():
+            if keep(item, chance, quest):
+                gathered.setdefault(item, {})[int(g["entry"])] = (chance, quest)
+
+    fished = {}
+    for area, entries in loot_table(db, "fishing_loot_template").items():
+        for item, (chance, quest) in resolver.expand(entries).items():
+            if keep(item, chance, quest):
+                fished.setdefault(item, {})[area] = (chance, quest)
+
+    contained = {}
+    for container, entries in loot_table(db, "item_loot_template").items():
+        for item, (chance, quest) in resolver.expand(entries).items():
+            if keep(item, chance, quest):
+                contained.setdefault(item, {})[container] = (chance, quest)
+
+    world = {item: [lo, hi] for item, (lo, hi) in world_levels.items() if item not in drops}
+    return {
+        "drops": top_sources(drops), "worldDrops": world, "skinned": top_sources(skinned), "pickpocketed": top_sources(picked),
+        "gathered": top_sources(gathered), "fished": top_sources(fished), "contained": top_sources(contained),
+    }
+
+
+loot_table.cache = {}
+
+
+def extract_vendors(db):
+    """-> vendors {itemID: [price per unit, stack, npcID, limited, ...]} (at most 12 NPCs per item)."""
+    price = {}
+    for r in rows(db, "SELECT entry, BuyPrice, BuyCount FROM item_template"):
+        count = max(1, int(r["BuyCount"] or 1))
+        price[int(r["entry"])] = (int(round((r["BuyPrice"] or 0) / count)), count)
+    by_item = {}
+    templates = {}
+    for r in rows(db, "SELECT entry, item, maxcount FROM npc_vendor_template"):
+        templates.setdefault(int(r["entry"]), []).append(r)
+    stock = []
+    for r in rows(db, "SELECT entry, item, maxcount FROM npc_vendor"):
+        stock.append((int(r["entry"]), int(r["item"]), int(r["maxcount"] or 0)))
+    for t in rows(db, "SELECT Entry, VendorTemplateId FROM creature_template WHERE VendorTemplateId > 0"):
+        for r in templates.get(int(t["VendorTemplateId"]), []):
+            stock.append((int(t["Entry"]), int(r["item"]), int(r["maxcount"] or 0)))
+    for npc, item, limited in stock:
+        if item <= 0:
+            continue
+        by_item.setdefault(item, {})[npc] = 1 if limited > 0 else 0
+    out = {}
+    for item, npcs in by_item.items():
+        unit, count = price.get(item, (0, 1))
+        flat = [unit, count]
+        for npc in sorted(npcs)[:12]:
+            flat += [npc, npcs[npc]]
+        out[item] = flat
+    return out
+
+
+def extract_trainers(db):
+    """-> trainers {recipeSpellID: [skillLine, skill, cost, npcID, ...]} for profession recipes."""
+    teaches = {}
+    for r in rows(db, "SELECT Id, Effect1, Effect2, Effect3, EffectTriggerSpell1, EffectTriggerSpell2, EffectTriggerSpell3 FROM spell_template"):
+        for i in (1, 2, 3):
+            if int(r["Effect%d" % i] or 0) == 36 and int(r["EffectTriggerSpell%d" % i] or 0) > 0:
+                teaches[int(r["Id"])] = int(r["EffectTriggerSpell%d" % i])
+                break
+    offers = []
+    templates = {}
+    for r in rows(db, "SELECT entry, spell, spellcost, reqskill, reqskillvalue FROM npc_trainer_template"):
+        templates.setdefault(int(r["entry"]), []).append(r)
+    for r in rows(db, "SELECT entry, spell, spellcost, reqskill, reqskillvalue FROM npc_trainer"):
+        offers.append((int(r["entry"]), r))
+    for t in rows(db, "SELECT Entry, TrainerTemplateId FROM creature_template WHERE TrainerTemplateId > 0"):
+        for r in templates.get(int(t["TrainerTemplateId"]), []):
+            offers.append((int(t["Entry"]), r))
+    out = {}
+    for npc, r in offers:
+        skill = int(r["reqskill"] or 0)
+        if skill <= 0:
+            continue
+        spell = int(r["spell"] or 0)
+        recipe = teaches.get(spell, spell)
+        row = out.get(recipe)
+        if not row:
+            row = out[recipe] = [skill, int(r["reqskillvalue"] or 0), int(r["spellcost"] or 0)]
+        if npc not in row[3:]:
+            row.append(npc)
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Extraction
 # ---------------------------------------------------------------------------
 ALLIANCE, HORDE = 1 | 4 | 8 | 64, 2 | 16 | 32 | 128
@@ -384,7 +608,34 @@ def pairs(row, id_fmt, count_fmt, n):
     return out
 
 
-def extract(db, placer):
+def npc_side(template, templates):
+    """0 usable by both factions, 1 Alliance only, 2 Horde only, 3 hostile to both, None unknown."""
+    t = templates.get(template)
+    if not t:
+        return None
+    enemy = t.get("enemyGroup", 0)
+    alliance_ok = not (enemy & 2)
+    horde_ok = not (enemy & 4)
+    if alliance_ok and horde_ok:
+        return 0
+    if alliance_ok:
+        return 1
+    if horde_ok:
+        return 2
+    return 3
+
+
+LOCK_SKILLS = {2: 1, 3: 2, 19: 3, 1: 4}   # lock type -> 1 Herbalism, 2 Mining, 3 Fishing, 4 Lockpicking
+
+
+def object_lock(lock_id, locks):
+    for lock_type, skill in locks.get(lock_id, []):
+        if lock_type in LOCK_SKILLS:
+            return LOCK_SKILLS[lock_type], skill
+    return None, None
+
+
+def extract(db, placer, client):
     starters_npc, starters_go, enders_npc, enders_go = {}, {}, {}, {}
     for table, target in (("creature_questrelation", starters_npc), ("gameobject_questrelation", starters_go),
                           ("creature_involvedrelation", enders_npc), ("gameobject_involvedrelation", enders_go)):
@@ -500,20 +751,55 @@ def extract(db, placer):
                             points[ident].append(p)
         return points, missed
 
+    # Loot, vendors and trainers, and the NPCs / objects they name.
+    item_quality = {int(r["entry"]): int(r["Quality"] or 0) for r in rows(db, "SELECT entry, Quality FROM item_template")}
+    loot = extract_loot(db, item_quality)
+    vendors = extract_vendors(db)
+    trainers = extract_trainers(db)
+    for key in ("drops", "skinned", "pickpocketed"):
+        for flat in loot[key].values():
+            for i in range(1, len(flat), 2):
+                npc_ids.add(flat[i])
+    for flat in loot["gathered"].values():
+        for i in range(1, len(flat), 2):
+            go_ids.add(flat[i])
+    for flat in vendors.values():
+        for i in range(2, len(flat), 2):
+            npc_ids.add(flat[i])
+    for row in trainers.values():
+        for npc in row[3:]:
+            npc_ids.add(npc)
+
     npc_points, npc_missed = spawns("creature", npc_ids, "creature_spawn_entry")
     go_points, go_missed = spawns("gameobject", go_ids, "gameobject_spawn_entry")
+    templates = {t["id"]: t for t in client.get("factionTemplates", [])}
+    locks = {l["id"]: l["keys"] for l in client.get("locks", [])}
     npcs = {}
-    for r in rows(db, 'SELECT Entry, Name, SubName, MinLevel, MaxLevel, NpcFlags FROM creature_template'):
+    for r in rows(db, 'SELECT Entry, Name, SubName, MinLevel, MaxLevel, NpcFlags, Faction, Rank FROM creature_template'):
         ident = int(r["Entry"])
         if ident in npc_ids:
             npcs[ident] = [r["Name"], r["SubName"] or None, int(r["MinLevel"] or 0), int(r["MaxLevel"] or 0), int(r["NpcFlags"] or 0),
-                           compact_spawns(npc_points.get(ident, [])) or None]
+                           compact_spawns(npc_points.get(ident, [])) or None, npc_side(int(r["Faction"] or 0), templates), int(r["Rank"] or 0) or None]
     objects = {}
-    for r in rows(db, 'SELECT entry, name, type FROM gameobject_template'):
+    for r in rows(db, 'SELECT entry, name, type, data0 FROM gameobject_template'):
         ident = int(r["entry"])
         if ident in go_ids:
-            objects[ident] = [r["name"], int(r["type"] or 0), compact_spawns(go_points.get(ident, [])) or None]
-    return out_quests, npcs, objects, {"npcSpawnsOffMap": npc_missed, "objectSpawnsOffMap": go_missed}
+            skill, value = object_lock(int(r["data0"] or 0), locks) if int(r["type"] or 0) == 3 else (None, None)
+            objects[ident] = [r["name"], int(r["type"] or 0), compact_spawns(go_points.get(ident, [])) or None, skill, value]
+    # Drop sources whose NPC never spawns anywhere are noise.
+    for key in ("drops", "skinned", "pickpocketed"):
+        for item in list(loot[key]):
+            flat = loot[key][item]
+            kept = [flat[0]]
+            for i in range(1, len(flat), 2):
+                if npcs.get(flat[i]) and npcs[flat[i]][5]:
+                    kept += [flat[i], flat[i + 1]]
+            if len(kept) > 1:
+                loot[key][item] = kept
+            else:
+                del loot[key][item]
+    stats = {"npcSpawnsOffMap": npc_missed, "objectSpawnsOffMap": go_missed}
+    return out_quests, npcs, objects, loot, vendors, trainers, stats
 
 
 # ---------------------------------------------------------------------------
@@ -574,7 +860,7 @@ def main():
         maps = json.load(f)
     placer = MapPlacer(maps)
     print("Extracting")
-    quests, npcs, objects, spawn_stats = extract(db, placer)
+    quests, npcs, objects, loot, vendors, trainers, spawn_stats = extract(db, placer, maps)
     source = "classic-db %s" % a.commit[:12]
     os.makedirs(a.out, exist_ok=True)
     write_table(os.path.join(a.out, "Quests.lua"), source, "quests",
@@ -582,11 +868,38 @@ def main():
                 "enderNpcs, enderObjects, items {id,count,...}, kills {id (negative = object),count,...}, choiceRewards, rewards, reputation {faction,value,...}, "
                 "prerequisites { {any of}, ... }, followUp, providedItem, objectives, groupSize, skill {skillLine, value}, breadcrumbFor, type }", quests)
     write_table(os.path.join(a.out, "Npcs.lua"), source, "npcs",
-                "npcs[id] = { name, subName, minLevel, maxLevel, npcFlags, spawns { uiMapID, x, y, ... } (x, y in 0.1% of the zone map; uiMapID < 0 = instance -mapID) }", npcs)
+                "npcs[id] = { name, subName, minLevel, maxLevel, npcFlags, spawns { uiMapID, x, y, ... } (x, y in 0.1% of the zone map; uiMapID < 0 = instance -mapID), "
+                "side (0 both factions, 1 Alliance, 2 Horde, 3 hostile, nil unknown), rank (1 elite, 2 rare elite, 3 boss, 4 rare) }", npcs)
     write_table(os.path.join(a.out, "Objects.lua"), source, "objects",
-                "objects[id] = { name, type, spawns { uiMapID, x, y, ... } }", objects)
+                "objects[id] = { name, type, spawns { uiMapID, x, y, ... }, lockSkill (1 Herbalism, 2 Mining, 3 Fishing, 4 Lockpicking), skillValue }", objects)
+    with open(os.path.join(a.out, "Loot.lua"), "w", encoding="utf-8", newline="\n") as f:
+        f.write(HEADER % source)
+        f.write("-- chances in 1/100 of a percent (negative = only while on the quest); lists keep the %d most likely sources after the total count\n" % TOP_SOURCES)
+        layouts = {
+            "drops": "drops[itemID] = { sourceCount, npcID, chance, ... }",
+            "skinned": "skinned[itemID] = { sourceCount, npcID, chance, ... }",
+            "pickpocketed": "pickpocketed[itemID] = { sourceCount, npcID, chance, ... }",
+            "gathered": "gathered[itemID] = { sourceCount, objectID, chance, ... } (herb and ore nodes, chests, fishing pools)",
+            "fished": "fished[itemID] = { sourceCount, areaID, chance, ... }",
+            "contained": "contained[itemID] = { sourceCount, containerItemID, chance, ... }",
+            "worldDrops": "worldDrops[itemID] = { minLevel, maxLevel } of the creatures whose shared loot includes it",
+        }
+        for key in ("drops", "worldDrops", "skinned", "pickpocketed", "gathered", "fished", "contained"):
+            f.write("-- %s\nFP.ClassicData.%s = {\n" % (layouts[key], key))
+            for ident in sorted(loot[key]):
+                f.write("[%d]=%s,\n" % (ident, lua(loot[key][ident])))
+            f.write("}\n")
+    write_table(os.path.join(a.out, "Vendors.lua"), source, "vendors",
+                "vendors[itemID] = { price per unit (copper), stack, npcID, limited (1 = limited stock), ... }", vendors)
+    write_table(os.path.join(a.out, "Trainers.lua"), source, "trainers",
+                "trainers[recipeSpellID] = { skillLine, skill required, cost (copper), trainerNpcID, ... }", trainers)
     zone_names = {m["id"]: m["name"] for m in maps["uiMaps"]}
     instance_names = {m["id"]: m["name"] for m in maps["maps"] if m["instanceType"] != 0}
+    fished_areas = set()
+    for flat in loot["fished"].values():
+        for i in range(1, len(flat), 2):
+            fished_areas.add(flat[i])
+    area_names = {ar["id"]: ar["name"] for ar in maps.get("areas", []) if ar["id"] in fished_areas}
     with open(os.path.join(a.out, "Maps.lua"), "w", encoding="utf-8", newline="\n") as f:
         f.write(HEADER % ("Forever client %s" % maps.get("build", "?")))
         f.write("FP.ClassicData.zones = {\n")
@@ -595,13 +908,29 @@ def main():
         f.write("}\nFP.ClassicData.instances = {\n")
         for ident in sorted(instance_names):
             f.write("[%d]=%s,\n" % (ident, lua(instance_names[ident])))
+        f.write("}\nFP.ClassicData.areas = {\n")
+        for ident in sorted(area_names):
+            f.write("[%d]=%s,\n" % (ident, lua(area_names[ident])))
         f.write("}\n")
     with open(os.path.join(a.out, "Meta.lua"), "w", encoding="utf-8", newline="\n") as f:
         f.write(HEADER % source)
-        f.write('FP.ClassicData.meta = { source = %s, commit = %s, quests = %d, npcs = %d, objects = %d }\n'
-                % (lua("CMaNGOS classic-db"), lua(a.commit), len(quests), len(npcs), len(objects)))
-    report = {"commit": a.commit, "counts": {"quests": len(quests), "npcs": len(npcs), "objects": len(objects)}, "spawns": spawn_stats, "load": load}
+        f.write('FP.ClassicData.meta = { source = %s, commit = %s, quests = %d, npcs = %d, objects = %d, dropItems = %d, vendorItems = %d, trainerRecipes = %d }\n'
+                % (lua("CMaNGOS classic-db"), lua(a.commit), len(quests), len(npcs), len(objects), len(loot["drops"]), len(vendors), len(trainers)))
+    counts = {"quests": len(quests), "npcs": len(npcs), "objects": len(objects), "vendorItems": len(vendors), "trainerRecipes": len(trainers)}
+    counts.update({k: len(v) for k, v in loot.items()})
+    report = {"commit": a.commit, "counts": counts, "spawns": spawn_stats, "load": load}
     print("Wrote %d quests, %d NPCs, %d objects to %s" % (len(quests), len(npcs), len(objects), a.out))
+    print("  loot: " + ", ".join("%s %d" % (k, len(v)) for k, v in loot.items()) + "; vendor items %d, trainer recipes %d" % (len(vendors), len(trainers)))
+    for item in (2447, 2770, 2589, 2318):
+        for key in ("drops", "gathered", "skinned"):
+            if item in loot[key]:
+                print("  check item %d %s: %s" % (item, key, loot[key][item][:7]))
+    for item in (2320, 2321):
+        if item in vendors:
+            print("  check vendor item %d: %s" % (item, vendors[item][:6]))
+    for spell in (2392, 3915, 2963):
+        if spell in trainers:
+            print("  check trainer recipe %d: %s" % (spell, trainers[spell][:6]))
     print("  spawns off any zone map: %d NPC, %d object" % (spawn_stats["npcSpawnsOffMap"], spawn_stats["objectSpawnsOffMap"]))
     for check in (5905, 4722, 6176):
         if check in npcs:

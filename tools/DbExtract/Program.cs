@@ -14,8 +14,10 @@
 //   items     names and quality for every item the catalogue refers to
 //   professions  skill line names and categories
 //   maps      (--maps, JSON for tools/ClassicDbExtract) zone maps (UiMap),
-//             their world-coordinate bounds (UiMapAssignment) and map /
-//             instance names (Map), to place CMaNGOS spawns on zone maps
+//             their world-coordinate bounds (UiMapAssignment), map /
+//             instance names (Map), area names (AreaTable), skill locks
+//             (Lock: which skill opens a herb or ore node) and faction
+//             templates (FactionTemplate: who an NPC is friendly to)
 //   factions  every reputation faction (Faction table): name, parent, pane
 //             index and the starting reputation per race mask
 //
@@ -169,6 +171,9 @@ namespace DbExtract
             { "UiMap", 1957206 },
             { "UiMapAssignment", 1957219 },
             { "Map", 1349477 },
+            { "AreaTable", 1353545 },
+            { "Lock", 1343608 },
+            { "FactionTemplate", 1361579 },
         };
 
         // Skill line categories worth cataloguing: 11 primary professions, 9 secondary.
@@ -187,6 +192,7 @@ namespace DbExtract
         };
 
         static int I(object o) => Convert.ToInt32(o, CultureInfo.InvariantCulture);
+        static int[] Is(object o) => o is Array a ? a.Cast<object>().Select(v => Convert.ToInt32(v, CultureInfo.InvariantCulture)).ToArray() : new int[0];
         static double[] Ds(object o) => o is Array a ? a.Cast<object>().Select(v => Math.Round(Convert.ToDouble(v, CultureInfo.InvariantCulture), 4)).ToArray() : new double[0];
         static long L(object o) => Convert.ToInt64(o, CultureInfo.InvariantCulture);
         // Faction.ReputationRaceMask: one 64-bit array in older layouts, four
@@ -560,10 +566,29 @@ namespace DbExtract
                     id = I(r["ID"]), name = Convert.ToString(r["MapName_lang"]), directory = Convert.ToString(r["Directory"]),
                     instanceType = I(r["InstanceType"]), maxPlayers = I(r["MaxPlayers"]),
                 }).OrderBy(m => m.id).ToList();
+                var areas = Rows(Load("AreaTable")).Values.Select(r => new
+                {
+                    id = I(r["ID"]), name = Convert.ToString(r["AreaName_lang"]), parent = I(r["ParentAreaID"]), continent = I(r["ContinentID"]),
+                }).OrderBy(a => a.id).ToList();
+                // Skill locks only (Type 2): lock type (2 herbalism, 3 mining, 19 fishing, 1 lockpicking ...) and the skill needed.
+                var locks = new List<object>();
+                foreach (var r in Rows(Load("Lock")).Values)
+                {
+                    var types = Is(r["Type"]); var index = Is(r["Index"]); var skill = Is(r["Skill"]);
+                    var keys = new List<int[]>();
+                    for (int i = 0; i < types.Length && i < index.Length && i < skill.Length; i++)
+                        if (types[i] == 2 && index[i] > 0) keys.Add(new[] { index[i], skill[i] });
+                    if (keys.Count > 0) locks.Add(new { id = I(r["ID"]), keys });
+                }
+                var factionTemplates = Rows(Load("FactionTemplate")).Values.Select(r => new
+                {
+                    id = I(r["ID"]), faction = I(r["Faction"]), group = I(r["FactionGroup"]), friendGroup = I(r["FriendGroup"]), enemyGroup = I(r["EnemyGroup"]),
+                    enemies = Is(r["Enemies"]).Where(v => v != 0).ToArray(), friends = Is(r["Friend"]).Where(v => v != 0).ToArray(),
+                }).OrderBy(f => f.id).ToList();
                 Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(o.Maps)));
-                File.WriteAllText(o.Maps, JsonSerializer.Serialize(new { build = config.VersionName, uiMaps, assignments, maps },
+                File.WriteAllText(o.Maps, JsonSerializer.Serialize(new { build = config.VersionName, uiMaps, assignments, maps, areas, locks, factionTemplates },
                     new JsonSerializerOptions { WriteIndented = true }), new UTF8Encoding(false));
-                Console.WriteLine($"Maps {o.Maps}: {uiMaps.Count} zone maps, {assignments.Count} assignments, {maps.Count} maps");
+                Console.WriteLine($"Maps {o.Maps}: {uiMaps.Count} zone maps, {assignments.Count} assignments, {maps.Count} maps, {areas.Count} areas, {locks.Count} skill locks, {factionTemplates.Count} faction templates");
             }
             return 0;
         }

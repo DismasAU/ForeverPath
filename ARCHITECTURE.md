@@ -455,6 +455,19 @@ Horde or both, from the classic race mask) and class mask against
 `UnitFactionGroup` and `UnitClass`. `ReputationProvider.QuestsFor(name,
 factionID)` adds `ClassicDB.ReputationQuests`.
 
+Items: `ClassicDB.ItemHints(itemID)` turns `vendors`, `gathered`,
+`drops`, `skinned`, `fished`, `contained`, `pickpocketed` (rogues) and
+`worldDrops` into resolver hints (`classic = true`, a `short` label for
+tags) that `SourceProvider.Sources` appends after the journal and
+AtlasLoot: gathering hints go through `QualifyGatherHint`, a recorded vendor
+suppresses the classic ones, bosses already named are skipped, drops under
+`ROUTE_MIN_CHANCE` (1%) and world drops are `unavailable` (shown, never
+routed). `VendorProvider.GetPrice` and `TrainerProvider.Requirement` fall
+back to `ClassicDB.VendorPrice` / `ClassicDB.Trainer`, so the price
+boundary and the catalogue's `Recipes.trainerLookup` pick classic data up
+without new paths. NPC `side` (from `FactionTemplate.EnemyGroup`) decides
+which vendors and trainers a character can use.
+
 Positions: classic-db stores world coordinates; `extract.py` places each
 spawn on the smallest zone map (`UiMapAssignment.Region`) that contains it,
 `x = (maxY - y) / (maxY - minY)`, `y = (maxX - x) / (maxX - minX)`, scaled

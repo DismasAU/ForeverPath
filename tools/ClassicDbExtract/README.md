@@ -20,9 +20,20 @@ powershell -ExecutionPolicy Bypass -File scripts\extract_classicdb.ps1 [-Commit 
   client's `UiMap`, `UiMapAssignment` (world bounds per zone map) and `Map`
   tables, written by `tools/DbExtract` (`scripts\extract_db.ps1 --maps`).
   Spawns inside instances keep the instance (map id) instead of a position.
-- Output: `ForeverPath_ClassicDB/Quests.lua`, `Npcs.lua`, `Objects.lua`,
-  `Maps.lua`, `Meta.lua` (layouts in each file's header and in
-  `ForeverPath/Providers/ClassicDBProvider.lua`). Quests without any giver or
+- Output: `ForeverPath_ClassicDB/Quests.lua`, `Loot.lua`, `Vendors.lua`,
+  `Trainers.lua`, `Npcs.lua`, `Objects.lua`, `Maps.lua`, `Meta.lua`
+  (layouts in each file's header and in
+  `ForeverPath/Providers/ClassicDBProvider.lua`).
+- Loot: references are expanded (chance x the reference row's chance x its
+  rolls), grouped rows with no chance share what the group's explicit
+  chances leave, negative chances are quest-only drops. A reference table
+  shared by 25 or more loot tables is a world drop (recorded with the level
+  range of the creatures that use it) instead of a per-creature source.
+  Items of poor quality and chances under 0.01% are left out; each item keeps
+  its 5 likeliest sources and the total count. Drop sources whose creature
+  never spawns are dropped.
+- Trainers list "learning" spells; `spell_template` (effect 36) maps them to
+  the recipe spell ForeverPath's catalogue uses. Quests without any giver or
   turn-in, and placeholder titles (`<...>`, `[UNUSED]`, ...), are left out.
   Spawns are clustered on a 2% grid, at most 10 points per NPC.
 

@@ -6,7 +6,11 @@
 --   3. ForeverDungeonJournal's boss loot, shared loot and dungeon quest
 --      rewards (Forever-specific data, read from its namespace at runtime),
 --   4. AtlasLootClassic's dungeon and raid loot tables, when that addon is
---      installed and enabled (read at runtime, never copied).
+--      installed and enabled (read at runtime, never copied),
+--   5. classic-era vendors, creature drops, gathering nodes, skinning,
+--      fishing and containers from CMaNGOS classic-db (ns.ClassicDB), behind
+--      everything above (a recorded vendor hides the classic ones; a boss the
+--      journal or AtlasLoot names is not listed twice).
 -- Everything is returned as resolver hints: { kind, label, detail, ... }.
 local _, ns = ...
 
@@ -432,11 +436,31 @@ function SourceProvider.Sources(itemID)
     local ok, hints = pcall(ns.ReputationProvider.Hints, itemID)
     for _, hint in ipairs(ok and hints or {}) do out[#out + 1] = hint end
   end
+  -- Classic-era sources behind the Forever ones.
+  local classicSkills = {}
+  local CDB = ns.ClassicDB
+  if CDB and CDB.IsAvailable() then
+    local names = {}
+    local recordedVendor = false
+    for _, existing in ipairs(out) do
+      if existing.boss then names[string.lower(existing.boss)] = true end
+      if existing.kind == "vendor" then recordedVendor = true end
+    end
+    local classID = type(UnitClass) == "function" and select(3, UnitClass("player")) or nil
+    local ok, hints = pcall(CDB.ItemHints, itemID, { skipVendors = recordedVendor, skipNames = names, classID = classID })
+    for _, hint in ipairs(ok and hints or {}) do
+      if hint.kind == "gather" then
+        hint = SourceProvider.QualifyGatherHint(hint)
+        if hint.skill then classicSkills[hint.skill] = true end
+      end
+      out[#out + 1] = hint
+    end
+  end
   -- The class heuristic is for raw materials: an item a recipe makes keeps
   -- it only when that recipe merely refines a lower tier of the same thing.
   if #recipesFor(itemID) == 0 or SourceProvider.IsRawMaterial(itemID) then
     local hint = SourceProvider.QualifyGatherHint(SourceProvider.ClassHint(itemID))
-    if hint then out[#out + 1] = hint end
+    if hint and not (hint.skill and classicSkills[hint.skill]) then out[#out + 1] = hint end
   end
   return out
 end

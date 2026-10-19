@@ -46,6 +46,7 @@ is built to take them without a rewrite (see `ARCHITECTURE.md`).
 | 0.15.1 quests that give reputation feed the Quests screen for reputation goals | Implemented, offline-tested, **not yet verified in game** |
 | 0.16.0 type-ahead suggestions for every goal kind (New Goal bar and header search); reputation goals for factions not met yet, from the client's faction table; the New Goal bar reflows when narrow | Implemented, offline-tested, **not yet verified in game** |
 | 0.16.1 Shift-click any item row to link it in chat or the Auction House search | Implemented, offline-tested, **not yet verified in game** |
+| 0.19.0 classic drops (with chances), world drops, gathering nodes, skinning, fishing, containers, vendors with prices and trainers with required skill and cost, all behind recorded Forever data | Implemented, offline-tested, **not yet verified in game** |
 | 0.18.0 classic-era data from CMaNGOS classic-db (the ForeverPath_ClassicDB addon): every classic quest with its giver, turn-in and map position, the items and kills it asks for, rewards, reputation and prerequisite chains, behind everything Forever-specific; ForeverPath is now GPL-3.0 | Implemented, offline-tested, **not yet verified in game** |
 | 0.17.3 click any step on the Attunements screen for its summary (state, giver, turn-in, items to bring with bag counts, rewards, waypoint, jump to the Quests screen) | Implemented, offline-tested, **not yet verified in game** |
 | 0.17.1 the shaman Call of Air chain (both factions) shipped in the quest catalogue: givers, turn-ins, map positions, the items each quest asks for and where they drop | Implemented, offline-tested, **not yet verified in game** |
@@ -76,8 +77,12 @@ directory, and `scripts\package.ps1` builds a release zip.
 `ForeverPath_ClassicDB` carries the classic-era content of
 [CMaNGOS classic-db](https://github.com/cmangos/classic-db): about 4,100
 quests with their givers, turn-ins, required items and kills, rewards,
-reputation and prerequisites, and the spawn points of the NPCs and objects
-those quests use, placed on the Forever client's zone maps. It is the
+reputation and prerequisites; where items drop (with chances), which herb
+and ore nodes, chests, fishing zones and containers give them, who sells
+them and for how much, which trainers teach a recipe at what skill and
+cost; and the spawn points of every NPC and object involved, placed on the
+Forever client's zone maps. Rare drops (under 1%) and world drops are
+listed for information but never recommended as a route. It is the
 baseline under everything Forever-specific: what ForeverPath learns at quest
 windows, the shipped quest catalogue, ForeverDungeonJournal and Attune all
 win over it, and `/fp quest` marks classic facts as "(classic data)".

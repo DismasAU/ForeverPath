@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.19.0 (2026-10-19) - classic drops, gathering, vendors and trainers
+
+### Added
+- `ForeverPath_ClassicDB` now also carries, from CMaNGOS classic-db:
+  - **where items drop** (`Loot.lua`): creature drops for 6,197 items with
+    their chances (the 5 likeliest creatures each, references expanded,
+    grouped loot shared out, quest-only drops flagged), 291 world drops (loot
+    tables shared by 25+ creatures, with the creatures' level range),
+    skinning, pickpocketing, gathering nodes and chests (2,623 items),
+    fishing zones and containers;
+  - **vendors** (`Vendors.lua`): who sells 1,788 items and the price per unit;
+  - **trainers** (`Trainers.lua`): which trainers teach 477 profession
+    recipes, the skill they need and the cost (trainer "learning" spells are
+    mapped to the recipe through classic-db's `spell_template`);
+  - NPCs gain the faction they deal with (from the client's
+    `FactionTemplate`) and their rank; objects the skill that opens them
+    (from the client's `Lock`: Herbalism, Mining, Fishing, Lockpicking).
+  5,955 NPCs and 959 objects in all.
+- **Classic item sources** (`ClassicDB.ItemHints`, through
+  `SourceProvider.Sources`): "Buy from <vendor>", "Gathered from
+  <node>" (qualified by who has the gathering skill, like every gathering
+  hint), "Dropped by <creature>" with zone, chance, level and rank,
+  "Skinned from", "Fished in", "Found in <container>", "Pickpocketed
+  from" (rogues only) and "World drop", each marked "(classic data)". A
+  vendor recorded at a merchant window hides the classic vendors; a
+  creature the journal or AtlasLoot already names is not listed twice; a
+  classic gathering node replaces the generic "Herbalism" class hint.
+  Drops under 1% and world drops are shown but never the recommended
+  route. Tags use a short form ("Drop: Wolf").
+- **Classic vendor prices**: `VendorProvider.GetPrice` falls back to the
+  cheapest classic vendor this faction can use, so vendor reagents have a
+  price before any merchant window is visited (a recorded price wins).
+- **Classic trainers**: `TrainerProvider.Requirement` falls back to the
+  classic trainer (skill, rank, cost, the first trainer this faction can
+  use, with its position), so trainer-taught recipes know their required
+  skill before any trainer window is visited; recorded trainers win.
+- `tools/DbExtract --maps` also exports `AreaTable`, skill `Lock` rows and
+  `FactionTemplate` to `maps.json`.
+
 ## 0.18.0 (2026-10-19) - classic-era quests and NPCs from CMaNGOS classic-db
 
 ### Changed

@@ -145,6 +145,15 @@ function VendorProvider.GetPrice(itemID)
   if best and best.price then
     return { copper = best.price, source = "vendor", timestamp = best.seenAt, kind = "vendor", vendor = best.name }
   end
+  -- Nothing recorded on this client: the classic vendor price, if any vendor
+  -- this faction can use sells it (a merchant window visit replaces it).
+  local CDB = ns.ClassicDB
+  if CDB and CDB.IsAvailable() then
+    local price, vendor = CDB.VendorPrice(itemID)
+    if price then
+      return { copper = price, source = "vendor", kind = "vendor", vendor = vendor.npc.name, classic = true }
+    end
+  end
   return nil, "no vendor recorded"
 end
 

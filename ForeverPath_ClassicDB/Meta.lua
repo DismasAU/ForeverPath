@@ -5,4 +5,4 @@
 local FP = _G.ForeverPath
 if type(FP) ~= "table" then return end
 FP.ClassicData = FP.ClassicData or {}
-FP.ClassicData.meta = { source = "CMaNGOS classic-db", commit = "ec4f596146be6467ea93c57397858e329e2db852", quests = 4143, npcs = 2216, objects = 313 }
+FP.ClassicData.meta = { source = "CMaNGOS classic-db", commit = "ec4f596146be6467ea93c57397858e329e2db852", quests = 4143, npcs = 5955, objects = 959, dropItems = 6197, vendorItems = 1788, trainerRecipes = 477 }

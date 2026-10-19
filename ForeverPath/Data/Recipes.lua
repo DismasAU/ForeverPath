@@ -179,7 +179,8 @@ function Recipes.ApplyTrainer(recipe)
   if type(lookup) ~= "function" then return recipe end
   local ok, record = pcall(lookup, recipe.recipeID)
   if not ok or type(record) ~= "table" then return recipe end
-  recipe.trainer = { name = record.trainer, zone = record.zone, subzone = record.subzone, cost = record.cost, skill = record.skill, rank = record.rank }
+  recipe.trainer = { name = record.trainer, zone = record.zone, subzone = record.subzone, cost = record.cost, skill = record.skill, rank = record.rank,
+    classic = record.classic, mapID = record.mapID, x = record.x, y = record.y }
   if tonumber(record.rank) and record.rank > (recipe.skill.min or 0) then
     recipe.skill.min = record.rank
     recipe.skill.source = "trainer"

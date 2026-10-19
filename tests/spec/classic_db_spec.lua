@@ -23,11 +23,27 @@ local function fixture()
       [300] = { "Totem Call", 20, 20, 0, 64, -82, { SALLY }, nil, nil, { SALLY }, nil },
     },
     npcs = {
-      [BOB] = { "Ranger Bob", nil, 20, 20, 2, { 1429, 420, 655 } },
-      [SALLY] = { "Sally", "Quartermaster", 30, 30, 2, { -36, 0, 0, 1453, 500, 500 } },
-      [WOLF] = { "Wolf", nil, 5, 6, 0, { 1429, 300, 300, 1429, 320, 310 } },
+      [BOB] = { "Ranger Bob", nil, 20, 20, 2, { 1429, 420, 655 }, 1 },
+      [SALLY] = { "Sally", "Quartermaster", 30, 30, 2, { -36, 0, 0, 1453, 500, 500 }, 2 },
+      [WOLF] = { "Wolf", nil, 5, 6, 0, { 1429, 300, 300, 1429, 320, 310 }, 3, 1 },
     },
-    objects = {},
+    objects = {
+      [700] = { "Peacebloom", 3, { 1429, 400, 400 }, 1, 1 },
+      [701] = { "Battered Chest", 3, { 1429, 600, 600 } },
+    },
+    drops = {
+      [LEATHER] = { 12, WOLF, 2500, BOB, 100 },
+      [SWORD] = { 1, WOLF, -5000 },
+    },
+    worldDrops = { [SHIELD] = { 10, 20 } },
+    skinned = { [LEATHER] = { 3, WOLF, 8000 } },
+    pickpocketed = { [THREAD] = { 1, BOB, 1500 } },
+    gathered = { [2447] = { 1, 700, 10000 }, [MEDIUM] = { 1, 701, 300 } },
+    fished = { [2675] = { 1, 40, 1200 } },
+    areas = { [40] = "Westfall" },
+    contained = { [THREAD] = { 1, 5523, 2000 } },
+    vendors = { [THREAD] = { 10, 1, SALLY, 0, BOB, 1 } },
+    trainers = { [2392] = { 197, 40, 45, BOB, SALLY } },
   }
 end
 
@@ -49,7 +65,7 @@ describe("ClassicDB (generated data)", function()
     local quests, npcs = CDB.Counts()
     assert_gt(quests, 4000)
     assert_gt(npcs, 2000)
-    assert_match(CDB.Status(), "^Classic data: %d+ quests, %d+ NPCs, %d+ objects from CMaNGOS classic%-db ec4f5961%.$")
+    assert_match(CDB.Status(), "^Classic data: %d+ quests, %d+ NPCs, %d+ objects; drop sources for %d+ items, vendors for %d+, trainers for %d+ recipes from CMaNGOS classic%-db ec4f5961%.$")
     -- Every row has the documented shape.
     for questID, row in pairs(ns.ClassicData.quests) do
       assert_eq(type(row[1]), "string", "title of " .. questID)
@@ -92,6 +108,38 @@ describe("ClassicDB (generated data)", function()
     assert_true(ids[1531] and ids[1532], "both Horde Call of Air quests reward the Air Totem")
     Mock.character.classID = 1
     assert_eq(#CDB.QuestsRewarding(5178), 0, "not for a warrior")
+    Mock.character.faction = "Alliance"
+    -- Loot, vendors and trainers.
+    local veins = CDB.Loot("gathered", 2770)
+    assert_eq(veins[1].id, 1731, "Copper Ore comes from Copper Veins")
+    assert_eq(veins[1].chance, 10000)
+    assert_eq(CDB.Object(1731).skill, "Mining")
+    assert_eq(CDB.Object(1618).skill, "Herbalism", "Peacebloom")
+    local skins = CDB.Loot("skinned", 2318)
+    assert_gt(#skins, 0)
+    assert_eq(CDB.ChanceText(skins[1].chance):match("%%$"), "%", "chance text ends in a percent sign")
+    assert_eq(ns.VendorProvider.GetPrice(2320).copper, 10, "Coarse Thread costs 10c in classic")
+    assert_true(ns.VendorProvider.GetPrice(2320).classic)
+    local trainer = ns.TrainerProvider.Requirement(2392)
+    assert_eq(trainer.skill, "Tailoring")
+    assert_eq(trainer.rank, 40, "Red Linen Shirt needs Tailoring 40")
+    assert_eq(trainer.cost, 45)
+    assert_true(trainer.classic)
+    assert_not_nil(trainer.trainer)
+    local shirt = ns.Data.Recipes.Get(2392)
+    assert_eq(shirt.skill.min, 40, "the trainer requirement reaches the catalogue recipe")
+    assert_true(shirt.trainer.classic)
+    local hints = ns.SourceProvider.Sources(2447)
+    local node
+    for _, hint in ipairs(hints) do
+      if hint.label == "Gathered from Peacebloom" then node = hint end
+    end
+    assert_not_nil(node, "Peacebloom nodes")
+    assert_eq(node.skill, "Herbalism")
+    assert_true(node.unavailable, "no character has Herbalism")
+    for _, hint in ipairs(hints) do
+      assert_ne(hint.label, "Herbalism", "the generic class hint is dropped when a classic node names it")
+    end
   end)
 
   it("says when the data addon is missing", function()
@@ -176,7 +224,7 @@ describe("Classic quests in ForeverPath", function()
     assert_match(QP.Describe(102, ns.ItemProvider.GetName)[1], "%(classic data%)$")
     assert_match(QP.Status(), "plus 7 classic quests")
     Mock.RunSlash("status")
-    assert_output("Classic data: 7 quests, 3 NPCs, 0 objects from CMaNGOS classic%-db abcdef12")
+    assert_output("Classic data: 7 quests, 3 NPCs, 2 objects from CMaNGOS classic%-db abcdef12")
   end)
 
   it("builds a questline from classic prerequisites", function()
@@ -258,6 +306,114 @@ describe("Classic quests in ForeverPath", function()
     local ok, message, byName = ns.GoalService.AddQuestFromInput("gather hides")
     assert_true(ok, message)
     assert_eq(byName.target.questID, 100)
+  end)
+
+  it("lists classic drops, gathering, vendors and trainers as sources behind recorded data", function()
+    local SP = ns.SourceProvider
+    Mock.AddItem(2447, { name = "Peacebloom" })
+    -- Creature drops: chance, zone, level, rank; most likely first.
+    local hints = SP.Sources(LEATHER)
+    local labels = {}
+    for i, hint in ipairs(hints) do labels[i] = hint.label end
+    assert_eq(labels[1], "Dropped by Wolf")
+    assert_eq(hints[1].kind, "drop")
+    assert_eq(hints[1].detail, "Elwynn Forest - 25%, level 5-6, elite, 12 mobs drop it (classic data)")
+    assert_eq(hints[1].short, "Drop: Wolf")
+    assert_eq(labels[2], "Dropped by Ranger Bob")
+    assert_match(hints[2].detail, "^Elwynn Forest %- 1%%, level 20 %(classic data%)$")
+    assert_nil(hints[2].unavailable, "1% is the threshold")
+    assert_nil(hints[1].unavailable)
+    assert_eq(labels[3], "Skinned from Wolf")
+    assert_eq(hints[3].skill, "Skinning")
+    assert_true(hints[3].unavailable, "nobody skins")
+    -- Quest-only drops say so.
+    assert_match(SP.Sources(SWORD)[1].detail, "50%% while on the quest")
+    -- World drops.
+    local world = SP.Sources(SHIELD)
+    assert_eq(world[#world].label, "World drop")
+    assert_eq(world[#world].detail, "mobs level 10-20 (classic data)")
+    assert_true(world[#world].unavailable, "a world drop is never the route")
+    ns.ClassicData.drops[SHIELD] = { 1, WOLF, 20 }
+    local rare = SP.Sources(SHIELD)[1]
+    assert_eq(rare.label, "Dropped by Wolf")
+    assert_true(rare.unavailable, "0.2% is information, not a route")
+    local shieldGoal = ns.GoalService.AddObtainGoal(SHIELD, 1)
+    assert_eq(ns.Planner.Evaluate(shieldGoal).tree.root.route, "buy", "the Auction House, not a 0.2% farm")
+    ns.GoalService.Remove(shieldGoal.id)
+    ns.ClassicData.drops[SHIELD] = nil
+    -- Gathering nodes and chests.
+    hints = SP.Sources(2447)
+    assert_eq(hints[1].label, "Gathered from Peacebloom")
+    assert_eq(hints[1].short, "Gather: Peacebloom")
+    assert_eq(hints[1].mapID, 1429)
+    assert_eq(hints[1].detail, "Elwynn Forest - 100% (classic data) - no character has Herbalism")
+    Mock.SetProfessions({ { slot = 1, name = "Herbalism", skillLevel = 75, maxSkillLevel = 150, skillLine = 182 } })
+    hints = SP.Sources(2447)
+    assert_nil(hints[1].unavailable)
+    assert_match(hints[1].detail, "you have Herbalism %(75%)$")
+    assert_eq(SP.Sources(MEDIUM)[1].label, "Found in Battered Chest")
+    -- Fishing and containers.
+    Mock.AddItem(2675, { name = "Crawler Meat" })
+    assert_eq(SP.Sources(2675)[1].label, "Fished in Westfall")
+    Mock.AddItem(5523, { name = "Small Barnacled Clam" })
+    hints = SP.Sources(THREAD)
+    labels = {}
+    for _, hint in ipairs(hints) do labels[hint.label] = hint end
+    assert_not_nil(labels["Buy from Ranger Bob"], "Alliance-friendly vendor")
+    assert_nil(labels["Buy from Sally"], "Sally is Horde-only")
+    assert_match(labels["Buy from Ranger Bob"].detail, "^Elwynn Forest %- .* each, limited stock %(classic data%)$")
+    assert_not_nil(labels["Found in Small Barnacled Clam"])
+    assert_nil(labels["Pickpocketed from Ranger Bob"], "only rogues pickpocket")
+    Mock.character.classID = 4
+    hints = SP.Sources(THREAD)
+    labels = {}
+    for _, hint in ipairs(hints) do labels[hint.label] = true end
+    assert_true(labels["Pickpocketed from Ranger Bob"])
+    Mock.character.classID = 1
+    -- Prices: the classic vendor until a merchant window is recorded.
+    local price = ns.VendorProvider.GetPrice(THREAD)
+    assert_eq(price.copper, 10)
+    assert_true(price.classic)
+    assert_eq(price.vendor, "Ranger Bob")
+    assert_eq(ns.PriceProvider.GetPrice(THREAD).copper, 10)
+    Mock.character.faction = "Horde"
+    assert_eq(ns.VendorProvider.GetPrice(THREAD).vendor, "Sally")
+    Mock.character.faction = "Alliance"
+    Mock.OpenMerchant("Tharynn Bouden", { { THREAD, 8 } })
+    Mock.RunTimers()
+    price = ns.VendorProvider.GetPrice(THREAD)
+    assert_eq(price.copper, 8, "a recorded vendor wins")
+    assert_nil(price.classic)
+    labels = {}
+    for _, hint in ipairs(SP.Sources(THREAD)) do labels[hint.label] = true end
+    assert_true(labels["Buy from Tharynn Bouden"])
+    assert_nil(labels["Buy from Ranger Bob"], "classic vendors hide behind a recorded one")
+    -- Planner: an item with only a classic drop is routed to it.
+    local goal = ns.GoalService.AddObtainGoal(LEATHER, 4)
+    local view = ns.Planner.Evaluate(goal)
+    assert_eq(view.tree.root.route, "drop")
+    assert_eq(view.sourceText, "Dropped by Wolf - Elwynn Forest - 25%, level 5-6, elite, 12 mobs drop it (classic data)")
+    -- A boss the journal names is not listed twice.
+    Mock.InstallDungeonJournal({ ["Test Dungeon"] = { bosses = { { name = "Wolf", npcID = WOLF, loot = { { LEATHER, "Light Leather", "Leather", 1 } } } }, quests = {} } }, {})
+    SP.journal.state = "idle"
+    local drops = 0
+    for _, hint in ipairs(SP.Sources(LEATHER)) do
+      if hint.label == "Dropped by Wolf" then drops = drops + 1 end
+    end
+    assert_eq(drops, 1)
+    -- Trainers: requirement, cost and trainer for a catalogue recipe.
+    local record = ns.TrainerProvider.Requirement(2392)
+    assert_eq(record.skill, "Tailoring")
+    assert_eq(record.rank, 40)
+    assert_eq(record.cost, 45)
+    assert_eq(record.trainer, "Ranger Bob", "the Alliance-friendly trainer")
+    assert_eq(record.zone, "Elwynn Forest")
+    assert_match(ns.TrainerProvider.Describe(2392), "^Ranger Bob %(Elwynn Forest%), needs Tailoring 40, .* %(classic data%)$")
+    ns.Data.Recipes.Invalidate()
+    local recipe = ns.Data.Recipes.Get(2392)
+    assert_eq(recipe.skill.min, 40)
+    assert_eq(recipe.trainer.name, "Ranger Bob")
+    assert_eq(recipe.trainer.mapID, 1429)
   end)
 
   it("lists classic quests that give reputation", function()
