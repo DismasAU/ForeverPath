@@ -61,6 +61,7 @@ ForeverPath/
     Screens/Attunements.lua  screen 06: picker, header, step timeline, current step
     MainFrame.lua            shell: window, header, sidebar, status bar, screen switching, link hook
     Tracker.lua              screen 08: compact goal tracker (separate frame)
+    MinimapButton.lua        minimap button with the mark (no library; angle in ForeverPathDB.minimap)
   Domain/Overview.lua        dashboard aggregation (missing materials, next steps) - pure
   Domain/ShoppingList.lua    cross-goal shopping rows, categories, mail plan, chat lines - pure
   Domain/CraftWise.lua       buy / craft / hybrid comparison over a full tree, route plan, presets - pure

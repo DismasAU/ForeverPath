@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.24.0 (2026-10-20) - minimap button
+
+### Added
+- **Minimap button** (`UI/MinimapButton.lua`) with the ForeverPath mark in
+  the client's standard minimap border. Left-click opens or closes the
+  window, right-click shows or hides the goal tracker, drag moves it around
+  the minimap edge (round and square minimap shapes). The tooltip shows the
+  version and how many goals are open. Position and visibility are
+  account-wide (`ForeverPathDB.minimap`); `/fp minimap [show|hide]` toggles
+  it and `/fp reset window` puts it back in the lower left.
+
 ## 0.23.1 (2026-10-19) - readable route options
 
 ### Fixed

@@ -46,6 +46,7 @@ is built to take them without a rewrite (see `ARCHITECTURE.md`).
 | 0.15.1 quests that give reputation feed the Quests screen for reputation goals | Implemented, offline-tested, **not yet verified in game** |
 | 0.16.0 type-ahead suggestions for every goal kind (New Goal bar and header search); reputation goals for factions not met yet, from the client's faction table; the New Goal bar reflows when narrow | Implemented, offline-tested, **not yet verified in game** |
 | 0.16.1 Shift-click any item row to link it in chat or the Auction House search | Implemented, offline-tested, **not yet verified in game** |
+| 0.24.0 minimap button: the ForeverPath mark on the minimap; left-click opens the window, right-click toggles the tracker, drag to move | Implemented, offline-tested, **not yet verified in game** |
 | 0.23.0 Questie bridge: with Questie installed, its quest database (givers, turn-ins, positions, items, chains) is read at runtime, behind Forever data and ahead of classic data | Implemented, offline-tested against Questie's documented data shapes, **not yet verified in game** (Questie's Forever port is not released) |
 | 0.22.0 share what you have learned: `/fp export` / `/fp import` move loot, quest givers, vendors and trainers between players; imports fill gaps behind your own data and never count twice | Implemented, offline-tested, **not yet verified in game** |
 | 0.21.0 farming estimates ("~16 kills of Wolf") on the overview and the shopping list, shopping list sorted by zone, `/fp train` lists what each profession can train now, where and for how much | Implemented, offline-tested, **not yet verified in game** |
@@ -187,6 +188,7 @@ and says so in the UI.
 | `/fp select <n>` / `/fp remove <n>` | Select (opens Crafting) or remove goal number n |
 | `/fp complete <n>` / `pause <n>` / `resume <n>` | Change a goal's status |
 | `/fp tracker` | Show or hide the compact tracker |
+| `/fp minimap [show\|hide]` | Show or hide the minimap button |
 | `/fp open <dashboard\|goals\|crafting>` | Open the window on a screen |
 | `/fp scan [all]` | Open unrecorded (or all) profession windows to record recipes |
 | `/fp status` | Client capabilities, recorded professions, goal counts |

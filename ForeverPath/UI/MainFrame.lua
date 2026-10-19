@@ -112,6 +112,9 @@ function MainFrame.ResetWindow()
   if ns.UI.Tracker and ns.UI.Tracker.ResetPosition then
     ns.UI.Tracker.ResetPosition()
   end
+  if ns.UI.MinimapButton then
+    ns.UI.MinimapButton.ResetPosition()
+  end
 end
 
 ---------------------------------------------------------------------------

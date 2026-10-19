@@ -36,5 +36,6 @@ return {
   "share_spec",
   "questie_bridge_spec",
   "bootstrap_spec",
+  "minimap_button_spec",
   "ui_spec",
 }

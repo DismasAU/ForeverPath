@@ -56,6 +56,7 @@ What is covered:
 | `loot_learner_spec` | GUID parsing; a corpse, area loot from two corpses, skinning a looted corpse, a herb node, fishing, each loot window counted once; hints by observed chance, through SourceProvider and the planner's route; observations ahead of classic data for the same creature; "New in Forever" from the classic item ranges and the client item index; the item index naming, ranking and binding items no recipe touches |
 | `farming_spec` | Estimates for kills, units per loot, skins, nodes, casts, chests, one kill; the estimate and zone on the tree's leaves, the overview step and shopping rows, zone sorting on the screen; trainer planning (known recipes left out, now / soon window, total cost, classic trainers, `/fp train`, unknown profession) |
 | `share_spec` | Codec round trips (numbers up to 2^40, odd bytes, nesting), refusals (functions, NaN, truncated or bomb input), base64 over every byte, packed strings with and without client compression; one account's loot, quest giver, merchant and trainer exported and imported on another (hints marked shared, giver, vendor price, trainer reaching the catalogue), re-import replacing, own export refused, own data added on top, listing and removing, the export and import windows, damaged and foreign data |
+| `minimap_button_spec` | The button is created at login with the mark, sits at 225 degrees on the minimap edge, reaches towards the corners on square minimaps, left-click toggles the window, right-click the tracker, dragging sets the angle and stops following the cursor, `/fp minimap` hides and shows it, `/fp reset window` resets it |
 | `questie_bridge_spec` | Without Questie nothing changes; with a Questie in its documented shapes: entries (side, class, level, zone, objective, any-of prerequisites), givers placed through ZoneDB, items, "(Questie)", eligibility by class, rewards, a three-quest chain with a waypoint planned from a reward item, the shipped catalogue winning over Questie, Questie winning over classic data, classic taking over when Questie goes away |
 | `enchant_goals_spec` | Enchants in the catalogue (decoded with `enchant`, no output item, skill ranks, formula, never indexed by item, search by kind, enchant and spell links, schematics without an item accepted by `recipeType` or the catalogue, the goal model); enchant goals from a link, a name, `/fp enchant` and `/fp learn`, item recipes routed to their item, refusals; the plan with no profession, too low a skill, the formula to get then read, learned with the reagents to obtain, every reagent in hand, casts counted only for the player, completion on the last cast with its toast, reopening; a trainer enchant as a train step with the recorded trainer, the crafting screen, the tree and the goals list for an enchant goal, and an Enchanting skill goal planned over enchants |
 | `craftwise_spec` | Buy vs craft vs hybrid per component, savings and recommendation, unknown prices stay unknown, owned and alt stock free, route plan and presets, obtain trees |
@@ -367,6 +368,14 @@ Needs two characters on the account. Log in on the alt first, then on your main.
 - [ ] With Questie installed, `/fp status` says "Questie: quest database available". `/fp quest <a Forever quest>` names its giver with "(Questie)" when no Forever source knows it.
 - [ ] A Forever quest reward (any class weapon chain): the goal walks Questie's chain with waypoints.
 - [ ] Questie errors or slows down: report the chat output with `/fp debug` on.
+
+### 32. 0.24.0 Minimap button
+
+- [ ] After `/reload` the ForeverPath mark sits on the lower-left edge of the minimap, in the round gold border.
+- [ ] Left-click opens the window; again closes it. Right-click hides or shows the goal tracker.
+- [ ] Dragging moves it around the edge; the spot survives `/reload` and logging another character in.
+- [ ] Hover shows the tooltip (version, open goals, the clicks).
+- [ ] `/fp minimap hide` removes it, `/fp minimap` brings it back; `/fp reset window` returns it to the lower left.
 
 ### Reporting
 Include: client build (`/dump GetBuildInfo()`), `/fp status` output, the step

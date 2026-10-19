@@ -42,12 +42,13 @@ Commands.help = {
   { "/fp attunements", "List the attunements Attune knows for your faction, with progress." },
   { "/fp attune <name>", "Add an attunement goal by name (needs the Attune addon)." },
   { "/fp tracker", "Show or hide the compact goal tracker." },
+  { "/fp minimap [show|hide]", "Show or hide the minimap button." },
   { "/fp open <dashboard|goals|crafting>", "Open the window on a screen." },
   { "/fp scan [all]", "Record recipes from your professions (opens their windows)." },
   { "/fp status", "Show client capabilities and recorded professions." },
   { "/fp debug", "Toggle diagnostic logging." },
   { "/fp errors", "Show recent errors captured by ForeverPath." },
-  { "/fp reset window", "Reset the window and tracker positions." },
+  { "/fp reset window", "Reset the window, tracker and minimap button positions." },
 }
 
 local function requireLoaded()
@@ -608,6 +609,17 @@ function handlers.tracker()
   ns.UI.Tracker.Toggle()
 end
 
+function handlers.minimap(rest)
+  if not requireLoaded() then return end
+  local arg = Util.Trim(rest or ""):lower()
+  local shown
+  if arg == "show" or arg == "on" then shown = true
+  elseif arg == "hide" or arg == "off" then shown = false
+  else shown = ns.db.minimap.hide == true end
+  ns.UI.MinimapButton.SetShown(shown)
+  Log.Print("Minimap button %s.%s", shown and "shown" or "hidden", shown and "" or " Use /fp minimap to bring it back.")
+end
+
 function handlers.open(rest)
   if not requireLoaded() then return end
   local key = Util.Trim(rest or ""):lower()
@@ -631,7 +643,7 @@ end
 function handlers.reset(rest)
   if Util.Trim(rest or "") == "window" then
     ns.UI.MainFrame.ResetWindow()
-    Log.Print("Window and tracker positions reset.")
+    Log.Print("Window, tracker and minimap button positions reset.")
   else
     Log.Print("Usage: /fp reset window")
   end

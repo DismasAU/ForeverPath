@@ -862,6 +862,13 @@ function Mock.install()
   _G.SOUNDKIT = { LEVELUP = 888 }
   _G.PlaySound = function(kit, channel) table.insert(Mock.sounds, kit) return true end
   _G.GameTooltip = newWidget("GameTooltip", "GameTooltip")
+  _G.Minimap = newWidget("Frame", "Minimap")
+  _G.Minimap:SetSize(140, 140)
+  _G.Minimap.GetCenter = function() return 1000, 600 end
+  _G.Minimap.GetEffectiveScale = function() return 1 end
+  _G.GetMinimapShape = nil
+  Mock.cursor = { 1000, 600 }
+  _G.GetCursorPosition = function() return Mock.cursor[1], Mock.cursor[2] end
   _G.DEFAULT_CHAT_FRAME = { AddMessage = function(_, message) table.insert(Mock.output, tostring(message)) end }
   _G.time = function() return Mock.now end
   _G.GetTime = function() return Mock.now end
