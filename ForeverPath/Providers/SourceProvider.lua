@@ -1,6 +1,7 @@
 -- Where an item comes from, aggregated from the sources that are available on
 -- this client without any external service:
---   1. vendors recorded from merchant windows (VendorProvider),
+--   1. vendors recorded from merchant windows (VendorProvider), and what
+--      this account has looted on Forever (LootLearner),
 --   2. item class heuristics (Data/ItemClasses.lua): herbs are picked, ore is
 --      mined, leather is skinned, cloth drops from humanoids,
 --   3. ForeverDungeonJournal's boss loot, shared loot and dungeon quest
@@ -400,6 +401,14 @@ function SourceProvider.Sources(itemID)
   if ns.VendorProvider then
     for _, hint in ipairs(ns.VendorProvider.Sources(itemID)) do out[#out + 1] = hint end
   end
+  -- What actually dropped on Forever comes before every database.
+  if ns.LootLearner then
+    local ok, hints = pcall(ns.LootLearner.ItemHints, itemID)
+    for _, hint in ipairs(ok and hints or {}) do
+      if hint.kind == "gather" then hint = SourceProvider.QualifyGatherHint(hint) end
+      out[#out + 1] = hint
+    end
+  end
   local quests, bosses = {}, {}
   for _, hint in ipairs(SourceProvider.JournalSources(itemID)) do
     if hint.kind == "quest" then
@@ -461,6 +470,11 @@ function SourceProvider.Sources(itemID)
   if #recipesFor(itemID) == 0 or SourceProvider.IsRawMaterial(itemID) then
     local hint = SourceProvider.QualifyGatherHint(SourceProvider.ClassHint(itemID))
     if hint and not (hint.skill and classicSkills[hint.skill]) then out[#out + 1] = hint end
+  end
+  -- Nothing at all, and the item is Forever's own: say why.
+  if #out == 0 and CDB and CDB.IsAvailable() and CDB.IsNewInForever(itemID) then
+    out[#out + 1] = { kind = "drop", unavailable = true, newInForever = true, label = "New in Forever", short = "New in Forever",
+      detail = "not in the classic data; loot it once (or open a merchant that sells it) and ForeverPath remembers where it came from" }
   end
   return out
 end

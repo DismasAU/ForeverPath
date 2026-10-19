@@ -233,10 +233,17 @@ function ItemProvider.SearchByName(query, limit)
       end
     end
   end
-  -- The catalogue names every item a recipe makes or needs.
+  -- The catalogue names every item a recipe makes or needs; the item index
+  -- every item the client lists as searchable.
   local catalogue = ns.Data and ns.Data.Recipes
   if catalogue and catalogue.Items then
     for itemID, row in pairs(catalogue.Items()) do
+      consider(itemID, row[1])
+    end
+  end
+  local index = ns.Data and ns.Data.ItemIndex
+  if type(index) == "table" then
+    for itemID, row in pairs(index) do
       consider(itemID, row[1])
     end
   end
@@ -248,7 +255,11 @@ function ItemProvider.SearchByName(query, limit)
       end
     end
   end
-  local function byName(a, b) return a.name < b.name end
+  -- Same name (a crafted and a quest version of one item): the lower id first.
+  local function byName(a, b)
+    if a.name ~= b.name then return a.name < b.name end
+    return a.itemID < b.itemID
+  end
   local ordered, later = {}, {}
   for rank = 0, 3 do
     table.sort(buckets[rank], byName)
@@ -267,7 +278,8 @@ function ItemProvider.SearchByName(query, limit)
     if hit.rank >= 2 then firstLater = index break end
   end
   if firstLater > 0 and firstLater > limit - ItemProvider.RESERVED_SLOTS then
-    reserve = math.min(ItemProvider.RESERVED_SLOTS, #later)
+    -- Never reserve the first slot: the best match always comes first.
+    reserve = math.min(ItemProvider.RESERVED_SLOTS, #later, math.max(0, limit - 1))
   end
   for index = 1, limit - reserve do
     results[#results + 1] = ordered[index]

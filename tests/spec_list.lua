@@ -31,6 +31,7 @@ return {
   "enchant_goals_spec",
   "questline_spec",
   "classic_db_spec",
+  "loot_learner_spec",
   "bootstrap_spec",
   "ui_spec",
 }

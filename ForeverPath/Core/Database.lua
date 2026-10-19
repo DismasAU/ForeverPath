@@ -38,6 +38,7 @@ Database.DEFAULTS = {
     itemRecipes = {},  -- outputItemID -> { [recipeID] = true }
     itemNames = {},    -- itemID -> name (cheap cache for display and name search)
     questFacts = {},   -- questID -> { giver, turnin, items } learned at quest windows (see Providers/QuestFactsProvider.lua)
+    lootSeen = {},     -- "c:<npcID>" / "o:<objectID>" / "f:<zone>" -> what was looted there (see Providers/LootLearner.lua)
   },
   char = {
     schemaVersion = ns.SCHEMA_VERSION,

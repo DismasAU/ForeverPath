@@ -101,6 +101,7 @@ function handlers.status()
   Log.output("  " .. ns.QuestProvider.Status())
   Log.output("  " .. ns.QuestFactsProvider.Status())
   Log.output("  " .. ns.ClassicDB.Status())
+  Log.output("  " .. ns.LootLearner.Status())
   Log.output("  " .. ns.EquipmentProvider.Status())
   Log.output("  " .. ns.ReputationProvider.Status())
 end

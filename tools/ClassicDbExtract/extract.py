@@ -912,6 +912,21 @@ def main():
         for ident in sorted(area_names):
             f.write("[%d]=%s,\n" % (ident, lua(area_names[ident])))
         f.write("}\n")
+    # Which item ids classic-db knows, as ranges: anything else the client lists is new in Forever.
+    ids = sorted(int(r["entry"]) for r in rows(db, "SELECT entry FROM item_template"))
+    ranges = []
+    for ident in ids:
+        if ranges and ident == ranges[-1][1] + 1:
+            ranges[-1][1] = ident
+        else:
+            ranges.append([ident, ident])
+    with open(os.path.join(a.out, "Items.lua"), "w", encoding="utf-8", newline="\n") as f:
+        f.write(HEADER % source)
+        f.write("-- itemRanges = { first, last, first, last, ... }: the item ids classic-db knows (sorted)\n")
+        f.write("FP.ClassicData.itemRanges = {\n")
+        for first, last in ranges:
+            f.write("%d,%d,\n" % (first, last))
+        f.write("}\n")
     with open(os.path.join(a.out, "Meta.lua"), "w", encoding="utf-8", newline="\n") as f:
         f.write(HEADER % source)
         f.write('FP.ClassicData.meta = { source = %s, commit = %s, quests = %d, npcs = %d, objects = %d, dropItems = %d, vendorItems = %d, trainerRecipes = %d }\n'

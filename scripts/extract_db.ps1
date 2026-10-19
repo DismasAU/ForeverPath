@@ -48,4 +48,4 @@ $args = @("run", "--project", (Join-Path $tool "DbExtract.csproj"), "-c", "Relea
 if ($NoHotfix) { $args += "--no-hotfix" }
 & dotnet @args
 if ($LASTEXITCODE -ne 0) { throw "DbExtract failed with exit code $LASTEXITCODE" }
-Write-Host "Done. Run python tests\run_tests.py, then scripts\install_dev.ps1."
+Write-Host "Done (RecipeCatalogue.lua, ItemIndex.lua, tools\ClassicDbExtract\maps.json). Run python tests\run_tests.py, then scripts\install_dev.ps1."

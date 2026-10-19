@@ -712,7 +712,8 @@ describe("UI shell and screens (mock widgets)", function()
     for _, r in ipairs(shop.list.rows) do if r.itemID == 10411 then line = r end end
     assert_not_nil(line)
     assert_eq(line.category, "gather")
-    assert_eq(line.sources[1], "Dropped by Kresh")
+    assert_eq(line.sources[1], "Soulbound", "the client's item index knows it binds on pickup")
+    assert_eq(line.sources[2], "Dropped by Kresh")
     assert_eq(line.missing, 1)
   end)
 

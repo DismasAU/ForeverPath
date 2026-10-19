@@ -391,6 +391,7 @@ local function Create(parent)
     if giver and giver.name then metaParts[#metaParts + 1] = giver.name .. (giver.zone and not (entry and entry.pickup) and (" - " .. giver.zone) or "") end
     if entry and entry.requires and entry.requires > playerLevel then metaParts[#metaParts + 1] = Theme.ColorText("missing", "requires level " .. entry.requires) end
     if entry and entry.groupSize and entry.groupSize > 1 then metaParts[#metaParts + 1] = entry.groupSize .. " players" end
+    if entry and entry.classic then metaParts[#metaParts + 1] = Theme.ColorText("text3", "classic data") end
     s.meta:SetText(table.concat(metaParts, " - "))
     s.badge:SetBadge(label, BADGE_KIND[label] or kind)
 

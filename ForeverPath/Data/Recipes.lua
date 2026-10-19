@@ -72,9 +72,20 @@ function Recipes.ProfessionID(name)
   return nil
 end
 
+-- The catalogue's row, else the item index's (every searchable item;
+-- Data/ItemIndex.lua, same layout plus item level and required level).
 local function itemRow(itemID)
   local c = catalogue()
-  return c and c.items and c.items[itemID] or nil
+  local row = c and c.items and c.items[itemID] or nil
+  if row and row[1] ~= "" then return row end
+  local index = ns.Data.ItemIndex
+  return index and index[itemID] or row
+end
+
+-- { name, quality, bind, classID, subclassID, itemLevel, requiredLevel } or nil.
+function Recipes.IndexedItem(itemID)
+  local index = ns.Data.ItemIndex
+  return index and index[tonumber(itemID) or 0] or nil
 end
 
 function Recipes.ItemName(itemID)

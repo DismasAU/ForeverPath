@@ -124,6 +124,8 @@ describe("ItemProvider", function()
       if hit.name == "Thunderstorm Blade" then sawBlade = true end
     end
     assert_true(sawMace and sawBlade)
+    -- A single result is always the best match, never a reserved one.
+    assert_eq(Items.SearchByName("storm", 1)[1].rank, 1)
     -- Nothing is reserved when the earlier groups already fit.
     hits = Items.SearchByName("mace of the", 3)
     assert_eq(hits[1].name, "Mace of the Storms")
@@ -137,13 +139,13 @@ describe("ItemProvider", function()
         quests = { { id = 96395, name = "An Ancient Grudge", faction = "Both", rewardItems = { { 279899, "Catacomb Cloak", 3 } } } },
       },
     }, { ["Wailing Caverns"] = { Kresh = { { 252512, "Brawler's Leather Helm", "Head, Leather", 3 } } } })
-    Mock.InstallGearQuest({ entries = {}, facts = { [11111] = { name = "Stormwind Guard Leggings", sourceType = "vendor" } } })
+    Mock.InstallGearQuest({ entries = {}, facts = { [11111] = { name = "Zephras Watch Leggings", sourceType = "vendor" } } })
     H.login(ns)
     Items = ns.ItemProvider
     assert_eq(Items.SearchByName("footpads of the fang", 5)[1].itemID, 10411)
     assert_eq(Items.SearchByName("catacomb", 5)[1].itemID, 279899)
     assert_eq(Items.SearchByName("brawler's leather helm", 5)[1].itemID, 252512)
-    assert_eq(Items.SearchByName("guard legg", 5)[1].itemID, 11111)
+    assert_eq(Items.SearchByName("zephras watch legg", 5)[1].itemID, 11111)
     local names = ns.SourceProvider.JournalNames()
     assert_eq(names[10411], "Footpads of the Fang")
     assert_eq(ns.SourceProvider.JournalNames(), names, "built once")

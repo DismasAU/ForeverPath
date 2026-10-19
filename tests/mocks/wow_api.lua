@@ -40,6 +40,7 @@ for _, event in ipairs({
   "PLAYER_EQUIPMENT_CHANGED", "UNIT_INVENTORY_CHANGED", "UPDATE_FACTION",
   "UNIT_SPELLCAST_SUCCEEDED",
   "QUEST_DETAIL", "QUEST_COMPLETE", "QUEST_FINISHED",
+  "LOOT_READY", "LOOT_OPENED", "LOOT_CLOSED",
 }) do
   Mock.knownEvents[event] = true
 end
@@ -529,6 +530,28 @@ function Mock.CloseQuestWindow()
   Mock.FireEvent("QUEST_FINISHED")
 end
 
+-- "Creature-0-1-2-3-<npcID>-<spawn>" for loot sources.
+function Mock.CreatureGUID(npcID, spawn)
+  return string.format("Creature-0-1-2-3-%d-%08X", npcID, spawn or 1)
+end
+
+function Mock.ObjectGUID(objectID, spawn)
+  return string.format("GameObject-0-1-2-3-%d-%08X", objectID, spawn or 1)
+end
+
+-- Opens a loot window (LOOT_READY + LOOT_OPENED); Mock.CloseLoot ends it.
+function Mock.OpenLoot(slots, opts)
+  opts = opts or {}
+  Mock.loot = { fishing = opts.fishing == true, slots = slots or {} }
+  Mock.FireEvent("LOOT_READY", true)
+  Mock.FireEvent("LOOT_OPENED", true)
+end
+
+function Mock.CloseLoot()
+  Mock.loot = nil
+  Mock.FireEvent("LOOT_CLOSED")
+end
+
 -- Marks a quest completed and fires the turn-in events.
 function Mock.CompleteQuest(questID)
   Mock.quests.completed[questID] = true
@@ -664,9 +687,29 @@ function Mock.install()
   _G.CreateColor = function(r, g, b, a) return { r = r, g = g, b = b, a = a } end
   _G.UnitName = function(unit)
     if unit == "questnpc" then return Mock.questNPC and Mock.questNPC.name or nil end
+    if unit == "target" and Mock.targetName then return Mock.targetName end
     if unit == "npc" then return (Mock.questNPC and Mock.questNPC.name) or (Mock.trainer and Mock.trainer.name) or (Mock.merchant and Mock.merchant.name) or nil end
     return Mock.character.name
   end
+  -- The loot window: Mock.loot = { fishing = bool, slots = { { itemID, quantity, sources = { guid, qty, ... } } } }.
+  _G.GetNumLootItems = function() return Mock.loot and #Mock.loot.slots or 0 end
+  _G.GetLootSlotLink = function(slot)
+    local s = Mock.loot and Mock.loot.slots[slot]
+    return s and Mock.ItemLink(s.itemID) or nil
+  end
+  _G.GetLootSlotInfo = function(slot)
+    local s = Mock.loot and Mock.loot.slots[slot]
+    if not s then return nil end
+    local item = Mock.items[s.itemID]
+    return item and item.icon or 0, item and item.name or "?", s.quantity or 1, nil, item and item.quality or 1
+  end
+  _G.GetLootSourceInfo = function(slot)
+    local s = Mock.loot and Mock.loot.slots[slot]
+    if not s then return nil end
+    return unpack(s.sources or {})
+  end
+  _G.IsFishingLoot = function() return Mock.loot ~= nil and Mock.loot.fishing == true end
+  _G.UnitGUID = function(unit) return unit == "target" and Mock.targetGUID or nil end
   -- The quest-giver window: GetQuestID names the quest on offer / being turned in.
   _G.GetQuestID = function() return Mock.questNPC and Mock.questNPC.questID or 0 end
   -- Map position and user waypoints (retail-engine C_Map / C_SuperTrack).
@@ -1050,6 +1093,9 @@ function Mock.reset()
   Mock.quests = { completed = {}, log = {}, details = {}, order = {}, titles = {}, requests = {}, watched = {} }
   Mock.questNPC = nil
   Mock.addOnLoaders = {}
+  Mock.loot = nil
+  Mock.targetGUID = nil
+  Mock.targetName = nil
   Mock.position = { mapID = 1411, x = 0.5, y = 0.5 }
   Mock.waypoint = nil
   Mock.waypointMaps = nil

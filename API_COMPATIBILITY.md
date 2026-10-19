@@ -59,6 +59,18 @@ client. Behaviour (return values, timing) is only verified where stated.
 | `GameTooltip:SetItemByID` | Widgets | Retail API | Guarded with pcall; falls back to a plain name tooltip |
 | `Enum.CraftingReagentType.Basic` (=1), `Enum.BankType.Character` (=0), `Enum.BagIndex.ReagentBag` (=5) | Compat | `Enum.BagIndex` in dump; the other two from Retail 12.x docs | Fallback constants used when the enum is missing |
 
+## 0.20.0
+
+| Function | Used for | Evidence |
+|---|---|---|
+| `GetNumLootItems()`, `GetLootSlotLink(slot)`, `GetLootSlotInfo(slot)`, `GetLootSourceInfo(slot)` (guid, quantity, ...), `IsFishingLoot()` | the loot learner | Retail API; area loot returns several GUID / quantity pairs. **Unverified** on Forever |
+| `UnitGUID("target")`, `UnitName("target")` | naming a looted creature that is your target | Retail API |
+
+Events: `LOOT_READY`, `LOOT_OPENED`, `LOOT_CLOSED`.
+
+The client's `ItemSearchName` table (11,094 rows with hotfixes on build
+70450) feeds `Data/ItemIndex.lua`.
+
 ## 0.18.0
 
 | Function | Used for | Evidence |

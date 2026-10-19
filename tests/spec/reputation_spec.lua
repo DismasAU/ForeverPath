@@ -397,7 +397,7 @@ describe("Reputation goals", function()
     assert_false(goals.newGoal:Layout(2000))
     assert_eq(goals.newGoal:GetHeight(), 50)
     -- The header search suggests every kind and opens the goal's screen.
-    MainFrame.frame.search:SetText("ancient gr")
+    MainFrame.frame.search:SetText("ancient grud")
     MainFrame.frame.search:Fire("OnTextChanged", true)
     assert_eq(popup.rows[1].text:GetText(), "An Ancient Grudge")
     popup.rows[1]:Click()

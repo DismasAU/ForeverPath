@@ -473,6 +473,30 @@ function ClassicDB.ItemHints(itemID, opts)
   return out
 end
 
+-- Does classic-db know this item at all? (itemRanges: sorted first/last pairs)
+function ClassicDB.KnowsItem(itemID)
+  local d = data()
+  local ranges = d and d.itemRanges
+  itemID = tonumber(itemID)
+  if type(ranges) ~= "table" or not itemID then return nil end
+  local lo, hi = 1, #ranges / 2
+  while lo <= hi do
+    local mid = math.floor((lo + hi) / 2)
+    local first, last = ranges[mid * 2 - 1], ranges[mid * 2]
+    if itemID < first then hi = mid - 1
+    elseif itemID > last then lo = mid + 1
+    else return true end
+  end
+  return false
+end
+
+-- An item the Forever client lists that classic-db has never heard of.
+function ClassicDB.IsNewInForever(itemID)
+  local index = ns.Data and ns.Data.ItemIndex
+  if type(index) ~= "table" or not index[tonumber(itemID) or 0] then return false end
+  return ClassicDB.KnowsItem(itemID) == false
+end
+
 local function buildIndexes()
   local d = data()
   local rewards, reputation, titles = {}, {}, {}
