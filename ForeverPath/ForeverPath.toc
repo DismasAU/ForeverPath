@@ -2,13 +2,13 @@
 ## Title: ForeverPath
 ## Notes: Goal-driven progression planner for World of Warcraft: Forever. Plan crafting and item goals and see what you still need and where it comes from.
 ## Author: Jacob
-## Version: 0.17.3
+## Version: 0.18.0
 ## IconTexture: Interface\AddOns\ForeverPath\Media\ForeverPath-Mark.png
 ## SavedVariables: ForeverPathDB
 ## SavedVariablesPerCharacter: ForeverPathCharDB
 ## AddonCompartmentFunc: ForeverPath_OnAddonCompartmentClick
 ## X-Category: Professions
-## X-License: MIT
+## X-License: GPL-3.0
 ## OptionalDeps: Auctionator, AtlasLootClassic, AtlasLootClassic_DungeonsAndRaids, ForeverDungeonJournal, Attune, GearQuestForever
 
 # Load order matters: Core -> Domain -> Providers -> Data -> services -> UI -> command and bootstrap wiring.
@@ -38,6 +38,7 @@ Providers\VendorProvider.lua
 Providers\TrainerProvider.lua
 Providers\SourceProvider.lua
 Providers\AttuneProvider.lua
+Providers\ClassicDBProvider.lua
 Providers\QuestFactsProvider.lua
 Providers\QuestProvider.lua
 Providers\EquipmentProvider.lua

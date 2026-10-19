@@ -75,6 +75,7 @@ function Compat.Detect()
 
   local cAddOns = type(C_AddOns) == "table" and C_AddOns or {}
   Compat.GetAddOnMetadata = pick(cAddOns.GetAddOnMetadata, _G.GetAddOnMetadata)
+  Compat.LoadAddOn = pick(cAddOns.LoadAddOn, _G.LoadAddOn)
 
   -- Merchant window: C_MerchantFrame.GetItemInfo (table) or legacy GetMerchantItemInfo (multiple returns).
   Compat.GetMerchantNumItems = pick(_G.GetMerchantNumItems)

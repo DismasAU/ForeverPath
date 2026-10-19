@@ -46,6 +46,7 @@ is built to take them without a rewrite (see `ARCHITECTURE.md`).
 | 0.15.1 quests that give reputation feed the Quests screen for reputation goals | Implemented, offline-tested, **not yet verified in game** |
 | 0.16.0 type-ahead suggestions for every goal kind (New Goal bar and header search); reputation goals for factions not met yet, from the client's faction table; the New Goal bar reflows when narrow | Implemented, offline-tested, **not yet verified in game** |
 | 0.16.1 Shift-click any item row to link it in chat or the Auction House search | Implemented, offline-tested, **not yet verified in game** |
+| 0.18.0 classic-era data from CMaNGOS classic-db (the ForeverPath_ClassicDB addon): every classic quest with its giver, turn-in and map position, the items and kills it asks for, rewards, reputation and prerequisite chains, behind everything Forever-specific; ForeverPath is now GPL-3.0 | Implemented, offline-tested, **not yet verified in game** |
 | 0.17.3 click any step on the Attunements screen for its summary (state, giver, turn-in, items to bring with bag counts, rewards, waypoint, jump to the Quests screen) | Implemented, offline-tested, **not yet verified in game** |
 | 0.17.1 the shaman Call of Air chain (both factions) shipped in the quest catalogue: givers, turn-ins, map positions, the items each quest asks for and where they drop | Implemented, offline-tested, **not yet verified in game** |
 | 0.17.0 questlines: a quest reward or a quest plans the whole chain that leads to it (Attune's attunement and class-quest chains), the items the chain's quests ask for go on the requirement rows, the tree and the shopping list, and quest givers, turn-ins and map pins are learned at quest windows (plus a shipped catalogue) with "Set waypoint" buttons | Implemented, offline-tested, **not yet verified in game** |
@@ -56,14 +57,32 @@ lists the API evidence and the remaining open questions.
 
 ## Installation
 
-1. Copy the `ForeverPath` folder (the one containing `ForeverPath.toc`) into
+1. Copy both folders from the release zip, `ForeverPath` and
+   `ForeverPath_ClassicDB`, into
    `World of Warcraft\_classic_beta_\Interface\AddOns\`.
    `_classic_beta_` is the Forever beta product folder.
+   `ForeverPath_ClassicDB` is the classic-era quest and NPC data; ForeverPath
+   loads it when it starts (it is load-on-demand, so it does not run on its
+   own). Without it everything works except classic quests, givers and
+   spawns.
 2. Start the game or type `/reload`.
 3. Type `/fp`.
 
-Developers: `scripts\install_dev.ps1` copies the folder into the AddOns
+Developers: `scripts\install_dev.ps1` copies both folders into the AddOns
 directory, and `scripts\package.ps1` builds a release zip.
+
+## Classic-era data
+
+`ForeverPath_ClassicDB` carries the classic-era content of
+[CMaNGOS classic-db](https://github.com/cmangos/classic-db): about 4,100
+quests with their givers, turn-ins, required items and kills, rewards,
+reputation and prerequisites, and the spawn points of the NPCs and objects
+those quests use, placed on the Forever client's zone maps. It is the
+baseline under everything Forever-specific: what ForeverPath learns at quest
+windows, the shipped quest catalogue, ForeverDungeonJournal and Attune all
+win over it, and `/fp quest` marks classic facts as "(classic data)".
+Forever's new content is not in it. Regenerate it with
+`scripts\extract_classicdb.ps1` (`tools/ClassicDbExtract/README.md`).
 
 ## Companion addons (all optional)
 
@@ -213,9 +232,20 @@ stored with its required skill, cost and the trainer's location
 - Pure Lua logic and the UI (with mock widgets) have an offline test suite
   (`python tests/run_tests.py`, details in `TESTING.md`).
 - The recipe catalogue is regenerated with `scripts\extract_db.ps1`
-  (`tools/DbExtract/README.md`).
+  (`tools/DbExtract/README.md`); the classic data with
+  `scripts\extract_classicdb.ps1` (`tools/ClassicDbExtract/README.md`).
 - Module layout, data flow and extension points: `ARCHITECTURE.md`.
 - API usage and verification status: `API_COMPATIBILITY.md`.
 - Changes: `CHANGELOG.md`.
 
-License: MIT (see `LICENSE`).
+## Licence
+
+ForeverPath is free software under the GNU General Public License, version 3
+(`LICENSE`; a copy ships in the addon as `LICENSE.txt`). Copyright (C) 2026
+Jacob (DismasAU). Versions up to 0.17.3 were released under MIT.
+
+`ForeverPath_ClassicDB` is generated from CMaNGOS classic-db (GPL-3.0, its
+`LICENSE.md` ships with the data). The data contains World of Warcraft
+content, a trademark and copyright of Blizzard Entertainment, used here
+non-commercially as described in the bundled `COPYRIGHT.md`. ForeverPath is
+not affiliated with Blizzard or the CMaNGOS project.

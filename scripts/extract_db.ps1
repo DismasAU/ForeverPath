@@ -43,7 +43,8 @@ if (-not (Test-Path (Join-Path $external "CascLib\CascLib.csproj"))) {
 $outDir = Join-Path $repoRoot "ForeverPath\Data"
 $args = @("run", "--project", (Join-Path $tool "DbExtract.csproj"), "-c", "Release", "--",
   "--wow", $WowPath, "--product", $Product, "--locale", $Locale,
-  "--out", $outDir, "--defs", (Join-Path $tool "definitions"), "--report", (Join-Path $tool "last-run.json"))
+  "--out", $outDir, "--defs", (Join-Path $tool "definitions"), "--report", (Join-Path $tool "last-run.json"),
+  "--maps", (Join-Path $repoRoot "tools\ClassicDbExtract\maps.json"))
 if ($NoHotfix) { $args += "--no-hotfix" }
 & dotnet @args
 if ($LASTEXITCODE -ne 0) { throw "DbExtract failed with exit code $LASTEXITCODE" }

@@ -59,6 +59,17 @@ client. Behaviour (return values, timing) is only verified where stated.
 | `GameTooltip:SetItemByID` | Widgets | Retail API | Guarded with pcall; falls back to a plain name tooltip |
 | `Enum.CraftingReagentType.Basic` (=1), `Enum.BankType.Character` (=0), `Enum.BagIndex.ReagentBag` (=5) | Compat | `Enum.BagIndex` in dump; the other two from Retail 12.x docs | Fallback constants used when the enum is missing |
 
+## 0.18.0
+
+| Function | Used for | Evidence |
+|---|---|---|
+| `C_AddOns.LoadAddOn("ForeverPath_ClassicDB")` (legacy `LoadAddOn` fallback) | loading the classic data addon at start-up | Retail 12.x API; `## LoadOnDemand: 1` with `## Dependencies: ForeverPath`. **Unverified** on Forever; a failure leaves the classic data off and `/fp status` names the reason |
+| `C_Map.GetMapInfo(uiMapID).name` | zone names the shipped table lacks | Retail API; only a fallback (the zone names ship with the data) |
+| `UnitClass("player")` third return (class id) | which classic quests this class can take | already relied on since 0.16.0 |
+
+Zone-map positions come from the client's own `UiMapAssignment` table
+(extracted with `tools/DbExtract`), so they match the map the client draws.
+
 ## 0.17.0
 
 | Function | Used for | Evidence |

@@ -1,4 +1,5 @@
-# Builds dist\ForeverPath-<version>.zip containing the addon folder.
+# Builds dist\ForeverPath-<version>.zip containing the addon folders
+# (ForeverPath and the load-on-demand ForeverPath_ClassicDB).
 # Usage: powershell -ExecutionPolicy Bypass -File scripts\package.ps1
 #
 # Entries are written with forward slashes. Compress-Archive on Windows
@@ -20,7 +21,12 @@ Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $archive = [System.IO.Compression.ZipFile]::Open($zip, [System.IO.Compression.ZipArchiveMode]::Create)
 try {
-  $files = Get-ChildItem -Path $source -Recurse -File | Sort-Object FullName
+  $files = @()
+  foreach ($folder in @("ForeverPath", "ForeverPath_ClassicDB")) {
+    $path = Join-Path $repoRoot $folder
+    if (Test-Path $path) { $files += Get-ChildItem -Path $path -Recurse -File }
+  }
+  $files = $files | Sort-Object FullName
   foreach ($file in $files) {
     $relative = $file.FullName.Substring($repoRoot.Length).TrimStart('\', '/') -replace '\\', '/'
     [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(

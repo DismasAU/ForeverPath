@@ -13,6 +13,9 @@
 //             Eye of Sulfuras -> Sulfuras or three lesser essences -> greater
 //   items     names and quality for every item the catalogue refers to
 //   professions  skill line names and categories
+//   maps      (--maps, JSON for tools/ClassicDbExtract) zone maps (UiMap),
+//             their world-coordinate bounds (UiMapAssignment) and map /
+//             instance names (Map), to place CMaNGOS spawns on zone maps
 //   factions  every reputation faction (Faction table): name, parent, pane
 //             index and the starting reputation per race mask
 //
@@ -91,6 +94,7 @@ namespace DbExtract
         public string Out = "ForeverPath/Data";
         public string Defs = "tools/DbExtract/definitions";
         public string Report = "tools/DbExtract/last-run.json";
+        public string Maps = "tools/ClassicDbExtract/maps.json";
         public string Hotfix;        // explicit DBCache.bin path
         public bool NoHotfix;
 
@@ -108,10 +112,11 @@ namespace DbExtract
                     case "--out": o.Out = Next(); break;
                     case "--defs": o.Defs = Next(); break;
                     case "--report": o.Report = Next(); break;
+                    case "--maps": o.Maps = Next(); break;
                     case "--hotfix": o.Hotfix = Next(); break;
                     case "--no-hotfix": o.NoHotfix = true; break;
                     case "-h": case "--help":
-                        Console.WriteLine("DbExtract --wow <install dir> [--product wow_classic_beta] [--locale enUS] [--out <dir>] [--defs <dir>] [--report <file>] [--hotfix <DBCache.bin>] [--no-hotfix]");
+                        Console.WriteLine("DbExtract --wow <install dir> [--product wow_classic_beta] [--locale enUS] [--out <dir>] [--defs <dir>] [--report <file>] [--maps <file>] [--hotfix <DBCache.bin>] [--no-hotfix]");
                         Environment.Exit(0); break;
                     default: throw new ArgumentException("unknown argument " + args[i]);
                 }
@@ -161,6 +166,9 @@ namespace DbExtract
             { "ItemSparse", 1572924 },
             { "Item", 841626 },
             { "Faction", 1361972 },
+            { "UiMap", 1957206 },
+            { "UiMapAssignment", 1957219 },
+            { "Map", 1349477 },
         };
 
         // Skill line categories worth cataloguing: 11 primary professions, 9 secondary.
@@ -179,6 +187,7 @@ namespace DbExtract
         };
 
         static int I(object o) => Convert.ToInt32(o, CultureInfo.InvariantCulture);
+        static double[] Ds(object o) => o is Array a ? a.Cast<object>().Select(v => Math.Round(Convert.ToDouble(v, CultureInfo.InvariantCulture), 4)).ToArray() : new double[0];
         static long L(object o) => Convert.ToInt64(o, CultureInfo.InvariantCulture);
         // Faction.ReputationRaceMask: one 64-bit array in older layouts, four
         // ReputationRaceMasks<i> fields of two 32-bit halves (low, high) in newer ones.
@@ -534,6 +543,27 @@ namespace DbExtract
                 };
                 File.WriteAllText(o.Report, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
                 Console.WriteLine($"Report {o.Report}");
+            }
+            if (!string.IsNullOrEmpty(o.Maps))
+            {
+                // Zone maps and their world bounds, so world positions (CMaNGOS spawns)
+                // can be placed on the map the client shows.
+                var uiMaps = Rows(Load("UiMap")).Values.Select(r => new { id = I(r["ID"]), name = Convert.ToString(r["Name_lang"]), parent = I(r["ParentUiMapID"]), type = I(r["Type"]) })
+                    .OrderBy(m => m.id).ToList();
+                var assignments = Rows(Load("UiMapAssignment")).Values.Select(r => new
+                {
+                    uiMapID = I(r["UiMapID"]), mapID = I(r["MapID"]), areaID = I(r["AreaID"]), order = I(r["OrderIndex"]),
+                    uiMin = Ds(r["UiMin"]), uiMax = Ds(r["UiMax"]), region = Ds(r["Region"]),
+                }).OrderBy(a => a.uiMapID).ThenBy(a => a.order).ToList();
+                var maps = Rows(Load("Map")).Values.Select(r => new
+                {
+                    id = I(r["ID"]), name = Convert.ToString(r["MapName_lang"]), directory = Convert.ToString(r["Directory"]),
+                    instanceType = I(r["InstanceType"]), maxPlayers = I(r["MaxPlayers"]),
+                }).OrderBy(m => m.id).ToList();
+                Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(o.Maps)));
+                File.WriteAllText(o.Maps, JsonSerializer.Serialize(new { build = config.VersionName, uiMaps, assignments, maps },
+                    new JsonSerializerOptions { WriteIndented = true }), new UTF8Encoding(false));
+                Console.WriteLine($"Maps {o.Maps}: {uiMaps.Count} zone maps, {assignments.Count} assignments, {maps.Count} maps");
             }
             return 0;
         }

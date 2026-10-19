@@ -482,15 +482,39 @@ function Planner.QuestlineItems(QP, line, questID)
   return out
 end
 
+-- 1 bind on pickup, 2 on equip, 3 on use, 4 quest item; nil when unknown.
+function Planner.BindType(itemID, deps)
+  local Compat = ns.Compat
+  if Compat and Compat.GetItemInfo then
+    local ok, name, _, _, _, _, _, _, _, _, _, _, _, _, bind = pcall(Compat.GetItemInfo, itemID)
+    if ok and name and tonumber(bind) then return tonumber(bind) end
+  end
+  local data = deps and deps.data
+  return data and data.ItemBind and data.ItemBind(itemID) or nil
+end
+
 -- The quest that rewards an item (for this faction) and the chain that
--- leads to it: { quest = entry, line }, or nil.
-function Planner.RewardQuestline(itemID, deps)
+-- leads to it: { quest = entry, line }, or nil. Classic-db quests only
+-- count for items that cannot be bought (bind on pickup, quest items) or
+-- that have no other route (opts.noRoute): a potion some old quest also
+-- rewards is still bought, not quested for.
+function Planner.RewardQuestline(itemID, deps, opts)
   local QP = deps.quest
   if not (QP and QP.IsAvailable and QP.IsAvailable() and QP.QuestsRewarding) then return nil end
   local faction = QP.Faction and QP.Faction() or nil
   local first
+  local classicOK
+  local function allowClassic()
+    if classicOK == nil then
+      local bind = Planner.BindType(itemID, deps)
+      classicOK = (bind == 1 or bind == 4) or (opts and opts.noRoute) or false
+    end
+    return classicOK
+  end
   for _, entry in ipairs(QP.QuestsRewarding(itemID)) do
-    if not faction or not entry.faction or entry.faction == "Both" or entry.faction == faction then
+    if entry.classic and not allowClassic() then
+      -- skipped: buyable, and something else sells or drops it
+    elseif not faction or not entry.faction or entry.faction == "Both" or entry.faction == faction then
       local line = QP.Questline and QP.Questline(entry.id) or nil
       if line then return { quest = entry, line = line } end
       first = first or { quest = entry }
@@ -1092,7 +1116,7 @@ function Planner.EvaluateReputation(view, goal, deps)
   end
   local record = progress.record
   view.item.name = record.name
-  local quests = RP.QuestsFor(record.name)
+  local quests = RP.QuestsFor(record.name, record.factionID or goal.target.factionID)
   local rewards = RP.Rewards(target.factionID)
   view.reputation = { record = record, progress = progress, quests = quests, rewards = rewards, targetLabel = progress.targetLabel }
   view.progress = { percent = progress.percent, ownedUnits = math.max(0, (record.value or 0) - progress.start), requiredUnits = math.max(0, progress.targetMin - progress.start), materialsHave = 0, materialsTotal = 0 }
@@ -1172,7 +1196,7 @@ function Planner.EvaluateObtain(view, goal, deps, sources)
   -- A quest reward: the chain that leads to the quest becomes the plan, and
   -- what its open quests ask for hangs below the item.
   if root.missing > 0 and not root.craft then
-    local questline = Planner.RewardQuestline(itemID, deps)
+    local questline = Planner.RewardQuestline(itemID, deps, { noRoute = root.noRoute })
     if questline then
       local QP = deps.quest
       local quest, line = questline.quest, questline.line

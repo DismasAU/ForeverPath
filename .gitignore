@@ -4,3 +4,4 @@ __pycache__/
 *.zip
 .vscode/
 debug.log
+tools/ClassicDbExtract/cache/

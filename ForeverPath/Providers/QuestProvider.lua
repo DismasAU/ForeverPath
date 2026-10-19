@@ -16,8 +16,12 @@
 -- Quests in the player's log are read from C_QuestLog whether or not either
 -- addon knows them; titles of other quests are requested from the client
 -- (RequestLoadQuestByID) and arrive with QUEST_DATA_LOAD_RESULT.
+-- Classic-era quests (CMaNGOS classic-db, Providers/ClassicDBProvider.lua)
+-- are the baseline under all of it: Get() falls back to them, and givers,
+-- turn-ins, required items, rewards and prerequisite chains come from them
+-- when nothing Forever-specific knows the quest.
 -- Questlines (the chain of steps that leads to a quest) come from Attune's
--- attunement and class-quest chains; quest givers, turn-ins and the items a
+-- attunement and class-quest chains, else the classic prerequisites; quest givers, turn-ins and the items a
 -- quest asks for from Providers/QuestFactsProvider.lua (shipped catalogue +
 -- what this account has learned at quest windows).
 local _, ns = ...
@@ -208,10 +212,31 @@ end
 function QuestProvider.Invalidate()
   QuestProvider.index = nil
   QuestProvider.logCache = nil
+  if ns.ReputationProvider then ns.ReputationProvider.questRewards = nil end
 end
 
+-- The curated entry (journal, Attune), else the classic one.
 function QuestProvider.Get(questID)
-  return QuestProvider.Index()[tonumber(questID) or 0]
+  questID = tonumber(questID) or 0
+  local entry = QuestProvider.Index()[questID]
+  if entry then return entry end
+  local CDB = ns.ClassicDB
+  return CDB and CDB.Quest(questID) or nil
+end
+
+function QuestProvider.Classic(questID)
+  local CDB = ns.ClassicDB
+  return CDB and CDB.Quest(tonumber(questID) or 0) or nil
+end
+
+-- Can this character take the quest? Curated entries check their faction;
+-- classic entries also their class.
+function QuestProvider.Eligible(entry)
+  if not entry then return false end
+  local faction = QuestProvider.Faction()
+  if entry.faction and entry.faction ~= "Both" and faction and entry.faction ~= faction then return false end
+  if entry.classic and ns.ClassicDB then return ns.ClassicDB.Eligible(entry.id) end
+  return true
 end
 
 function QuestProvider.Faction()
@@ -410,13 +435,20 @@ end
 
 -- Quests (indexed) that reward itemID.
 function QuestProvider.QuestsRewarding(itemID)
-  local out = {}
+  local out, seen = {}, {}
   for _, entry in pairs(QuestProvider.Index()) do
     for _, reward in ipairs(entry.rewards or {}) do
-      if reward.itemID == itemID then out[#out + 1] = entry break end
+      if reward.itemID == itemID then out[#out + 1] = entry seen[entry.id] = true break end
     end
   end
   table.sort(out, function(a, b) return a.id < b.id end)
+  -- Classic quests (this character's faction and class) after the curated ones.
+  local CDB = ns.ClassicDB
+  if CDB and CDB.IsAvailable() then
+    for _, entry in ipairs(CDB.QuestsRewarding(itemID)) do
+      if not seen[entry.id] then out[#out + 1] = entry end
+    end
+  end
   return out
 end
 
@@ -441,7 +473,7 @@ function QuestProvider.FeedsGoals(goals, views, nameOf)
     if goal.type == "REACH_REPUTATION" and goal.target then
       local quests = view and view.reputation and view.reputation.quests
       if not quests and ns.ReputationProvider and ns.ReputationProvider.QuestsFor then
-        local ok, list = pcall(ns.ReputationProvider.QuestsFor, goal.target.name)
+        local ok, list = pcall(ns.ReputationProvider.QuestsFor, goal.target.name, goal.target.factionID)
         quests = ok and list or nil
       end
       for _, quest in ipairs(quests or {}) do
@@ -487,6 +519,15 @@ function QuestProvider.Search(text, limit)
   for _, log in ipairs(QuestProvider.LogEntries()) do
     consider(log.questID, log.title, log.zone or "Quest log")
   end
+  local CDB = ns.ClassicDB
+  if CDB and CDB.IsAvailable() then
+    for _, questID in ipairs(CDB.Search(needle)) do
+      if not seen[questID] then
+        local entry = CDB.Quest(questID)
+        consider(questID, entry.name, (entry.location or "Classic") .. (entry.level and (" - level " .. entry.level) or ""))
+      end
+    end
+  end
   table.sort(hits, function(a, b)
     if a.rank ~= b.rank then return a.rank < b.rank end
     if a.name ~= b.name then return a.name < b.name end
@@ -511,6 +552,14 @@ function QuestProvider.StateLabel(state, entry, playerLevel)
       if id and not QuestProvider.State(id).completed then return "Locked", "text" end
     end
   end
+  -- Classic prerequisites: every group needs one completed member.
+  for _, group in ipairs(entry and entry.prerequisites or {}) do
+    local met = false
+    for _, id in ipairs(group) do
+      if QuestProvider.State(id).completed then met = true break end
+    end
+    if not met then return "Locked", "text" end
+  end
   return "Available", "partial"
 end
 
@@ -529,8 +578,11 @@ function QuestProvider.Status()
   if QuestProvider.HasAttune() then sources[#sources + 1] = "Attune" end
   local numQuests, max = QuestProvider.LogCapacity()
   local QF = ns.QuestFactsProvider
-  return string.format("Quests: %d known from %s; quest log %d / %d; givers and items recorded for %d quests.", QuestProvider.Count(),
-    #sources > 0 and table.concat(sources, " and ") or "no data addon", numQuests, max, QF and (QF.Count() + QF.ShippedCount()) or 0)
+  local CDB = ns.ClassicDB
+  local classic = CDB and CDB.IsAvailable() and select(1, CDB.Counts()) or 0
+  return string.format("Quests: %d known from %s%s; quest log %d / %d; givers and items recorded for %d quests.", QuestProvider.Count(),
+    #sources > 0 and table.concat(sources, " and ") or "no data addon", classic > 0 and string.format(", plus %d classic quests", classic) or "",
+    numQuests, max, QF and (QF.Count() + QF.ShippedCount()) or 0)
 end
 
 ---------------------------------------------------------------------------
@@ -547,11 +599,64 @@ end
 -- this faction and class, each quest step carrying its entry and live
 -- state: { attune, steps, target, next, done, total, percent, complete }.
 -- nil when no chain includes the quest.
+-- The chain of classic prerequisites that leads to questID, in the same
+-- shape as an Attune questline; nil when the quest has none.
+function QuestProvider.ClassicQuestline(questID)
+  local CDB = ns.ClassicDB
+  questID = tonumber(questID)
+  if not (CDB and CDB.IsAvailable() and questID and CDB.Quest(questID)) then return nil end
+  local order, follows = CDB.ChainTo(questID, function(id) return QuestProvider.State(id).completed end)
+  if #order < 2 then return nil end
+  local target = CDB.Quest(questID)
+  local line = { attune = { id = "classic:" .. questID, name = target.name .. " chain", classic = true }, steps = {}, done = 0, total = #order, classic = true }
+  local done = {}
+  for index, id in ipairs(order) do
+    local entry = QuestProvider.Get(id)
+    local state = QuestProvider.State(id)
+    local giver = QuestProvider.Giver(id)
+    local step = {
+      key = "classic-" .. id, id = tostring(id), attuneID = line.attune.id, type = "Quest", typeLabel = "Quest",
+      name = entry and entry.name or QuestProvider.Name(id), location = (giver and giver.zone) or (entry and entry.location) or nil,
+      wowheadID = tostring(id), icon = QuestProvider.ICON, follows = {}, stage = index, count = 1, side = false,
+      questID = id, entry = entry, questState = state, done = state.completed, classic = true,
+    }
+    for _, f in ipairs(follows[id] or {}) do step.follows[#step.follows + 1] = tostring(f) end
+    done[id] = step.done
+    line.steps[index] = step
+    if step.done then line.done = line.done + 1 end
+  end
+  for _, step in ipairs(line.steps) do
+    if step.done then
+      step.state = "done"
+    else
+      local ready = true
+      for _, f in ipairs(follows[step.questID] or {}) do
+        if not done[f] then ready = false end
+      end
+      step.state = ready and "current" or "locked"
+      if ready and not line.next then line.next = step end
+    end
+  end
+  line.target = line.steps[#line.steps]
+  line.complete = line.target.done
+  line.percent = line.total > 0 and math.floor(line.done * 100 / line.total + 0.5) or 0
+  if line.complete then line.percent = 100 end
+  return line
+end
+
 function QuestProvider.Questline(questID)
   local AP = ns.AttuneProvider
-  if not (AP and AP.IsAvailable and AP.IsAvailable() and AP.QuestlineFor) then return nil end
-  local ok, line = pcall(AP.QuestlineFor, tonumber(questID))
-  if not ok or type(line) ~= "table" then return nil end
+  local line
+  if AP and AP.IsAvailable and AP.IsAvailable() and AP.QuestlineFor then
+    local ok, result = pcall(AP.QuestlineFor, tonumber(questID))
+    if ok and type(result) == "table" then line = result end
+  end
+  if not line then
+    -- A journal chain is Forever-curated: it wins over the classic one.
+    local entry = QuestProvider.Index()[tonumber(questID) or 0]
+    if entry and entry.chain then return nil end
+    return QuestProvider.ClassicQuestline(questID)
+  end
   for _, step in ipairs(line.steps) do
     if QUEST_STEP[step.type] then
       step.questID = firstQuestID(step)
@@ -593,20 +698,35 @@ function QuestProvider.Giver(questID)
     local name = s.target or (s.label and (s.label:match("^([^%-]+)") or s.label):gsub("%s+$", "")) or entry.pickup
     return { name = name, mapID = s.mapID, x = fraction(s.x), y = fraction(s.y), zone = entry.location, label = s.label or name }
   end
-  if entry and entry.pickup then
-    return { name = entry.pickup:match("^([^,]+)") or entry.pickup, zone = entry.location, label = entry.pickup }
+  local CDB = ns.ClassicDB
+  local classic = CDB and CDB.IsAvailable() and CDB.Giver(questID) or nil
+  if entry and entry.pickup and not entry.classic then
+    local name = entry.pickup:match("^([^,]+)") or entry.pickup
+    -- The journal names the giver; the classic spawn gives the position when it is the same NPC.
+    if classic and classic.mapID and string.lower(classic.name or "") == string.lower(name) then
+      classic.label = entry.pickup
+      return classic
+    end
+    return { name = name, zone = entry.location, label = entry.pickup }
   end
-  return nil
+  return classic
 end
 
 function QuestProvider.Turnin(questID)
   local facts = QuestProvider.Facts(questID)
   if facts and facts.turnin and facts.turnin.name then return placeOf(facts.turnin) end
   local entry = QuestProvider.Get(questID)
-  if entry and entry.turnin then
-    return { name = entry.turnin:match("^([^,]+)") or entry.turnin, zone = entry.location, label = entry.turnin }
+  local CDB = ns.ClassicDB
+  local classic = CDB and CDB.IsAvailable() and CDB.Turnin(questID) or nil
+  if entry and entry.turnin and not entry.classic then
+    local name = entry.turnin:match("^([^,]+)") or entry.turnin
+    if classic and classic.mapID and string.lower(classic.name or "") == string.lower(name) then
+      classic.label = entry.turnin
+      return classic
+    end
+    return { name = name, zone = entry.location, label = entry.turnin }
   end
-  return nil
+  return classic
 end
 
 -- Items a quest asks for: live objectives while it is in the log, else the
@@ -622,6 +742,12 @@ function QuestProvider.RequiredItems(questID)
   local out = {}
   for _, item in ipairs(facts and facts.items or {}) do
     out[#out + 1] = { name = item.name, count = item.count or 1, have = 0, itemID = item.itemID, source = item.source }
+  end
+  if #out == 0 and not (facts and facts.items and #facts.items == 0 and facts.learned) then
+    local CDB = ns.ClassicDB
+    for _, item in ipairs(CDB and CDB.IsAvailable() and CDB.RequiredItems(questID) or {}) do
+      out[#out + 1] = { count = item.count or 1, have = 0, itemID = item.itemID, classic = true }
+    end
   end
   return out
 end
@@ -654,8 +780,9 @@ function QuestProvider.Describe(questID, nameOf)
   local state = QuestProvider.State(questID)
   local lines = {}
   local label = QuestProvider.StateLabel(state, entry)
-  lines[#lines + 1] = string.format("%s [%s]%s%s", QuestProvider.Name(questID), label,
-    entry and entry.level and (" - level " .. entry.level) or "", entry and entry.instance and (" - " .. entry.instance) or "")
+  lines[#lines + 1] = string.format("%s [%s]%s%s%s", QuestProvider.Name(questID), label,
+    entry and entry.level and (" - level " .. entry.level) or "", entry and entry.instance and (" - " .. entry.instance) or "",
+    entry and entry.classic and " (classic data)" or "")
   if entry and entry.pickup then lines[#lines + 1] = "  Pick up: " .. entry.pickup end
   if entry and entry.turnin then lines[#lines + 1] = "  Turn in: " .. entry.turnin end
   if entry and entry.objective then lines[#lines + 1] = "  " .. entry.objective end

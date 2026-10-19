@@ -246,6 +246,7 @@ function Mock.AddItem(itemID, opts)
     equipLoc = opts.equipLoc,
     ilvl = opts.ilvl,
     stats = opts.stats,
+    bind = opts.bind,
   }
   return itemID
 end
@@ -842,6 +843,13 @@ function Mock.install()
       if name == "ForeverPath" and field == "Version" then return "0.1.0-test" end
       return nil
     end,
+    -- Load-on-demand addons: Mock.addOnLoaders[name] runs the addon's files.
+    LoadAddOn = function(name)
+      local loader = Mock.addOnLoaders[name]
+      if not loader then return false, "MISSING" end
+      loader()
+      return true
+    end,
   }
 
   _G.C_Item = {
@@ -850,7 +858,7 @@ function Mock.install()
       local item = id and Mock.items[id]
       if not item or not item.loaded then return nil end
       return item.name, Mock.ItemLink(id), item.quality, item.ilvl or 1, 1, item.itemType or "Trade Goods", item.itemSubType or "Parts", 20, item.equipLoc or "", item.icon,
-        item.sellPrice, item.classID or 7, item.subclassID or 1, 0, 0, nil, true
+        item.sellPrice, item.classID or 7, item.subclassID or 1, item.bind or 0, 0, nil, true
     end,
     GetItemInfoInstant = function(itemInfo)
       local id = itemIDFrom(itemInfo)
@@ -1041,6 +1049,7 @@ function Mock.reset()
   Mock.sounds = {}
   Mock.quests = { completed = {}, log = {}, details = {}, order = {}, titles = {}, requests = {}, watched = {} }
   Mock.questNPC = nil
+  Mock.addOnLoaders = {}
   Mock.position = { mapID = 1411, x = 0.5, y = 0.5 }
   Mock.waypoint = nil
   Mock.waypointMaps = nil

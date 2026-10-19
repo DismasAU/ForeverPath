@@ -1,5 +1,62 @@
 # Changelog
 
+## 0.18.0 (2026-10-19) - classic-era quests and NPCs from CMaNGOS classic-db
+
+### Changed
+- **Licence: ForeverPath is now GPL-3.0** (was MIT up to 0.17.3), so it can
+  ship data generated from CMaNGOS classic-db. `LICENSE` holds the GPL text
+  and the addon ships it as `LICENSE.txt`; both manifests say
+  `X-License: GPL-3.0`.
+- The release zip and `scripts\install_dev.ps1` carry two folders:
+  `ForeverPath` and `ForeverPath_ClassicDB`.
+
+### Added
+- **`ForeverPath_ClassicDB`**, a load-on-demand data addon generated from
+  CMaNGOS classic-db (pinned snapshot ec4f5961, 2026-09-22): 4,143 quests
+  (title, levels, side, class, givers, turn-ins, the item that starts it,
+  items and kills required, choice and fixed rewards, reputation,
+  prerequisites, follow-up, objective text), 2,216 NPCs and 313 objects with
+  spawn points, and zone / instance names. classic-db's `LICENSE.md` and
+  `COPYRIGHT.md` ship with it.
+- **`tools/ClassicDbExtract`** and `scripts\extract_classicdb.ps1`: loads the
+  dump and its 387 update files into SQLite in installer order (about 1% of
+  update statements are MySQL-only and skipped; counted in the report) and
+  writes the Lua tables. Spawns are placed on the Forever client's zone maps
+  through `UiMapAssignment` bounds, which `tools/DbExtract` now exports to
+  `tools/ClassicDbExtract/maps.json` (`--maps`). Checked against Attune's
+  pins: Prate Cloudseer 53.5/42.6 (Attune 53.6/42.8), Rau Cliffrunner
+  46.1/51.7 (46.0/51.6), Bath'rah 80.5/66.9 (80.4/66.8).
+- **`ns.ClassicDB`** (`Providers/ClassicDBProvider.lua`) loads the data addon
+  at start-up (`Compat.LoadAddOn`) and serves quests in QuestProvider's
+  entry shape (`source = "classic"`), NPCs and objects with their spawns,
+  places (`PlaceOf`), eligibility by faction and class, reward / reputation
+  / title indexes and prerequisite chains (`ChainTo`: an "any of" group
+  takes the member already completed, else the first this character can
+  take).
+- **Quests fall back to classic data** behind everything Forever-specific:
+  `QuestProvider.Get` returns the classic entry for quests no journal or
+  Attune entry knows; `Giver` / `Turnin` use the classic NPC's position
+  (learned facts, the shipped catalogue and journal / Attune pins still
+  win; a journal giver named like the classic NPC gets its position);
+  `RequiredItems` falls back to the classic items; `QuestsRewarding` adds
+  classic quests this character can take; `Search` finds classic titles;
+  `StateLabel` locks a quest until each prerequisite group has a completed
+  member; `Describe` says "(classic data)".
+- **Classic questlines**: `QuestProvider.ClassicQuestline` turns the
+  prerequisite chain into the same shape as an Attune questline, so quest
+  goals and quest-reward items plan along any classic chain ("First pick up
+  Gather Hides from Ranger Bob in Elwynn Forest (step 1 of 4 of The Final
+  Test chain, ...)"), with waypoints, the chain's items on the tree and the
+  shopping list. A ForeverDungeonJournal chain still wins for its quests.
+- Classic quest rewards are planned as a questline only for items that
+  bind on pickup or are quest items (`Planner.BindType`), or that have no
+  other route, so a potion an old quest also rewards is still bought.
+- **Classic reputation quests**: `ReputationProvider.QuestsFor(name,
+  factionID)` adds every classic quest this character can take that rewards
+  the faction, so reputation goals and the Reputations and Quests screens
+  list them.
+- `/fp status` reports the classic data (or why it is not loaded).
+
 ## 0.17.3 (2026-10-18) - click any attunement step for its summary
 
 ### Added

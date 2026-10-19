@@ -325,14 +325,22 @@ function ReputationProvider.QuestRewards()
 end
 
 -- Quests that reward reputation with a faction, each with its live state.
-function ReputationProvider.QuestsFor(factionName)
+-- factionID (optional) adds the classic quests that reward the faction.
+function ReputationProvider.QuestsFor(factionName, factionID)
   local list = ReputationProvider.QuestRewards()[factionName] or {}
   local QP = ns.QuestProvider
-  local out = {}
-  for _, source in ipairs(list) do
+  local out, seen = {}, {}
+  local function add(source)
+    if seen[source.questID] or not source.entry then return end
+    seen[source.questID] = true
     local state = QP and QP.State(source.questID) or { completed = false, inLog = false }
     out[#out + 1] = { questID = source.questID, amount = source.amount, entry = source.entry, name = source.entry.name, state = state,
-      label = QP and QP.StateLabel(state, source.entry) or "?" }
+      label = QP and QP.StateLabel(state, source.entry) or "?", classic = source.entry.classic or nil }
+  end
+  for _, source in ipairs(list) do add(source) end
+  local CDB = ns.ClassicDB
+  if factionID and CDB and CDB.IsAvailable() then
+    for _, source in ipairs(CDB.ReputationQuests(factionID)) do add(source) end
   end
   return out
 end
@@ -466,7 +474,7 @@ function ReputationProvider.Describe(factionID, nameOf)
   local record = ReputationProvider.Get(factionID)
   if not record then return { "Unknown faction " .. tostring(factionID) } end
   local lines = { string.format("%s: %s (%d / %d into it)", record.name, record.standingLabel, record.into or 0, record.span or 0) }
-  for _, quest in ipairs(ReputationProvider.QuestsFor(record.name)) do
+  for _, quest in ipairs(ReputationProvider.QuestsFor(record.name, record.factionID)) do
     lines[#lines + 1] = string.format("  Quest %s: +%d [%s]", quest.name, quest.amount, quest.label)
   end
   for _, tier in ipairs(ReputationProvider.Rewards(factionID)) do

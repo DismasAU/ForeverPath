@@ -1,0 +1,4 @@
+# The downloaded classic-db snapshot, its SQLite working copy and the run report.
+# Only ForeverPath_ClassicDB/*.lua (and maps.json, which the classic build reads) are committed.
+cache/
+last-run.json

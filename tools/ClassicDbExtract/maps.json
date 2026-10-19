@@ -1,0 +1,2222 @@
+{
+  "build": "1.60.1.70450",
+  "uiMaps": [
+    {
+      "id": 947,
+      "name": "Azeroth",
+      "parent": 0,
+      "type": 1
+    },
+    {
+      "id": 1411,
+      "name": "Durotar",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1412,
+      "name": "Mulgore",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1413,
+      "name": "The Barrens",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1414,
+      "name": "Kalimdor",
+      "parent": 947,
+      "type": 2
+    },
+    {
+      "id": 1415,
+      "name": "Eastern Kingdoms",
+      "parent": 947,
+      "type": 2
+    },
+    {
+      "id": 1416,
+      "name": "Alterac Mountains",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1417,
+      "name": "Arathi Highlands",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1418,
+      "name": "Badlands",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1419,
+      "name": "Blasted Lands",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1420,
+      "name": "Tirisfal Glades",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1421,
+      "name": "Silverpine Forest",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1422,
+      "name": "Western Plaguelands",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1423,
+      "name": "Eastern Plaguelands",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1424,
+      "name": "Hillsbrad Foothills",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1425,
+      "name": "The Hinterlands",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1426,
+      "name": "Dun Morogh",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1427,
+      "name": "Searing Gorge",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1428,
+      "name": "Burning Steppes",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1429,
+      "name": "Elwynn Forest",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1430,
+      "name": "Deadwind Pass",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1431,
+      "name": "Duskwood",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1432,
+      "name": "Loch Modan",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1433,
+      "name": "Redridge Mountains",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1434,
+      "name": "Stranglethorn Vale",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1435,
+      "name": "Swamp of Sorrows",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1436,
+      "name": "Westfall",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1437,
+      "name": "Wetlands",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1438,
+      "name": "Teldrassil",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1439,
+      "name": "Darkshore",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1440,
+      "name": "Ashenvale",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1441,
+      "name": "Thousand Needles",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1442,
+      "name": "Stonetalon Mountains",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1443,
+      "name": "Desolace",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1444,
+      "name": "Feralas",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1445,
+      "name": "Dustwallow Marsh",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1446,
+      "name": "Tanaris",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1447,
+      "name": "Azshara",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1448,
+      "name": "Felwood",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1449,
+      "name": "Un\u0027Goro Crater",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1450,
+      "name": "Moonglade",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1451,
+      "name": "Silithus",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1452,
+      "name": "Winterspring",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1453,
+      "name": "Stormwind City",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1454,
+      "name": "Orgrimmar",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1455,
+      "name": "Ironforge",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1456,
+      "name": "Thunder Bluff",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1457,
+      "name": "Darnassus",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 1458,
+      "name": "Undercity",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 1459,
+      "name": "Alterac Valley",
+      "parent": 1424,
+      "type": 6
+    },
+    {
+      "id": 1460,
+      "name": "Warsong Gulch",
+      "parent": 1413,
+      "type": 6
+    },
+    {
+      "id": 1461,
+      "name": "Arathi Basin",
+      "parent": 1417,
+      "type": 6
+    },
+    {
+      "id": 1463,
+      "name": "Eastern Kingdoms",
+      "parent": 0,
+      "type": 2
+    },
+    {
+      "id": 1464,
+      "name": "Kalimdor",
+      "parent": 0,
+      "type": 2
+    },
+    {
+      "id": 2482,
+      "name": "Mount Hyjal",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 2521,
+      "name": "Zephras Isle",
+      "parent": 947,
+      "type": 3
+    },
+    {
+      "id": 2524,
+      "name": "Darkspear Islands",
+      "parent": 1414,
+      "type": 6
+    },
+    {
+      "id": 2548,
+      "name": "Riverglades",
+      "parent": 1415,
+      "type": 3
+    },
+    {
+      "id": 2652,
+      "name": "Shen\u0027dralas",
+      "parent": 1414,
+      "type": 3
+    },
+    {
+      "id": 2665,
+      "name": "Zephras Isle",
+      "parent": 0,
+      "type": 3
+    }
+  ],
+  "assignments": [
+    {
+      "uiMapID": 947,
+      "mapID": 1,
+      "areaID": 0,
+      "order": 0,
+      "uiMin": [
+        0.0399,
+        0.0855
+      ],
+      "uiMax": [
+        0.4083,
+        0.9234
+      ],
+      "region": [
+        -12800,
+        -9600,
+        -1000000,
+        12266.7002,
+        6933.2998,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 947,
+      "mapID": 0,
+      "areaID": 0,
+      "order": 1,
+      "uiMin": [
+        0.5505,
+        0.0994
+      ],
+      "uiMax": [
+        0.8966,
+        0.8691
+      ],
+      "region": [
+        -16000,
+        -7466.7002,
+        -1000000,
+        6933.2998,
+        8000,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1411,
+      "mapID": 1,
+      "areaID": 14,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -1716.6666,
+        -7249.9995,
+        -1000000,
+        1808.3333,
+        -1962.4999,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1412,
+      "mapID": 1,
+      "areaID": 215,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -3835.416,
+        -3675,
+        -1000000,
+        266.666,
+        2479.167,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1413,
+      "mapID": 1,
+      "areaID": 17,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -5143.75,
+        -7510.4165,
+        -1000000,
+        1612.4999,
+        2622.9165,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1414,
+      "mapID": 1,
+      "areaID": 0,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -11733.2998,
+        -19733.2109,
+        -1000000,
+        12799.9004,
+        17066.5996,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1415,
+      "mapID": 0,
+      "areaID": 0,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -16000,
+        -19199.9004,
+        -1000000,
+        7466.6001,
+        16000,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1416,
+      "mapID": 0,
+      "areaID": 36,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -366.6667,
+        -2016.6666,
+        -1000000,
+        1500,
+        783.3333,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1417,
+      "mapID": 0,
+      "areaID": 45,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -2533.3333,
+        -4466.6665,
+        -1000000,
+        -133.3333,
+        -866.6666,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1418,
+      "mapID": 0,
+      "areaID": 3,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -7547.9165,
+        -4566.6665,
+        -1000000,
+        -5889.583,
+        -2079.1665,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1419,
+      "mapID": 0,
+      "areaID": 4,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -12800,
+        -4591.6665,
+        -1000000,
+        -10566.666,
+        -1241.6666,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1420,
+      "mapID": 0,
+      "areaID": 85,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        824.9999,
+        -1485.4166,
+        -1000000,
+        3837.4998,
+        3033.3333,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1421,
+      "mapID": 0,
+      "areaID": 130,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -1133.3333,
+        -750,
+        -1000000,
+        1666.6666,
+        3449.9998,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1422,
+      "mapID": 0,
+      "areaID": 28,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        500,
+        -3883.3333,
+        -1000000,
+        3366.6665,
+        416.6667,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1423,
+      "mapID": 0,
+      "areaID": 139,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        825,
+        -6558.334,
+        -1000000,
+        3691.667,
+        -2256.25,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1424,
+      "mapID": 0,
+      "areaID": 267,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -1733.3333,
+        -2133.3333,
+        -1000000,
+        400,
+        1066.6666,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1425,
+      "mapID": 0,
+      "areaID": 47,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -1100,
+        -5425,
+        -1000000,
+        1466.6666,
+        -1575,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1426,
+      "mapID": 0,
+      "areaID": 1,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -7160.4165,
+        -3122.9165,
+        -1000000,
+        -3877.0833,
+        1802.0833,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1427,
+      "mapID": 0,
+      "areaID": 51,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -7587.4995,
+        -2554.1665,
+        -1000000,
+        -6100,
+        -322.9167,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1428,
+      "mapID": 0,
+      "areaID": 46,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -8983.333,
+        -3195.8333,
+        -1000000,
+        -7031.2495,
+        -266.6667,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1429,
+      "mapID": 0,
+      "areaID": 12,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -10254.166,
+        -1935.4166,
+        -1000000,
+        -7939.583,
+        1535.4166,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1430,
+      "mapID": 0,
+      "areaID": 41,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -11533.333,
+        -3333.3333,
+        -1000000,
+        -9866.666,
+        -833.3333,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1431,
+      "mapID": 0,
+      "areaID": 10,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -11516.666,
+        -1866.6666,
+        -1000000,
+        -9716.666,
+        833.3333,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1432,
+      "mapID": 0,
+      "areaID": 38,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -6327.083,
+        -4752.083,
+        -1000000,
+        -4487.5,
+        -1993.7499,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1433,
+      "mapID": 0,
+      "areaID": 44,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -10022.916,
+        -3852.084,
+        -1000000,
+        -8575,
+        -1681.25,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1434,
+      "mapID": 0,
+      "areaID": 33,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -15422.916,
+        -4160.4165,
+        -1000000,
+        -11168.75,
+        2220.8333,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1435,
+      "mapID": 0,
+      "areaID": 8,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -11150,
+        -4516.6665,
+        -1000000,
+        -9620.833,
+        -2222.9165,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1436,
+      "mapID": 0,
+      "areaID": 40,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -11733.333,
+        -483.3333,
+        -1000000,
+        -9400,
+        3016.6665,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1437,
+      "mapID": 0,
+      "areaID": 11,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -4904.1665,
+        -4525,
+        -1000000,
+        -2147.9165,
+        -389.5833,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1438,
+      "mapID": 1,
+      "areaID": 141,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        8437.5,
+        -1277.0833,
+        -1000000,
+        11831.25,
+        3814.5833,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1439,
+      "mapID": 1,
+      "areaID": 148,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        3966.6665,
+        -3608.3333,
+        -1000000,
+        8333.333,
+        2941.6665,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1440,
+      "mapID": 1,
+      "areaID": 331,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        829.1666,
+        -4066.6665,
+        -1000000,
+        4672.9165,
+        1699.9999,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1441,
+      "mapID": 1,
+      "areaID": 400,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -6899.9995,
+        -4833.333,
+        -1000000,
+        -3966.6665,
+        -433.3333,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1442,
+      "mapID": 1,
+      "areaID": 406,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -339.5833,
+        -1637.4999,
+        -1000000,
+        2916.6665,
+        3245.8333,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1443,
+      "mapID": 1,
+      "areaID": 405,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -2545.8333,
+        -262.5,
+        -1000000,
+        452.0833,
+        4233.333,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1444,
+      "mapID": 1,
+      "areaID": 357,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -6999.9995,
+        -1508.3333,
+        -1000000,
+        -2366.6665,
+        5441.6665,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1445,
+      "mapID": 1,
+      "areaID": 15,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -5533.333,
+        -6225,
+        -1000000,
+        -2033.3333,
+        -974.9999,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1446,
+      "mapID": 1,
+      "areaID": 440,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -10475,
+        -7118.7495,
+        -1000000,
+        -5875,
+        -218.75,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1447,
+      "mapID": 1,
+      "areaID": 16,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        1960.4166,
+        -8347.916,
+        -1000000,
+        5341.6665,
+        -3277.0833,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1448,
+      "mapID": 1,
+      "areaID": 361,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        3299.9998,
+        -4108.333,
+        -1000000,
+        7133.333,
+        1641.6666,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1449,
+      "mapID": 1,
+      "areaID": 490,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -8433.333,
+        -3166.6665,
+        -1000000,
+        -5966.6665,
+        533.3333,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1450,
+      "mapID": 1,
+      "areaID": 493,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        6952.083,
+        -3689.5833,
+        -1000000,
+        8491.666,
+        -1381.25,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1451,
+      "mapID": 1,
+      "areaID": 1377,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -8281.25,
+        -945.834,
+        -1000000,
+        -5958.334,
+        2537.5,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1452,
+      "mapID": 1,
+      "areaID": 618,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        3799.9998,
+        -7416.6665,
+        -1000000,
+        8533.333,
+        -316.6667,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1453,
+      "mapID": 0,
+      "areaID": 1519,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -9154.1699,
+        -14.584,
+        -1000000,
+        -7995.8301,
+        1722.92,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1454,
+      "mapID": 1,
+      "areaID": 1637,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        1338.4606,
+        -5083.2056,
+        -1000000,
+        2273.8772,
+        -3680.6011,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1455,
+      "mapID": 0,
+      "areaID": 1537,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -5096.8457,
+        -1504.2164,
+        -1000000,
+        -4569.2412,
+        -713.5914,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1456,
+      "mapID": 1,
+      "areaID": 1638,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -1545.8333,
+        -527.0833,
+        -1000000,
+        -849.9999,
+        516.6666,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1457,
+      "mapID": 1,
+      "areaID": 1657,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        9532.5869,
+        1880.0295,
+        -1000000,
+        10238.3164,
+        2938.3628,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1458,
+      "mapID": 0,
+      "areaID": 1497,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        1237.8412,
+        -86.1824,
+        -1000000,
+        1877.9453,
+        873.1926,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1459,
+      "mapID": 30,
+      "areaID": 2597,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -1739.5833,
+        -2456.25,
+        -1000000,
+        1085.4166,
+        1781.2499,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1460,
+      "mapID": 489,
+      "areaID": 3277,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        862.4999,
+        895.8333,
+        -1000000,
+        1627.0833,
+        2041.6666,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1461,
+      "mapID": 529,
+      "areaID": 3358,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        337.5,
+        102.0833,
+        -1000000,
+        1508.3333,
+        1858.3333,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1463,
+      "mapID": 0,
+      "areaID": 0,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -15980,
+        -11880,
+        -1000000,
+        5817,
+        9917,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 1464,
+      "mapID": 1,
+      "areaID": 0,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -11870,
+        -13370,
+        -1000000,
+        12470,
+        10970,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 2482,
+      "mapID": 1,
+      "areaID": 616,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        3989.583,
+        -4395.834,
+        -1000000,
+        6304.166,
+        -922.916,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 2521,
+      "mapID": 2991,
+      "areaID": 16593,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        1247.917,
+        -1331.25,
+        -1000000,
+        4956.25,
+        4231.25,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 2524,
+      "mapID": 2997,
+      "areaID": 16606,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -835.416,
+        993.75,
+        -1000000,
+        447.916,
+        2918.75,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 2548,
+      "mapID": 0,
+      "areaID": 16591,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -9700,
+        -6741.666,
+        -1000000,
+        -6466.666,
+        -1891.666,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 2652,
+      "mapID": 1,
+      "areaID": 16651,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        -3266.666,
+        -25,
+        -1000000,
+        -1900,
+        2025,
+        1000000
+      ]
+    },
+    {
+      "uiMapID": 2665,
+      "mapID": 2991,
+      "areaID": 0,
+      "order": 0,
+      "uiMin": [
+        0,
+        0
+      ],
+      "uiMax": [
+        1,
+        1
+      ],
+      "region": [
+        1247.92,
+        -1331.25,
+        -1000000,
+        4956.25,
+        4231.25,
+        1000000
+      ]
+    }
+  ],
+  "maps": [
+    {
+      "id": 0,
+      "name": "Eastern Kingdoms",
+      "directory": "Azeroth",
+      "instanceType": 0,
+      "maxPlayers": 0
+    },
+    {
+      "id": 1,
+      "name": "Kalimdor",
+      "directory": "Kalimdor",
+      "instanceType": 0,
+      "maxPlayers": 0
+    },
+    {
+      "id": 13,
+      "name": "Test Dungeon",
+      "directory": "test",
+      "instanceType": 1,
+      "maxPlayers": 0
+    },
+    {
+      "id": 25,
+      "name": "Scott Test",
+      "directory": "ScottTest",
+      "instanceType": 0,
+      "maxPlayers": 0
+    },
+    {
+      "id": 29,
+      "name": "CashTest",
+      "directory": "TEST_01",
+      "instanceType": 1,
+      "maxPlayers": 10
+    },
+    {
+      "id": 30,
+      "name": "Alterac Valley",
+      "directory": "PVPZone01",
+      "instanceType": 3,
+      "maxPlayers": 0
+    },
+    {
+      "id": 33,
+      "name": "Shadowfang Keep",
+      "directory": "Shadowfang",
+      "instanceType": 1,
+      "maxPlayers": 10
+    },
+    {
+      "id": 34,
+      "name": "Stormwind Stockade",
+      "directory": "StormwindJail",
+      "instanceType": 1,
+      "maxPlayers": 10
+    },
+    {
+      "id": 35,
+      "name": "\u003Cunused\u003EStormwindPrison",
+      "directory": "StormwindPrison",
+      "instanceType": 0,
+      "maxPlayers": 0
+    },
+    {
+      "id": 36,
+      "name": "Deadmines",
+      "directory": "DeadminesInstance",
+      "instanceType": 1,
+      "maxPlayers": 10
+    },
+    {
+      "id": 37,
+      "name": "Azshara Crater",
+      "directory": "PVPZone02",
+      "instanceType": 0,
+      "maxPlayers": 0
+    },
+    {
+      "id": 42,
+      "name": "Collin\u0027s Test",
+      "directory": "Collin",
+      "instanceType": 0,
+      "maxPlayers": 0
+    },
+    {
+      "id": 43,
+      "name": "Wailing Caverns",
+      "directory": "WailingCaverns",
+      "instanceType": 1,
+      "maxPlayers": 10
+    },
+    {
+      "id": 44,
+      "name": "\u003Cunused\u003E Monastery",
+      "directory": "Monastery",
+      "instanceType": 1,
+      "maxPlayers": 10
+    },
+    {
+      "id": 47,
+      "name": "Razorfen Kraul",
+      "directory": "RazorfenKraulInstance",
+      "instanceType": 1,
+      "maxPlayers": 10
+    },
+    {
+      "id": 48,
+      "name": "Blackfathom Deeps",
+      "directory": "Blackfathom",
+      "instanceType": 1,
+      "maxPlayers": 10
+    },
+    {
+      "id": 70,
+      "name": "Uldaman",
+      "directory": "Uldaman",
+      "instanceType": 1,
+      "maxPlayers": 10
+    },
+    {
+      "id": 90,
+      "name": "Gnomeregan",
+      "directory": "GnomeragonInstance",
+      "instanceType": 1,
+      "maxPlayers": 10
+    },
+    {
+      "id": 109,
+      "name": "Sunken Temple",
+      "directory": "SunkenTemple",
+      "instanceType": 1,
+      "maxPlayers": 20
+    },
+    {
+      "id": 129,
+      "name": "Razorfen Downs",
+      "directory": "RazorfenDowns",
+      "instanceType": 1,
+      "maxPlayers": 10
+    },
+    {
+      "id": 169,
+      "name": "Emerald Dream",
+      "directory": "EmeraldDream",
+      "instanceType": 2,
+      "maxPlayers": 40
+    },
+    {
+      "id": 189,
+      "name": "Scarlet Monastery",
+      "directory": "MonasteryInstances",
+      "instanceType": 1,
+      "maxPlayers": 10
+    },
+    {
+      "id": 209,
+      "name": "Zul\u0027Farrak",
+      "directory": "TanarisInstance",
+      "instanceType": 1,
+      "maxPlayers": 10
+    },
+    {
+      "id": 229,
+      "name": "Blackrock Spire",
+      "directory": "BlackRockSpire",
+      "instanceType": 1,
+      "maxPlayers": 10
+    },
+    {
+      "id": 230,
+      "name": "Blackrock Depths",
+      "directory": "BlackrockDepths",
+      "instanceType": 1,
+      "maxPlayers": 5
+    },
+    {
+      "id": 249,
+      "name": "Onyxia\u0027s Lair",
+      "directory": "OnyxiaLairInstance",
+      "instanceType": 2,
+      "maxPlayers": 40
+    },
+    {
+      "id": 269,
+      "name": "Caverns of Time",
+      "directory": "CavernsOfTime",
+      "instanceType": 1,
+      "maxPlayers": 10
+    },
+    {
+      "id": 289,
+      "name": "Scholomance",
+      "directory": "SchoolofNecromancy",
+      "instanceType": 1,
+      "maxPlayers": 5
+    },
+    {
+      "id": 309,
+      "name": "Zul\u0027Gurub",
+      "directory": "Zul\u0027gurub",
+      "instanceType": 2,
+      "maxPlayers": 20
+    },
+    {
+      "id": 329,
+      "name": "Stratholme",
+      "directory": "Stratholme",
+      "instanceType": 1,
+      "maxPlayers": 5
+    },
+    {
+      "id": 349,
+      "name": "Maraudon",
+      "directory": "Mauradon",
+      "instanceType": 1,
+      "maxPlayers": 10
+    },
+    {
+      "id": 369,
+      "name": "Deeprun Tram",
+      "directory": "DeeprunTram",
+      "instanceType": 0,
+      "maxPlayers": 0
+    },
+    {
+      "id": 389,
+      "name": "Ragefire Chasm",
+      "directory": "OrgrimmarInstance",
+      "instanceType": 1,
+      "maxPlayers": 10
+    },
+    {
+      "id": 409,
+      "name": "Molten Core",
+      "directory": "MoltenCore",
+      "instanceType": 2,
+      "maxPlayers": 40
+    },
+    {
+      "id": 429,
+      "name": "Dire Maul",
+      "directory": "DireMaul",
+      "instanceType": 1,
+      "maxPlayers": 5
+    },
+    {
+      "id": 449,
+      "name": "Alliance PVP Barracks",
+      "directory": "AlliancePVPBarracks",
+      "instanceType": 0,
+      "maxPlayers": 0
+    },
+    {
+      "id": 450,
+      "name": "Horde PVP Barracks",
+      "directory": "HordePVPBarracks",
+      "instanceType": 0,
+      "maxPlayers": 0
+    },
+    {
+      "id": 469,
+      "name": "Blackwing Lair",
+      "directory": "BlackwingLair",
+      "instanceType": 2,
+      "maxPlayers": 40
+    },
+    {
+      "id": 489,
+      "name": "Warsong Gulch",
+      "directory": "PVPZone03",
+      "instanceType": 3,
+      "maxPlayers": 0
+    },
+    {
+      "id": 509,
+      "name": "Ruins of Ahn\u0027Qiraj",
+      "directory": "AhnQiraj",
+      "instanceType": 2,
+      "maxPlayers": 20
+    },
+    {
+      "id": 529,
+      "name": "Arathi Basin",
+      "directory": "PVPZone04",
+      "instanceType": 3,
+      "maxPlayers": 0
+    },
+    {
+      "id": 531,
+      "name": "Ahn\u0027Qiraj Temple",
+      "directory": "AhnQirajTemple",
+      "instanceType": 2,
+      "maxPlayers": 40
+    },
+    {
+      "id": 533,
+      "name": "Naxxramas",
+      "directory": "Stratholme Raid",
+      "instanceType": 2,
+      "maxPlayers": 40
+    },
+    {
+      "id": 2720,
+      "name": "The Searing Basin",
+      "directory": "2720",
+      "instanceType": 1,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2784,
+      "name": "Demon Fall Canyon",
+      "directory": "2784",
+      "instanceType": 1,
+      "maxPlayers": 5
+    },
+    {
+      "id": 2789,
+      "name": "The Tainted Scar",
+      "directory": "2789",
+      "instanceType": 2,
+      "maxPlayers": 40
+    },
+    {
+      "id": 2791,
+      "name": "Storm Cliffs",
+      "directory": "2791",
+      "instanceType": 2,
+      "maxPlayers": 40
+    },
+    {
+      "id": 2804,
+      "name": "The Crystal Vale",
+      "directory": "2804",
+      "instanceType": 2,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2806,
+      "name": "Shadow Hold",
+      "directory": "2806",
+      "instanceType": 1,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2807,
+      "name": "Burning of Andorhal",
+      "directory": "2807",
+      "instanceType": 1,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2817,
+      "name": "Starfall Barrow Den",
+      "directory": "2817",
+      "instanceType": 1,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2832,
+      "name": "Nightmare Grove",
+      "directory": "2832",
+      "instanceType": 2,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2853,
+      "name": "Deadwind Pass",
+      "directory": "2853",
+      "instanceType": 1,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2856,
+      "name": "Scarlet Enclave",
+      "directory": "2856",
+      "instanceType": 2,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2868,
+      "name": "Eastern Plaguelands (Scarlet Raid Phase)",
+      "directory": "2868",
+      "instanceType": 0,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2875,
+      "name": "Karazhan Crypts",
+      "directory": "2875",
+      "instanceType": 1,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2902,
+      "name": "The Scarab Dais",
+      "directory": "2902",
+      "instanceType": 1,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2921,
+      "name": "Naxxramas",
+      "directory": "2921",
+      "instanceType": 1,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2959,
+      "name": "City of Dalaran",
+      "directory": "2959",
+      "instanceType": 1,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2980,
+      "name": "Dalaran City",
+      "directory": "2980",
+      "instanceType": 0,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2991,
+      "name": "Zephras Isle",
+      "directory": "2991",
+      "instanceType": 0,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2995,
+      "name": "Hyjal Crater",
+      "directory": "2995",
+      "instanceType": 0,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2996,
+      "name": "Warsong Gulch (Winter)",
+      "directory": "2996",
+      "instanceType": 0,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2997,
+      "name": "Darkspear Islands",
+      "directory": "2997",
+      "instanceType": 3,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2998,
+      "name": "Excavation Site: Wetlands",
+      "directory": "2998",
+      "instanceType": 1,
+      "maxPlayers": 0
+    },
+    {
+      "id": 2999,
+      "name": "Ruins of Lordaeron",
+      "directory": "2999",
+      "instanceType": 1,
+      "maxPlayers": 0
+    },
+    {
+      "id": 3005,
+      "name": "Battle for Gilneas",
+      "directory": "3005",
+      "instanceType": 3,
+      "maxPlayers": 0
+    },
+    {
+      "id": 3021,
+      "name": "Eastern Kingdoms Preserved",
+      "directory": "3021",
+      "instanceType": 0,
+      "maxPlayers": 0
+    },
+    {
+      "id": 3065,
+      "name": "The Hall of Thanes",
+      "directory": "3065",
+      "instanceType": 1,
+      "maxPlayers": 0
+    },
+    {
+      "id": 3104,
+      "name": "nothing to see here",
+      "directory": "3104",
+      "instanceType": 0,
+      "maxPlayers": 0
+    },
+    {
+      "id": 3109,
+      "name": "Manor Mistmantle",
+      "directory": "3109",
+      "instanceType": 1,
+      "maxPlayers": 0
+    },
+    {
+      "id": 3217,
+      "name": "Dalaran Skycuter",
+      "directory": "3217",
+      "instanceType": 0,
+      "maxPlayers": 0
+    },
+    {
+      "id": 3218,
+      "name": "Mulgore Skycuter",
+      "directory": "3218",
+      "instanceType": 0,
+      "maxPlayers": 0
+    }
+  ]
+}

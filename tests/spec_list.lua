@@ -30,6 +30,7 @@ return {
   "reputation_spec",
   "enchant_goals_spec",
   "questline_spec",
+  "classic_db_spec",
   "bootstrap_spec",
   "ui_spec",
 }

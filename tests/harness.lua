@@ -184,6 +184,16 @@ function Harness.loadAddon(root)
   return ns
 end
 
+-- Runs the ForeverPath_ClassicDB files (as the client would on LoadAddOn).
+function Harness.loadClassicDB(root)
+  local addonDir = (root or Harness.root) .. "/ForeverPath_ClassicDB"
+  for _, rel in ipairs(Harness.tocFiles(addonDir .. "/ForeverPath_ClassicDB.toc")) do
+    local chunk, err = loadfile(addonDir .. "/" .. rel)
+    if not chunk then error("compile error in ForeverPath_ClassicDB/" .. rel .. ": " .. tostring(err)) end
+    chunk("ForeverPath_ClassicDB", {})
+  end
+end
+
 -- Fresh client state plus a freshly loaded addon. opts.setup runs after the
 -- mock reset and before the addon files execute (to remove APIs, seed data).
 function Harness.fresh(opts)

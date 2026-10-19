@@ -251,7 +251,7 @@ local function Create(parent)
       s.toTarget:SetText(string.format("%d reputation to %s", progress.remaining, progress.targetLabel))
     end
     -- Quests
-    local quests = RP.QuestsFor(record.name)
+    local quests = RP.QuestsFor(record.name, record.factionID)
     local shown = 0
     for _, quest in ipairs(quests) do
       if shown < MAX_QUESTS then
