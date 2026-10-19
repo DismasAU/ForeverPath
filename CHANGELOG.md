@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.23.1 (2026-10-19) - readable route options
+
+### Fixed
+- The "Ways to get" option cards in the selected-node panel no longer cut
+  their text off: the title and detail wrap, and each card grows to fit them.
+
 ## 0.23.0 (2026-10-19) - Questie bridge
 
 ### Added

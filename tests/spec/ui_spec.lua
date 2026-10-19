@@ -411,6 +411,20 @@ describe("UI shell and screens (mock widgets)", function()
     assert_true(tree.side.cards[1].best:IsShown())
     assert_match(tree.side.cards[1].cost:GetText(), "current")
     assert_match(tree.side.cards[2].title:GetText(), "Auction House")
+    -- Option text wraps inside the card and the card grows to fit it.
+    for i = 1, 2 do
+      local card = tree.side.cards[i]
+      assert_true(card.detail.wordWrap, "detail wraps")
+      assert_true(card.title.wordWrap, "title wraps")
+      assert_true(card.detail:GetWidth() > 0)
+      assert_true(card:GetHeight() >= 5 + card.title:GetStringHeight() + 2 + card.detail:GetStringHeight(), "card fits its text")
+    end
+    local card = tree.side.cards[1]
+    local oneLine = card:GetHeight()
+    card.detail:SetText("You can learn it - 1 Large Glimmering Shard, 2 Strange Dust, 4 Lesser Astral Essence per craft")
+    card:Fit()
+    assert_true(card.detail:GetStringHeight() > 12, "a long reagent list takes more than one line")
+    assert_true(card:GetHeight() > oneLine, "and the card grows to show all of it")
     assert_eq(tree.side.use.label:GetText(), "Use buying route")
     assert_false(tree.side.reset:IsShown())
 

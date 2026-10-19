@@ -16,6 +16,7 @@ local GUIDE = 18
 local SIDE = 252
 local COLS = { have = 44, status = 70, via = 104, cost = 62 }
 local MAX_OPTIONS = 3
+local CARD_WIDTH = SIDE - 24 -- the side panel less its 12 px insets
 
 local STATUS_BADGE = { have = { "Have", "ok" }, partial = { "Partial", "partial" }, missing = { "Missing", "missing" } }
 
@@ -314,19 +315,29 @@ local function createOptionCard(parent, index, tree)
   local highlight = card:CreateTexture(nil, "HIGHLIGHT")
   highlight:SetAllPoints(card)
   Widgets.SetColor(highlight, C.white, 0.03)
-  card.title = Widgets.Text(card, "body", "")
+  -- Title and detail wrap: the card grows to fit them, nothing is cut off.
+  card.title = Widgets.Text(card, "body", "", { wrap = true })
   card.title:SetPoint("TOPLEFT", card, "TOPLEFT", 10, -5)
-  card.detail = Widgets.Text(card, "small", "")
-  card.detail:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 10, 5)
-  card.detail:SetPoint("RIGHT", card, "RIGHT", -10, 0)
+  card.detail = Widgets.Text(card, "small", "", { wrap = true })
+  card.detail:SetPoint("TOPLEFT", card.title, "BOTTOMLEFT", 0, -2)
   card.cost = Widgets.Text(card, "secondary", "", { justify = "RIGHT", color = C.text3 })
   card.cost:SetPoint("TOPRIGHT", card, "TOPRIGHT", -10, -5)
   card.best = Widgets.Badge(card, "Best", "gold")
   card.best:SetPoint("TOPRIGHT", card, "TOPRIGHT", -6, 6)
-  card.title:SetPoint("RIGHT", card.cost, "LEFT", -6, 0)
   card:SetScript("OnClick", function(self)
     if self.option and self.node then tree:ApplyRoute(self.node, self.option) end
   end)
+
+  -- Explicit widths so the wrapped heights are known straight after SetText.
+  function card:Fit()
+    local inner = CARD_WIDTH - 20
+    local costWidth = self.cost:GetText() ~= "" and math.ceil(self.cost:GetStringWidth() or 0) + 6 or 0
+    self.title:SetWidth(math.max(60, inner - costWidth))
+    self.detail:SetWidth(inner)
+    local titleHeight = math.max(12, math.ceil(self.title:GetStringHeight() or 0))
+    local detailHeight = self.detail:GetText() ~= "" and math.ceil(self.detail:GetStringHeight() or 0) or 0
+    self:SetHeight(math.max(38, 5 + titleHeight + 2 + detailHeight + 6))
+  end
   return card
 end
 
@@ -525,6 +536,7 @@ local function createSide(view, tree)
           costText = isCurrent and Theme.ColorText("gold", "current") or Theme.ColorText("text3", option.unavailable and "no gatherer" or "no price")
         end
         card.cost:SetText(costText)
+        card:Fit()
         if best then
           Widgets.SetBackdrop(card, Theme.RGB("#2B2619"), C.gold)
           card.best:Show()

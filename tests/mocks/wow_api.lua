@@ -159,6 +159,14 @@ function Widget:SetText(text)
 end
 function Widget:GetText() return self.text end
 function Widget:GetStringWidth() return #(self.text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")) * 6 end
+-- Wrapped height: 6 px per character, 12 px lines, over the set width when wrapping.
+function Widget:SetWordWrap(wrap) self.wordWrap = wrap end
+function Widget:GetStringHeight()
+  if self.text == "" then return 0 end
+  local w = self:GetStringWidth()
+  if not self.wordWrap or (self.width or 0) <= 0 then return 12 end
+  return math.ceil(w / self.width) * 12
+end
 function Widget:SetAlpha(alpha) self.alpha = alpha end
 function Widget:GetAlpha() return self.alpha or 1 end
 function Widget:SetFrameLevel(level) self.frameLevel = level end
