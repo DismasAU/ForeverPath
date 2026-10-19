@@ -59,6 +59,14 @@ client. Behaviour (return values, timing) is only verified where stated.
 | `GameTooltip:SetItemByID` | Widgets | Retail API | Guarded with pcall; falls back to a plain name tooltip |
 | `Enum.CraftingReagentType.Basic` (=1), `Enum.BankType.Character` (=0), `Enum.BagIndex.ReagentBag` (=5) | Compat | `Enum.BagIndex` in dump; the other two from Retail 12.x docs | Fallback constants used when the enum is missing |
 
+## 0.23.0
+
+| Function | Used for | Evidence |
+|---|---|---|
+| `QuestieLoader:ImportModule("QuestieDB")`: `GetQuest(id)`, `:GetNPC(id)`, `:GetObject(id)`, `:GetItem(id)` | the Questie bridge | Questie master (2026-10-19), `Database/QuestieDB.lua` and `test/QuestieDBMetaMock.lua` for the field layouts. **Unverified** against an installed Questie on Forever |
+| `QuestieLoader:ImportModule("ZoneDB"):GetUiMapIdByAreaId(areaID)` | placing Questie spawns on zone maps | `Database/Zones/zoneDB.lua` |
+| `C_Map.GetMapInfo(uiMapID).name` | zone names for Questie positions | Retail API |
+
 ## 0.22.0
 
 | Function | Used for | Evidence |

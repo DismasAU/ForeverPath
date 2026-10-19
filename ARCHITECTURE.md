@@ -34,6 +34,7 @@ ForeverPath/
     SourceProvider.lua       item sources: vendors + item-class heuristics + DungeonJournal and AtlasLoot bridges
     AttuneProvider.lua       attunement chains from the Attune addon, progress from quest flags / log / level / bags / survey; questlines
     ClassicDBProvider.lua    classic-era quests, NPCs, objects and spawns (ForeverPath_ClassicDB, CMaNGOS classic-db): places, eligibility, indexes, chains
+    QuestieBridge.lua        Questie's quest database read at runtime (QuestieLoader modules), ranked between Forever data and classic data
     LootLearner.lua          what this account loots on Forever (LOOT_READY, GetLootSourceInfo), per creature / object / fishing zone; first in item sources
     QuestFactsProvider.lua   quest givers, turn-ins and item objectives learned at quest windows (account-wide) + the shipped catalogue
     PriceProvider.lua        pricing boundary: cheapest of registered sources, freshness, status
@@ -443,8 +444,11 @@ providers) calls `Compat.LoadAddOn` once; without the addon every classic
 call returns nothing and `Status` says why.
 
 Precedence for a quest fact, highest first: learned at a quest window
-(QuestFactsProvider), the shipped quest catalogue, ForeverDungeonJournal /
-Attune, classic data. `QuestProvider.Get` falls back to `ClassicDB.Quest`;
+(QuestFactsProvider, then shared imports), the shipped quest catalogue,
+ForeverDungeonJournal / Attune, Questie (when installed; read through
+`QuestieLoader:ImportModule("QuestieDB" / "ZoneDB")`, never stored),
+classic data. `QuestProvider.ChainTo` builds prerequisite chains over
+`QuestProvider.Get`, so a chain mixes Questie and classic entries. `QuestProvider.Get` falls back to `ClassicDB.Quest`;
 `Giver`, `Turnin`, `RequiredItems`, `QuestsRewarding`, `Search`,
 `StateLabel` and `Questline` consult it last (a journal pickup named like
 the classic NPC borrows the classic position; a journal chain suppresses the

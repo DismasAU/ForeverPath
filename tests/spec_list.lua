@@ -34,6 +34,7 @@ return {
   "loot_learner_spec",
   "farming_spec",
   "share_spec",
+  "questie_bridge_spec",
   "bootstrap_spec",
   "ui_spec",
 }

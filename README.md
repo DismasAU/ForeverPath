@@ -46,6 +46,7 @@ is built to take them without a rewrite (see `ARCHITECTURE.md`).
 | 0.15.1 quests that give reputation feed the Quests screen for reputation goals | Implemented, offline-tested, **not yet verified in game** |
 | 0.16.0 type-ahead suggestions for every goal kind (New Goal bar and header search); reputation goals for factions not met yet, from the client's faction table; the New Goal bar reflows when narrow | Implemented, offline-tested, **not yet verified in game** |
 | 0.16.1 Shift-click any item row to link it in chat or the Auction House search | Implemented, offline-tested, **not yet verified in game** |
+| 0.23.0 Questie bridge: with Questie installed, its quest database (givers, turn-ins, positions, items, chains) is read at runtime, behind Forever data and ahead of classic data | Implemented, offline-tested against Questie's documented data shapes, **not yet verified in game** (Questie's Forever port is not released) |
 | 0.22.0 share what you have learned: `/fp export` / `/fp import` move loot, quest givers, vendors and trainers between players; imports fill gaps behind your own data and never count twice | Implemented, offline-tested, **not yet verified in game** |
 | 0.21.0 farming estimates ("~16 kills of Wolf") on the overview and the shopping list, shopping list sorted by zone, `/fp train` lists what each profession can train now, where and for how much | Implemented, offline-tested, **not yet verified in game** |
 | 0.20.0 the loot learner (what you loot on Forever is recorded account-wide and listed before every database), every searchable item named from the client (11,094), "New in Forever" for items classic data does not know | Implemented, offline-tested, **not yet verified in game** |
@@ -104,6 +105,7 @@ and says so in the UI.
 | AtlasLootClassic (+ DungeonsAndRaids and Factions modules) | Boss and trash loot tables for drop sources; the items each reputation standing unlocks | Drop sources only from ForeverDungeonJournal; no faction rewards |
 | ForeverDungeonJournal | Forever-specific boss loot, dungeon quests with their prerequisite chains, quest givers and rewards (quest goals, the Quests screen), quests that give reputation | Drop sources only from AtlasLoot; the Quests screen lists only your log; no quest sources for reputation goals |
 | Attune | Attunement goals and the Attunements screen; attunement quests (givers, rewards) on the Quests screen | The Attunements screen explains that Attune is missing |
+| Questie (Forever port) | Quest givers, turn-ins and positions, required items and quest chains from its maintained database, ahead of the classic data | Classic data (ForeverPath_ClassicDB) and what ForeverPath learns |
 | GearQuest Forever (+ its class module) | Per-slot upgrade hunts on the Equipment screen (best pick, other options, sources) and gear sources for obtain goals | The Equipment screen shows what is worn and your gear goals, without picks |
 
 ## Using ForeverPath

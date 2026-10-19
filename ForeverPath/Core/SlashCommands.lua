@@ -107,6 +107,7 @@ function handlers.status()
   Log.output("  " .. ns.ClassicDB.Status())
   Log.output("  " .. ns.LootLearner.Status())
   Log.output("  " .. ns.Share.Status())
+  Log.output("  " .. ns.QuestieBridge.Status())
   Log.output("  " .. ns.EquipmentProvider.Status())
   Log.output("  " .. ns.ReputationProvider.Status())
 end

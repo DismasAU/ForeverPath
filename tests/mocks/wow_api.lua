@@ -530,6 +530,19 @@ function Mock.CloseQuestWindow()
   Mock.FireEvent("QUEST_FINISHED")
 end
 
+-- A minimal Questie: data = { quests = { [id] = Quest }, npcs = { [id] = NPC }, objects, items, zones = { [areaID] = uiMapID } }
+-- in the shapes QuestieDB.GetQuest / QuestieDB:GetNPC / :GetObject / :GetItem and ZoneDB:GetUiMapIdByAreaId return.
+function Mock.InstallQuestie(data)
+  local QuestieDB, ZoneDB = {}, {}
+  function QuestieDB.GetQuest(id) return data.quests and data.quests[id] or nil end
+  function QuestieDB:GetNPC(id) return data.npcs and data.npcs[id] or nil end
+  function QuestieDB:GetObject(id) return data.objects and data.objects[id] or nil end
+  function QuestieDB:GetItem(id) return data.items and data.items[id] or nil end
+  function ZoneDB:GetUiMapIdByAreaId(area) return data.zones and data.zones[area] or nil end
+  local modules = { QuestieDB = QuestieDB, ZoneDB = ZoneDB }
+  _G.QuestieLoader = { ImportModule = function(_, name) return modules[name] end }
+end
+
 -- "Creature-0-1-2-3-<npcID>-<spawn>" for loot sources.
 function Mock.CreatureGUID(npcID, spawn)
   return string.format("Creature-0-1-2-3-%d-%08X", npcID, spawn or 1)
@@ -720,6 +733,7 @@ function Mock.install()
       return { GetXY = function() return Mock.position.x, Mock.position.y end }
     end,
     CanSetUserWaypointOnMap = function(mapID) return Mock.waypointMaps == nil or Mock.waypointMaps[mapID] == true end,
+    GetMapInfo = function(mapID) return Mock.mapNames[mapID] and { mapID = mapID, name = Mock.mapNames[mapID] } or nil end,
     SetUserWaypoint = function(point) Mock.waypoint = point end,
     ClearUserWaypoint = function() Mock.waypoint = nil end,
     HasUserWaypoint = function() return Mock.waypoint ~= nil end,
@@ -1093,6 +1107,8 @@ function Mock.reset()
   Mock.quests = { completed = {}, log = {}, details = {}, order = {}, titles = {}, requests = {}, watched = {} }
   Mock.questNPC = nil
   Mock.addOnLoaders = {}
+  Mock.mapNames = {}
+  _G.QuestieLoader = nil
   Mock.loot = nil
   Mock.targetGUID = nil
   Mock.targetName = nil

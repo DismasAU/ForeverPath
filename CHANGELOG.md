@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.23.0 (2026-10-19) - Questie bridge
+
+### Added
+- **Questie bridge** (`Providers/QuestieBridge.lua`): when Questie is
+  installed (its Forever port is in progress upstream), ForeverPath reads
+  its quest database at runtime through `QuestieLoader:ImportModule`:
+  `QuestieDB.GetQuest` (name, levels, races, classes, starters, finishers,
+  item objectives, `preQuestSingle` as an any-of group, `preQuestGroup` as
+  all-of, follow-up), `QuestieDB:GetNPC` / `:GetObject` (spawns in percent
+  per area, placed on zone maps with `ZoneDB:GetUiMapIdByAreaId`) and
+  `QuestieDB:GetItem` (`questRewards`). Nothing is copied or stored;
+  Questie ships without a licence, so ForeverPath only reads it while it runs.
+- Questie ranks behind everything Forever-specific (learned facts, the
+  shipped catalogue, ForeverDungeonJournal, Attune) and ahead of CMaNGOS
+  classic-db: `QuestProvider.Get`, `Giver`, `Turnin`, `RequiredItems`
+  (Questie's items, classic-db's counts when it has them), `QuestsRewarding`
+  (filtered by faction and class) and quest chains use it. Entries say
+  "(Questie)" in `/fp quest`; `/fp status` reports the bridge; Questie is an
+  optional dependency so it loads first.
+
+### Changed
+- Quest chains from databases (`QuestProvider.ChainTo`) walk whichever
+  source knows each quest (Questie, else classic-db), so a chain can mix
+  them; `ClassicQuestline` builds lines from either.
+
 ## 0.22.0 (2026-10-19) - share what you have learned on Forever
 
 ### Added
