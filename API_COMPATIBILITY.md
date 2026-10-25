@@ -4,8 +4,8 @@
 
 | Fact | Value | Evidence |
 |---|---|---|
-| Product folder | `_classic_beta_` (executable `WowB.exe`) | Local install `D:\Blizzard Games\World of Warcraft\_classic_beta_`; `.build.info` product `wow_classic_beta` |
-| Build at time of writing | 1.60.1.70450 | `.build.info` on this machine (2026-10-17) |
+| Product folder | `_forever_` (executable `Wow.exe`), released 2026-10; the beta was `_classic_beta_` (`WowB.exe`, product `wow_classic_beta`) | Local install `D:\Blizzard Games\World of Warcraft\_forever_`; `.build.info` product `wowf` |
+| Build at time of writing | 1.60.1.70532 (`WOW-70532patch1.60.1_Retail`); the beta was 1.60.1.70450 | `.build.info` on this machine (2026-10-25). Interface is still `16001`. The release's base DB2 tables match the beta's; the beta's later recipes and item names came from its hotfix cache |
 | TOC `## Interface` | `16001` | Local `Config.wtf` (`engineSurveyPatch "16001"`), every Forever addon installed locally, Warcraft Wiki TOC table, forever-addon-kit, Atraeau/WoW-Addons |
 | TOC filename suffix | `_Camelot.toc` (`_Forever` listed as alias) | Warcraft Wiki TOC format page; ProfessionMaster and EllesmereUI ship `*_Camelot.toc` |
 | Engine | Retail 12.x based (`WOW_PROJECT_ID == WOW_PROJECT_MAINLINE`), all modern `C_*` namespaces | forever-addon-kit findings; `forever_api.json` (6,045 functions, 269 namespaces) |

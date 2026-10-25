@@ -13,7 +13,7 @@ python tests\run_tests.py
 powershell -ExecutionPolicy Bypass -File scripts\install_dev.ps1
 ```
 
-Options: `-WowPath "D:\Blizzard Games\World of Warcraft"`, `-Product wow_classic_beta`,
+Options: `-WowPath "D:\Blizzard Games\World of Warcraft"`, `-Product wowf` (`wow_classic_beta` for the old beta),
 `-Locale enUS`, `-NoHotfix`.
 
 ## Where the data comes from
@@ -21,7 +21,7 @@ Options: `-WowPath "D:\Blizzard Games\World of Warcraft"`, `-Product wow_classic
 Every number in the catalogue is read from the client's own database tables
 (DB2 files in the CASC store under `<install>\Data`), with the server's
 hotfixes applied from the cache the client writes after a login
-(`_classic_beta_\Cache\ADB\enUS\DBCache.bin`). Nothing is copied from another
+(`_forever_\Cache\ADB\enUS\DBCache.bin`). Log in once after every client patch before extracting: without the cache, items and recipes added by hotfixes are missing. Nothing is copied from another
 addon or a website.
 
 | Table | Used for |

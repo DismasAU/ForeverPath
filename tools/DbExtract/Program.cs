@@ -95,7 +95,7 @@ namespace DbExtract
     class Options
     {
         public string Wow = @"D:\Blizzard Games\World of Warcraft";
-        public string Product = "wow_classic_beta";
+        public string Product = "wowf";
         public string Locale = "enUS";
         public string Out = "ForeverPath/Data";
         public string Defs = "tools/DbExtract/definitions";
@@ -122,7 +122,7 @@ namespace DbExtract
                     case "--hotfix": o.Hotfix = Next(); break;
                     case "--no-hotfix": o.NoHotfix = true; break;
                     case "-h": case "--help":
-                        Console.WriteLine("DbExtract --wow <install dir> [--product wow_classic_beta] [--locale enUS] [--out <dir>] [--defs <dir>] [--report <file>] [--maps <file>] [--hotfix <DBCache.bin>] [--no-hotfix]");
+                        Console.WriteLine("DbExtract --wow <install dir> [--product wowf] [--locale enUS] [--out <dir>] [--defs <dir>] [--report <file>] [--maps <file>] [--hotfix <DBCache.bin>] [--no-hotfix]");
                         Environment.Exit(0); break;
                     default: throw new ArgumentException("unknown argument " + args[i]);
                 }

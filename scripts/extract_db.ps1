@@ -4,7 +4,7 @@
 # client writes after a login) and writes the recipe catalogue the addon ships.
 # Run it after every client patch, then run the tests and reinstall.
 #
-# Usage: powershell -ExecutionPolicy Bypass -File scripts\extract_db.ps1 [-WowPath "D:\Blizzard Games\World of Warcraft"] [-Product wow_classic_beta] [-Locale enUS] [-NoHotfix]
+# Usage: powershell -ExecutionPolicy Bypass -File scripts\extract_db.ps1 [-WowPath "D:\Blizzard Games\World of Warcraft"] [-Product wowf] [-Locale enUS] [-NoHotfix]
 #
 # Needs: .NET SDK 7 or newer (dotnet), git, and the game installed. The first
 # run clones CascLib (https://github.com/WoW-Tools/CascLib, no licence file,
@@ -14,7 +14,7 @@
 # from WoWDBDefs and are cached in tools\DbExtract\definitions.
 param(
   [string]$WowPath = "D:\Blizzard Games\World of Warcraft",
-  [string]$Product = "wow_classic_beta",
+  [string]$Product = "wowf",
   [string]$Locale = "enUS",
   [switch]$NoHotfix
 )

@@ -65,8 +65,9 @@ lists the API evidence and the remaining open questions.
 
 1. Copy both folders from the release zip, `ForeverPath` and
    `ForeverPath_ClassicDB`, into
-   `World of Warcraft\_classic_beta_\Interface\AddOns\`.
-   `_classic_beta_` is the Forever beta product folder.
+   `World of Warcraft\_forever_\Interface\AddOns\`.
+   `_forever_` is the released Forever product folder (the beta used
+   `_classic_beta_`).
    `ForeverPath_ClassicDB` is the classic-era quest and NPC data; ForeverPath
    loads it when it starts (it is load-on-demand, so it does not run on its
    own). Without it everything works except classic quests, givers and

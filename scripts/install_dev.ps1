@@ -2,7 +2,7 @@
 # into the WoW: Forever AddOns directory.
 # Usage: powershell -ExecutionPolicy Bypass -File scripts\install_dev.ps1 [-AddOnsPath <path>]
 param(
-    [string]$AddOnsPath = "D:\Blizzard Games\World of Warcraft\_classic_beta_\Interface\AddOns"
+    [string]$AddOnsPath = "D:\Blizzard Games\World of Warcraft\_forever_\Interface\AddOns"
 )
 
 $ErrorActionPreference = "Stop"
