@@ -49,6 +49,27 @@ local function findGoal(goalType, field, value, normalize)
   return store and store:FindByTarget(goalType, field, value, normalize) or nil
 end
 
+local LOADING = "ForeverPath is still loading."
+
+-- An Add* call for a goal that already exists: retarget it (update(goal,
+-- reopening), when given), reopen it if it was completed, select it.
+-- Returns goal, message, false.
+local function reuseGoal(store, existing, update)
+  local reopening = not GoalModel.IsOpen(existing)
+  if update then update(existing, reopening) end
+  if reopening then store:SetStatus(existing.id, GoalModel.Statuses.ACTIVE) end
+  store:Select(existing.id)
+  return existing, string.format("%s: %s", update and "Updated goal" or "Already a goal", GoalService.Title(existing)), false
+end
+
+-- Creates and selects a goal. Returns goal, message, true, or nil, error.
+local function createGoal(store, goalType, target)
+  local goal, err = store:Create(goalType, target)
+  if not goal then return nil, err end
+  store:Select(goal.id)
+  return goal, string.format("Added goal: %s", GoalService.Title(goal)), true
+end
+
 function GoalService.Title(goal)
   return GoalModel.Title(goal, ItemProvider.GetCachedName)
 end
@@ -81,31 +102,19 @@ end
 -- Returns goal, message, isNew.
 function GoalService.AddItemGoal(itemID, quantity, goalType)
   local store = GoalService.Store()
-  if not store then
-    return nil, "ForeverPath is still loading."
-  end
+  if not store then return nil, LOADING end
   quantity = Util.IsPositiveInt(quantity) and quantity or 1
   local explicit = goalType
   goalType = goalType or GoalService.TypeForItem(itemID)
   local existing = GoalService.FindItemGoal(itemID)
   if existing then
-    if explicit and existing.type ~= explicit then
-      store:SetType(existing.id, explicit)
-    end
-    store:SetQuantity(existing.id, quantity)
-    if not GoalModel.IsOpen(existing) then
-      store:SetStatus(existing.id, GoalModel.Statuses.ACTIVE)
-    end
-    store:Select(existing.id)
-    return existing, string.format("Updated goal: %s", GoalService.Title(existing)), false
+    return reuseGoal(store, existing, function(goal)
+      if explicit and goal.type ~= explicit then store:SetType(goal.id, explicit) end
+      store:SetQuantity(goal.id, quantity)
+    end)
   end
-  local goal, err = store:Create(goalType, { itemID = itemID, quantity = quantity })
-  if not goal then
-    return nil, err
-  end
-  store:Select(goal.id)
   ItemProvider.Prefetch(itemID)
-  return goal, string.format("Added goal: %s", GoalService.Title(goal)), true
+  return createGoal(store, goalType, { itemID = itemID, quantity = quantity })
 end
 
 function GoalService.AddCraftGoal(itemID, quantity)
@@ -120,27 +129,14 @@ end
 -- Creates (or selects) an attunement goal from an Attune id. Returns goal, message, isNew.
 function GoalService.AddAttunementGoal(attuneID)
   local store = GoalService.Store()
-  if not store then
-    return nil, "ForeverPath is still loading."
-  end
+  if not store then return nil, LOADING end
   local attune = ns.AttuneProvider and ns.AttuneProvider.Get(attuneID)
   if not attune then
     return nil, ns.AttuneProvider and ns.AttuneProvider.IsAvailable() and "Unknown attunement." or "Attunement goals need the Attune addon."
   end
   local existing = GoalService.FindAttunementGoal(attune.id)
-  if existing then
-    if not GoalModel.IsOpen(existing) then
-      store:SetStatus(existing.id, GoalModel.Statuses.ACTIVE)
-    end
-    store:Select(existing.id)
-    return existing, string.format("Already a goal: %s", GoalService.Title(existing)), false
-  end
-  local goal, err = store:Create("COMPLETE_ATTUNEMENT", { attuneID = attune.id, name = attune.name, icon = attune.icon })
-  if not goal then
-    return nil, err
-  end
-  store:Select(goal.id)
-  return goal, string.format("Added goal: %s", GoalService.Title(goal)), true
+  if existing then return reuseGoal(store, existing) end
+  return createGoal(store, "COMPLETE_ATTUNEMENT", { attuneID = attune.id, name = attune.name, icon = attune.icon })
 end
 
 -- Attunement goal from free text (name, for the player's faction).
@@ -177,9 +173,7 @@ end
 -- Creates (or selects) a learn-recipe goal for a recipe spell id. Returns goal, message, isNew.
 function GoalService.AddRecipeGoal(spellID)
   local store = GoalService.Store()
-  if not store then
-    return nil, "ForeverPath is still loading."
-  end
+  if not store then return nil, LOADING end
   local recipe = recipeByID(spellID)
   if not recipe then
     return nil, string.format("No recipe with spell id %s is known (catalogue or recorded professions).", tostring(spellID))
@@ -188,22 +182,11 @@ function GoalService.AddRecipeGoal(spellID)
     return nil, string.format("%s is an item-use combine: anyone can do it, there is nothing to learn.", recipe.name or "That")
   end
   local existing = GoalService.FindRecipeGoal(spellID)
-  if existing then
-    if not GoalModel.IsOpen(existing) then
-      store:SetStatus(existing.id, GoalModel.Statuses.ACTIVE)
-    end
-    store:Select(existing.id)
-    return existing, string.format("Already a goal: %s", GoalService.Title(existing)), false
-  end
-  local goal, err = store:Create("LEARN_RECIPE", {
+  if existing then return reuseGoal(store, existing) end
+  if recipe.teachItemID then ItemProvider.Prefetch(recipe.teachItemID) end
+  return createGoal(store, "LEARN_RECIPE", {
     spellID = spellID, name = recipe.name, professionName = recipe.professionName, professionID = recipe.professionID, icon = recipe.icon,
   })
-  if not goal then
-    return nil, err
-  end
-  store:Select(goal.id)
-  if recipe.teachItemID then ItemProvider.Prefetch(recipe.teachItemID) end
-  return goal, string.format("Added goal: %s", GoalService.Title(goal)), true
 end
 
 -- Spell id from an enchant or spell link (Shift-click in a profession
@@ -255,9 +238,7 @@ end
 -- Returns goal, message, isNew.
 function GoalService.AddEnchantGoal(spellID, quantity)
   local store = GoalService.Store()
-  if not store then
-    return nil, "ForeverPath is still loading."
-  end
+  if not store then return nil, LOADING end
   local recipe = recipeByID(spellID)
   if not recipe then
     return nil, string.format("No enchant with spell id %s is known (catalogue or recorded professions).", tostring(spellID))
@@ -268,23 +249,13 @@ function GoalService.AddEnchantGoal(spellID, quantity)
   quantity = Util.IsPositiveInt(quantity) and quantity or 1
   local existing = GoalService.FindEnchantGoal(spellID)
   if existing then
-    store:SetQuantity(existing.id, quantity)
-    if not GoalModel.IsOpen(existing) then
-      store:SetStatus(existing.id, GoalModel.Statuses.ACTIVE)
-    end
-    store:Select(existing.id)
-    return existing, string.format("Updated goal: %s", GoalService.Title(existing)), false
+    return reuseGoal(store, existing, function(goal) store:SetQuantity(goal.id, quantity) end)
   end
-  local goal, err = store:Create("APPLY_ENCHANT", {
+  if recipe.teachItemID then ItemProvider.Prefetch(recipe.teachItemID) end
+  return createGoal(store, "APPLY_ENCHANT", {
     spellID = spellID, name = recipe.name, professionName = recipe.professionName, professionID = recipe.professionID, icon = recipe.icon,
     quantity = quantity, casts = 0,
   })
-  if not goal then
-    return nil, err
-  end
-  store:Select(goal.id)
-  if recipe.teachItemID then ItemProvider.Prefetch(recipe.teachItemID) end
-  return goal, string.format("Added goal: %s", GoalService.Title(goal)), true
 end
 
 -- Enchant goal from free text: an enchant or spell link, a spell id, or an
@@ -345,9 +316,7 @@ end
 -- Returns goal, message, isNew.
 function GoalService.AddSkillGoal(professionName, rank)
   local store = GoalService.Store()
-  if not store then
-    return nil, "ForeverPath is still loading."
-  end
+  if not store then return nil, LOADING end
   local catalogue = ns.Data and ns.Data.Recipes
   local professionID, canonical
   if catalogue and catalogue.FindProfession then
@@ -363,27 +332,19 @@ function GoalService.AddSkillGoal(professionName, rank)
   rank = Util.ParseInt(rank) or GoalService.NextSkillTarget(standing)
   local existing = GoalService.FindSkillGoal(canonical)
   if existing then
-    store:SetRank(existing.id, rank)
-    if not GoalModel.IsOpen(existing) then
-      existing.target.startRank = standing and standing.skillLevel or existing.target.startRank
-      store:SetStatus(existing.id, GoalModel.Statuses.ACTIVE)
-    end
-    store:Select(existing.id)
-    return existing, string.format("Updated goal: %s", GoalService.Title(existing)), false
+    return reuseGoal(store, existing, function(goal, reopening)
+      store:SetRank(goal.id, rank)
+      if reopening then goal.target.startRank = standing and standing.skillLevel or goal.target.startRank end
+    end)
   end
-  local goal, err = store:Create("REACH_SKILL", {
+  local goal, message, isNew = createGoal(store, "REACH_SKILL", {
     professionID = professionID, professionName = canonical, rank = rank,
     startRank = standing and standing.skillLevel or nil, icon = standing and standing.icon or nil,
   })
-  if not goal then
-    return nil, err
-  end
-  store:Select(goal.id)
-  local message = string.format("Added goal: %s", GoalService.Title(goal))
-  if not standing then
+  if goal and not standing then
     message = message .. string.format(" (%s is not one of this character's professions yet)", canonical)
   end
-  return goal, message, true
+  return goal, message, isNew
 end
 
 -- "Tailoring 225", "tailoring", "225 Tailoring". Returns goal, message, isNew.
@@ -420,31 +381,18 @@ end
 -- Creates (or selects) a quest goal. Returns goal, message, isNew.
 function GoalService.AddQuestGoal(questID)
   local store = GoalService.Store()
-  if not store then
-    return nil, "ForeverPath is still loading."
-  end
+  if not store then return nil, LOADING end
   local QP = ns.QuestProvider
   if not QP or not QP.IsAvailable() then
     return nil, "Quest goals need the quest API (C_QuestLog), which this client lacks."
   end
   local existing = GoalService.FindQuestGoal(questID)
-  if existing then
-    if not GoalModel.IsOpen(existing) then
-      store:SetStatus(existing.id, GoalModel.Statuses.ACTIVE)
-    end
-    store:Select(existing.id)
-    return existing, string.format("Already a goal: %s", GoalService.Title(existing)), false
-  end
+  if existing then return reuseGoal(store, existing) end
   local entry = QP.Get(questID)
-  local goal, err = store:Create("COMPLETE_QUEST", {
+  for _, reward in ipairs(entry and entry.rewards or {}) do ItemProvider.Prefetch(reward.itemID) end
+  return createGoal(store, "COMPLETE_QUEST", {
     questID = questID, name = QP.Name(questID), level = entry and entry.level or nil, instance = entry and entry.instance or nil, icon = QP.ICON,
   })
-  if not goal then
-    return nil, err
-  end
-  store:Select(goal.id)
-  for _, reward in ipairs(entry and entry.rewards or {}) do ItemProvider.Prefetch(reward.itemID) end
-  return goal, string.format("Added goal: %s", GoalService.Title(goal)), true
 end
 
 -- Quest goal from free text: a quest id, or a name searched in the known
@@ -490,9 +438,7 @@ end
 -- Returns goal, message, isNew.
 function GoalService.AddReputationGoal(factionID, standing)
   local store = GoalService.Store()
-  if not store then
-    return nil, "ForeverPath is still loading."
-  end
+  if not store then return nil, LOADING end
   local RP = ns.ReputationProvider
   if not RP or not RP.IsAvailable() then
     return nil, "Reputation goals need the faction API, which this client lacks."
@@ -507,24 +453,16 @@ function GoalService.AddReputationGoal(factionID, standing)
   end
   local existing = GoalService.FindReputationGoal(record.factionID)
   if existing then
-    store:SetStanding(existing.id, standing)
-    if not GoalModel.IsOpen(existing) then
-      existing.target.startValue = record.value
-      store:SetStatus(existing.id, GoalModel.Statuses.ACTIVE)
-    end
-    store:Select(existing.id)
-    return existing, string.format("Updated goal: %s", GoalService.Title(existing)), false
+    return reuseGoal(store, existing, function(goal, reopening)
+      store:SetStanding(goal.id, standing)
+      if reopening then goal.target.startValue = record.value end
+    end)
   end
-  local goal, err = store:Create("REACH_REPUTATION", {
+  local goal, message, isNew = createGoal(store, "REACH_REPUTATION", {
     factionID = record.factionID, name = record.name, standing = standing, startValue = record.value, icon = RP.ICON,
   })
-  if not goal then
-    return nil, err
-  end
-  store:Select(goal.id)
-  local message = string.format("Added goal: %s", GoalService.Title(goal))
-  if (record.standing or 0) >= standing then message = message .. " (already there)" end
-  return goal, message, true
+  if goal and (record.standing or 0) >= standing then message = message .. " (already there)" end
+  return goal, message, isNew
 end
 
 -- "argent dawn exalted", "argent dawn" (next standing), "exalted argent dawn". Returns goal, message, isNew.
