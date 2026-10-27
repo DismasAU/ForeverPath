@@ -87,12 +87,7 @@ EquipmentProvider.SourceGroups = {
   { key = "drop", label = "Drops", types = { world_drop = true, container = true, object_drop = true, fishing = true } },
 }
 
-local function call(fn, ...)
-  if type(fn) ~= "function" then return nil end
-  local ok, a, b, c, d = pcall(fn, ...)
-  if ok then return a, b, c, d end
-  return nil
-end
+local call = Util.SafeCall
 
 function EquipmentProvider.IsAvailable()
   return type(_G.GetInventoryItemID) == "function"

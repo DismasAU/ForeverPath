@@ -34,6 +34,19 @@ function Util.ParseInt(value)
   return tonumber(digits)
 end
 
+local function passResults(ok, ...)
+  if ok then return ... end
+  return nil
+end
+
+-- Calls `fn` when it is a function and returns all of its results; returns
+-- nil when `fn` is missing or raises. For client APIs that may be absent or
+-- throw on some builds.
+function Util.SafeCall(fn, ...)
+  if type(fn) ~= "function" then return nil end
+  return passResults(pcall(fn, ...))
+end
+
 function Util.IsPositiveInt(value)
   return type(value) == "number" and value > 0 and value == math.floor(value)
 end

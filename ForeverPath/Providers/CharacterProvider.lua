@@ -18,12 +18,7 @@ ns.CharacterProvider = CharacterProvider
 CharacterProvider.SNAPSHOT_FRESH = 24 * 3600   -- younger: "snapshot"; older: "cached"
 CharacterProvider.Levels = { LIVE = "live", SNAPSHOT = "snapshot", CACHED = "cached" }
 
-local function call(fn, ...)
-  if type(fn) ~= "function" then return nil end
-  local ok, a, b, c, d = pcall(fn, ...)
-  if ok then return a, b, c, d end
-  return nil
-end
+local call = Util.SafeCall
 
 -- Who the logged-in character is. Pure data; the UI adds colours.
 function CharacterProvider.Identity()

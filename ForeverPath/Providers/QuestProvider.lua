@@ -42,12 +42,7 @@ local function questLog()
   return type(C_QuestLog) == "table" and C_QuestLog or nil
 end
 
-local function call(fn, ...)
-  if type(fn) ~= "function" then return nil end
-  local ok, a, b, c, d = pcall(fn, ...)
-  if ok then return a, b, c, d end
-  return nil
-end
+local call = Util.SafeCall
 
 function QuestProvider.IsAvailable()
   return Compat.IsQuestFlaggedCompleted ~= nil and Compat.IsOnQuest ~= nil

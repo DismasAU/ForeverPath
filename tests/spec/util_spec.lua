@@ -48,4 +48,12 @@ describe("Util", function()
     copy.nested.value = 2
     assert_eq(original.nested.value, 1)
   end)
+
+  it("safe-calls functions, passing every result through", function()
+    local a, b, c, d, e = ns.Util.SafeCall(function(x) return x, 2, 3, 4, 5 end, 1)
+    assert_eq(a, 1)
+    assert_eq(e, 5)
+    assert_nil(ns.Util.SafeCall(nil))
+    assert_nil(ns.Util.SafeCall(function() error("boom") end))
+  end)
 end)

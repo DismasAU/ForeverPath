@@ -23,12 +23,7 @@ ns.QuestFactsProvider = QuestFacts
 
 QuestFacts.RETRY_LIMIT = 20
 
-local function call(fn, ...)
-  if type(fn) ~= "function" then return nil end
-  local ok, a, b, c = pcall(fn, ...)
-  if ok then return a, b, c end
-  return nil
-end
+local call = ns.Util.SafeCall
 
 function QuestFacts.Store()
   if not ns.db then return nil end

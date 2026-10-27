@@ -25,12 +25,7 @@ ns.LootLearner = LootLearner
 
 LootLearner.MAX_HINTS = 3
 
-local function call(fn, ...)
-  if type(fn) ~= "function" then return nil end
-  local ok, a, b, c, d, e, f, g, h, i, j = pcall(fn, ...)
-  if ok then return a, b, c, d, e, f, g, h, i, j end
-  return nil
-end
+local call = Util.SafeCall
 
 function LootLearner.IsAvailable()
   return type(_G.GetNumLootItems) == "function" and type(_G.GetLootSlotLink) == "function"

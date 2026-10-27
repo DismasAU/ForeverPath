@@ -22,12 +22,7 @@ ReputationProvider.StandingMin = { [1] = -42000, [2] = -6000, [3] = -3000, [4] =
 ReputationProvider.StandingMax = { [1] = -6000, [2] = -3000, [3] = 0, [4] = 3000, [5] = 9000, [6] = 21000, [7] = 42000, [8] = 42999 }
 ReputationProvider.StandingColor = { [1] = "missing", [2] = "missing", [3] = "partial", [4] = "text2", [5] = "ok", [6] = "info", [7] = "gold", [8] = "goldLight" }
 
-local function call(fn, ...)
-  if type(fn) ~= "function" then return nil end
-  local ok, a, b, c, d, e, f, g, h, i, j, k, l, m, n = pcall(fn, ...)
-  if ok then return a, b, c, d, e, f, g, h, i, j, k, l, m, n end
-  return nil
-end
+local call = Util.SafeCall
 
 local function cRep()
   return type(C_Reputation) == "table" and C_Reputation or nil

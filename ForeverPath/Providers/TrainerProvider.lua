@@ -36,11 +36,7 @@ function TrainerProvider.Trainers()
 end
 
 local function call(name, ...)
-  local fn = _G[name]
-  if type(fn) ~= "function" then return nil end
-  local ok, a, b, c, d = pcall(fn, ...)
-  if not ok then return nil end
-  return a, b, c, d
+  return Util.SafeCall(_G[name], ...)
 end
 
 local function currentNPC()
