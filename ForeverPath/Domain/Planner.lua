@@ -380,13 +380,11 @@ function Planner.StepItemsPlan(tree, complete)
 end
 
 -- 1 bind on pickup, 2 on equip, 3 on use, 4 quest item; nil when unknown.
+-- The client's answer (deps.item) first, then the catalogue's (deps.data).
 function Planner.BindType(itemID, deps)
-  local Compat = ns.Compat
-  if Compat and Compat.GetItemInfo then
-    local ok, name, _, _, _, _, _, _, _, _, _, _, _, _, bind = pcall(Compat.GetItemInfo, itemID)
-    if ok and name and tonumber(bind) then return tonumber(bind) end
-  end
-  local data = deps and deps.data
+  local item, data = deps and deps.item, deps and deps.data
+  local bind = item and item.BindType and Log.Try(item.BindType, itemID)
+  if bind then return bind end
   return data and data.ItemBind and data.ItemBind(itemID) or nil
 end
 

@@ -111,6 +111,13 @@ function ItemProvider.RequestLoad(itemID)
   return true
 end
 
+-- How the client says an item binds: 1 on pickup, 2 on equip, 3 on use,
+-- 4 quest item; nil while the item is not loaded or the API is missing.
+function ItemProvider.BindType(itemID)
+  local name, _, _, _, _, _, _, _, _, _, _, _, _, bind = Util.SafeCall(Compat.GetItemInfo, itemID)
+  return name and tonumber(bind) or nil
+end
+
 -- Returns { itemID, exists, loaded, name, link, icon, quality, unavailable }.
 -- Never blocks: when data is missing it requests a load and the caller
 -- refreshes on FP_ITEM_LOADED.
