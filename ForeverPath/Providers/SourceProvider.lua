@@ -392,10 +392,20 @@ end
 ---------------------------------------------------------------------------
 -- Aggregate
 ---------------------------------------------------------------------------
--- Resolver hints for itemID, cheapest/most certain first: vendors, then boss
--- drops (DungeonJournal first, AtlasLoot entries for the same boss folded
--- in), then quest rewards, then the class heuristic (skipped when a recipe
--- is recorded for the item, because then crafting is the real source).
+-- Resolver hints for itemID, most certain first. Callers take hints[1] as
+-- the route, so this order is the contract:
+--   1. recorded vendors (own, then shared)
+--   2. loot learned on Forever (LootLearner)
+--   3. boss drops: DungeonJournal, then AtlasLoot bosses the journal lacks
+--   4. journal quest rewards
+--   5. quest catalogue drops (items a curated quest asks for)
+--   6. GearQuest Forever, minus vendors/quests already listed
+--   7. reputation vendors (unavailable below the standing)
+--   8. classic-db: drops, gathering, vendors (skipped when one is recorded)
+--   9. the class heuristic - only for items no recipe makes, or that a
+--      recipe merely refines from a lower tier
+--  10. nothing found and the item is new in Forever: an unavailable
+--      "New in Forever" hint that says why
 function SourceProvider.Sources(itemID)
   local out = {}
   for _, hint in ipairs(Log.Try(ns.VendorProvider.ItemHints, itemID) or {}) do out[#out + 1] = hint end
