@@ -402,12 +402,9 @@ function SourceProvider.Sources(itemID)
     for _, hint in ipairs(ns.VendorProvider.Sources(itemID)) do out[#out + 1] = hint end
   end
   -- What actually dropped on Forever comes before every database.
-  if ns.LootLearner then
-    local ok, hints = pcall(ns.LootLearner.ItemHints, itemID)
-    for _, hint in ipairs(ok and hints or {}) do
-      if hint.kind == "gather" then hint = SourceProvider.QualifyGatherHint(hint) end
-      out[#out + 1] = hint
-    end
+  for _, hint in ipairs(Log.Try(ns.LootLearner.ItemHints, itemID) or {}) do
+    if hint.kind == "gather" then hint = SourceProvider.QualifyGatherHint(hint) end
+    out[#out + 1] = hint
   end
   local quests, bosses = {}, {}
   for _, hint in ipairs(SourceProvider.JournalSources(itemID)) do
@@ -423,28 +420,19 @@ function SourceProvider.Sources(itemID)
   end
   for _, hint in ipairs(quests) do out[#out + 1] = hint end
   -- The quest catalogue says where the items a curated quest asks for drop.
-  if ns.QuestFactsProvider and ns.QuestFactsProvider.ItemHints then
-    local ok, hints = pcall(ns.QuestFactsProvider.ItemHints, itemID)
-    for _, hint in ipairs(ok and hints or {}) do out[#out + 1] = hint end
-  end
+  for _, hint in ipairs(Log.Try(ns.QuestFactsProvider.ItemHints, itemID) or {}) do out[#out + 1] = hint end
   -- GearQuest Forever knows where leveling gear comes from (vendor and npc,
   -- quest and zone, boss or world drop); it fills in what nothing above did.
-  if ns.EquipmentProvider and ns.EquipmentProvider.Hints then
-    local ok, hints = pcall(ns.EquipmentProvider.Hints, itemID)
-    for _, hint in ipairs(ok and hints or {}) do
-      local duplicate = false
-      for _, existing in ipairs(out) do
-        if existing.kind == hint.kind and (existing.kind == "vendor" and existing.name == hint.name or existing.kind == "quest" and existing.quest == hint.quest) then duplicate = true end
-      end
-      if not duplicate then out[#out + 1] = hint end
+  for _, hint in ipairs(Log.Try(ns.EquipmentProvider.Hints, itemID) or {}) do
+    local duplicate = false
+    for _, existing in ipairs(out) do
+      if existing.kind == hint.kind and (existing.kind == "vendor" and existing.name == hint.name or existing.kind == "quest" and existing.quest == hint.quest) then duplicate = true end
     end
+    if not duplicate then out[#out + 1] = hint end
   end
   -- Reputation vendors (AtlasLoot's faction tables): a vendor option that
   -- is unavailable until the standing is reached.
-  if ns.ReputationProvider and ns.ReputationProvider.Hints then
-    local ok, hints = pcall(ns.ReputationProvider.Hints, itemID)
-    for _, hint in ipairs(ok and hints or {}) do out[#out + 1] = hint end
-  end
+  for _, hint in ipairs(Log.Try(ns.ReputationProvider.Hints, itemID) or {}) do out[#out + 1] = hint end
   -- Classic-era sources behind the Forever ones.
   local classicSkills = {}
   local CDB = ns.ClassicDB
@@ -456,8 +444,7 @@ function SourceProvider.Sources(itemID)
       if existing.kind == "vendor" then recordedVendor = true end
     end
     local classID = type(UnitClass) == "function" and select(3, UnitClass("player")) or nil
-    local ok, hints = pcall(CDB.ItemHints, itemID, { skipVendors = recordedVendor, skipNames = names, classID = classID })
-    for _, hint in ipairs(ok and hints or {}) do
+    for _, hint in ipairs(Log.Try(CDB.ItemHints, itemID, { skipVendors = recordedVendor, skipNames = names, classID = classID }) or {}) do
       if hint.kind == "gather" then
         hint = SourceProvider.QualifyGatherHint(hint)
         if hint.skill then classicSkills[hint.skill] = true end

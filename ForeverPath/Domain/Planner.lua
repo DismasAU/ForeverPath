@@ -22,6 +22,7 @@ local CraftingEngine = ns.CraftingEngine
 local RecipeModel = ns.RecipeModel
 local GoalModel = ns.GoalModel
 local Util = ns.Util
+local Log = ns.Log
 local DependencyResolver = ns.DependencyResolver
 local Allocation = ns.Allocation
 
@@ -73,8 +74,8 @@ end
 
 local function professionList(deps)
   local names = {}
-  local ok, list = pcall(deps.profession.GetScannedProfessions)
-  if ok and type(list) == "table" then
+  local list = Log.Try(deps.profession.GetScannedProfessions)
+  if type(list) == "table" then
     for _, p in ipairs(list) do
       names[#names + 1] = p.name or ("profession " .. tostring(p.professionID))
     end
@@ -347,19 +348,11 @@ end
 
 -- A recipe by spell id: the catalogue first, then a recorded profession window.
 function Planner.RecipeByID(spellID, deps)
-  if deps.data and deps.data.Get then
-    local ok, recipe = pcall(deps.data.Get, spellID)
-    if ok and type(recipe) == "table" then return recipe end
-  end
-  if deps.data and deps.data.GetCombine then
-    local ok, recipe = pcall(deps.data.GetCombine, spellID)
-    if ok and type(recipe) == "table" then return recipe end
-  end
-  if deps.profession and deps.profession.GetRecipe then
-    local ok, recipe = pcall(deps.profession.GetRecipe, spellID, false)
-    if ok and type(recipe) == "table" then return recipe end
-  end
-  return nil
+  local data, profession = deps.data or {}, deps.profession or {}
+  local recipe = Log.Try(data.Get, spellID)
+  if type(recipe) ~= "table" then recipe = Log.Try(data.GetCombine, spellID) end
+  if type(recipe) ~= "table" then recipe = Log.Try(profession.GetRecipe, spellID, false) end
+  return type(recipe) == "table" and recipe or nil
 end
 
 -- This character's standing in a profession: { name, skillLevel, maxSkillLevel, icon, source }
@@ -370,20 +363,14 @@ function Planner.CurrentSkill(deps, professionName, professionID)
   local function matches(p)
     return (professionName and p.name == professionName) or (professionID and professionID ~= 0 and (p.skillLine == professionID or p.professionID == professionID))
   end
-  if profession.GetCharacterProfessions then
-    local ok, list = pcall(profession.GetCharacterProfessions)
-    for _, p in ipairs(ok and list or {}) do
-      if matches(p) then
-        return { name = p.name, skillLevel = p.skillLevel or 0, maxSkillLevel = p.maxSkillLevel or 0, icon = (p.icon ~= 0) and p.icon or nil, source = "live" }
-      end
+  for _, p in ipairs(Log.Try(profession.GetCharacterProfessions) or {}) do
+    if matches(p) then
+      return { name = p.name, skillLevel = p.skillLevel or 0, maxSkillLevel = p.maxSkillLevel or 0, icon = (p.icon ~= 0) and p.icon or nil, source = "live" }
     end
   end
-  if profession.GetScannedProfessions then
-    local ok, list = pcall(profession.GetScannedProfessions)
-    for _, p in ipairs(ok and list or {}) do
-      if matches(p) then
-        return { name = p.name, skillLevel = p.skillLevel or 0, maxSkillLevel = p.maxSkillLevel or 0, source = "recorded" }
-      end
+  for _, p in ipairs(Log.Try(profession.GetScannedProfessions) or {}) do
+    if matches(p) then
+      return { name = p.name, skillLevel = p.skillLevel or 0, maxSkillLevel = p.maxSkillLevel or 0, source = "recorded" }
     end
   end
   return nil
@@ -402,13 +389,10 @@ function Planner.Trainable(deps, professionName, window)
   local profession = deps.profession
   local out = {}
   if not (data and data.ForProfession and profession and profession.GetCharacterProfessions) then return out end
-  local ok, list = pcall(profession.GetCharacterProfessions)
+  local list = Log.Try(profession.GetCharacterProfessions)
   local scanned = {}
-  if profession.GetScannedProfessions then
-    local okScan, scans = pcall(profession.GetScannedProfessions)
-    for _, p in ipairs(okScan and scans or {}) do scanned[p.name] = true end
-  end
-  for _, p in ipairs(ok and list or {}) do
+  for _, p in ipairs(Log.Try(profession.GetScannedProfessions) or {}) do scanned[p.name] = true end
+  for _, p in ipairs(list or {}) do
     if not professionName or string.lower(p.name or "") == string.lower(professionName) then
       local skillLine = p.skillLine or (data.ProfessionID and data.ProfessionID(p.name))
       local current = p.skillLevel or 0
@@ -949,11 +933,8 @@ function Planner.EvaluateSkill(view, goal, deps)
     return view
   end
   local scanned = false
-  if deps.profession and deps.profession.GetScannedProfessions then
-    local ok, list = pcall(deps.profession.GetScannedProfessions)
-    for _, p in ipairs(ok and list or {}) do
-      if p.name == skill.professionName or (professionID and p.professionID == professionID) then scanned = true end
-    end
+  for _, p in ipairs(deps.profession and Log.Try(deps.profession.GetScannedProfessions) or {}) do
+    if p.name == skill.professionName or (professionID and p.professionID == professionID) then scanned = true end
   end
   skill.scanned = scanned
 
@@ -1369,8 +1350,8 @@ function Planner.SourceFinder(deps)
   return function(itemID)
     local out = {}
     for _, fn in ipairs(finders) do
-      local ok, hints = pcall(fn, itemID)
-      if ok and type(hints) == "table" then
+      local hints = Log.Try(fn, itemID)
+      if type(hints) == "table" then
         for _, hint in ipairs(hints) do out[#out + 1] = hint end
       end
     end

@@ -483,9 +483,8 @@ function QuestProvider.FeedsGoals(goals, views, nameOf)
     local name = nameOf and nameOf(goal) or goal.id
     if goal.type == "REACH_REPUTATION" and goal.target then
       local quests = view and view.reputation and view.reputation.quests
-      if not quests and ns.ReputationProvider and ns.ReputationProvider.QuestsFor then
-        local ok, list = pcall(ns.ReputationProvider.QuestsFor, goal.target.name, goal.target.factionID)
-        quests = ok and list or nil
+      if not quests then
+        quests = Log.Try(ns.ReputationProvider.QuestsFor, goal.target.name, goal.target.factionID)
       end
       for _, quest in ipairs(quests or {}) do
         if quest.entry and not (quest.state and quest.state.completed) then
@@ -696,9 +695,9 @@ end
 function QuestProvider.Questline(questID)
   local AP = ns.AttuneProvider
   local line
-  if AP and AP.IsAvailable and AP.IsAvailable() and AP.QuestlineFor then
-    local ok, result = pcall(AP.QuestlineFor, tonumber(questID))
-    if ok and type(result) == "table" then line = result end
+  if AP.IsAvailable() then
+    local result = Log.Try(AP.QuestlineFor, tonumber(questID))
+    if type(result) == "table" then line = result end
   end
   if not line then
     -- A journal chain is Forever-curated: it wins over the classic one.

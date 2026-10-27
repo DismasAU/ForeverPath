@@ -52,10 +52,8 @@ end
 -- the catalogue and before any profession has been scanned nothing is known
 -- either way, so goals stay crafting goals and the planner asks for a scan.
 function GoalService.TypeForItem(itemID)
-  if ns.ProfessionProvider and ns.ProfessionProvider.FindRecipesForItem then
-    local ok, candidates = pcall(ns.ProfessionProvider.FindRecipesForItem, itemID)
-    if ok and type(candidates) == "table" and #candidates > 0 then return "CRAFT_ITEM" end
-  end
+  local candidates = ns.Log.Try(ns.ProfessionProvider.FindRecipesForItem, itemID)
+  if type(candidates) == "table" and #candidates > 0 then return "CRAFT_ITEM" end
   local catalogue = ns.Data and ns.Data.Recipes
   if catalogue and catalogue.Lookup then
     local hints = catalogue.Lookup(itemID)

@@ -95,3 +95,22 @@ function Log.Call(fn, ...)
   end
   return ok, result
 end
+
+local function passOrLog(ok, ...)
+  if ok then return ... end
+  Log.Error("%s", (...))
+  return nil
+end
+
+-- For calls into ForeverPath's own modules where one failing source should
+-- not break the caller: returns every result of fn(...), or nil when fn is
+-- missing or raises. A raise is logged (see /fp errors), unlike
+-- Util.SafeCall, which is for client APIs that are expected to fail.
+function Log.Try(fn, ...)
+  if type(fn) ~= "function" then return nil end
+  local n = select("#", ...)
+  local args = { ... }
+  return passOrLog(xpcall(function()
+    return fn(unpack(args, 1, n))
+  end, traceback))
+end
