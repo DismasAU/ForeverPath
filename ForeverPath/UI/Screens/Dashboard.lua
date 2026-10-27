@@ -314,7 +314,7 @@ local function Create(parent)
         cell.bar:SetValue((p.maxSkillLevel or 0) > 0 and (p.skillLevel or 0) / p.maxSkillLevel or 0)
         cell.bar:Show()
       else
-        cell.title:SetText(i == 1 and "PROFESSION" or "PROFESSION")
+        cell.title:SetText("PROFESSION")
         cell.value:SetText(Theme.ColorText("text3", "-"))
         cell.sub:SetText(i == 1 and "None learned" or "")
         cell.bar:Hide()
