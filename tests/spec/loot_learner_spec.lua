@@ -28,7 +28,7 @@ describe("LootLearner", function()
 
   it("records corpses, items, skinning, objects and fishing, once per loot", function()
     assert_true(LL.IsAvailable())
-    assert_match(LL.Status(), "^Loot learner: 0 items seen from 0 ")
+    assert_match(LL.StatusLine(), "^Loot learner: 0 items seen from 0 ")
     local wolf1 = Mock.CreatureGUID(525, 1)
     Mock.targetGUID, Mock.targetName = wolf1, "Mangy Wolf"
     Mock.OpenLoot({ { itemID = LINEN, quantity = 2, sources = { wolf1, 2 } } })
@@ -66,7 +66,7 @@ describe("LootLearner", function()
     Mock.CloseLoot()
     assert_eq(ns.db.lootSeen["f:Westfall"].kind, "fishing")
     assert_eq(ns.db.lootSeen["f:Westfall"].name, "Westfall")
-    assert_match(LL.Status(), "^Loot learner: 5 items seen from 3 ")
+    assert_match(LL.StatusLine(), "^Loot learner: 5 items seen from 3 ")
     -- Hints: likeliest first, chance from what was seen.
     local hints = LL.ItemHints(LINEN)
     assert_eq(#hints, 1)

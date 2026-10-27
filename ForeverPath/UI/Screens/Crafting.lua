@@ -4,7 +4,7 @@ local _, ns = ...
 local Theme = ns.UI.Theme
 local Widgets = ns.UI.Widgets
 local C = Theme.Colors
-local Status = ns.Status
+local Readiness = ns.Readiness
 local Util = ns.Util
 
 ns.UI.Screens = ns.UI.Screens or {}
@@ -306,7 +306,7 @@ local function recipeChips(view, chips)
   elseif recipe.professionName then
     chips[#chips + 1] = { recipe.professionName, "info" }
   end
-  if view.status == Status.RECIPE_NOT_LEARNED or view.recipeStatus == "unlearned" then
+  if view.readiness == Readiness.RECIPE_NOT_LEARNED or view.recipeStatus == "unlearned" then
     local craft = view.tree and view.tree.root and view.tree.root.craft
     if craft and craft.combine then
       chips[#chips + 1] = { "Combine - anyone can", "ok" }
@@ -357,7 +357,7 @@ local function heroChips(goal, view)
   elseif view.obtain then
     obtainChips(goal, view, chips)
   else
-    chips[#chips + 1] = { ns.StatusLabel[view.status] or "Unknown", "missing" }
+    chips[#chips + 1] = { ns.ReadinessLabel[view.readiness] or "Unknown", "missing" }
   end
   return chips
 end
@@ -516,7 +516,7 @@ local function renderRequirements(screen, view, sortKey)
     return
   end
   if not view.plan then
-    showTableMessage(screen, ns.StatusLabel[view.status] or "Unavailable", view.message or "")
+    showTableMessage(screen, ns.ReadinessLabel[view.readiness] or "Unavailable", view.message or "")
     return
   end
   if #view.plan.materials == 0 and (view.learn or view.skill or view.enchant) then

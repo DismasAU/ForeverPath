@@ -391,7 +391,7 @@ function EquipmentProvider.Analyze(opts)
   return result
 end
 
-function EquipmentProvider.Status()
+function EquipmentProvider.StatusLine()
   if not EquipmentProvider.IsAvailable() then
     return "Equipment: the inventory API (GetInventoryItemID) is unavailable on this client."
   end

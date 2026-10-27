@@ -574,7 +574,7 @@ function QuestProvider.Count()
   return n
 end
 
-function QuestProvider.Status()
+function QuestProvider.StatusLine()
   if not QuestProvider.IsAvailable() then
     return "Quests: the quest API (C_QuestLog) is unavailable on this client."
   end

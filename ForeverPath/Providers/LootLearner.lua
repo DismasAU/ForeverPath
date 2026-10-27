@@ -254,7 +254,7 @@ function LootLearner.Count()
   return sources, Util.Count(items)
 end
 
-function LootLearner.Status()
+function LootLearner.StatusLine()
   if not LootLearner.IsAvailable() then return "Loot learner: the loot window API is unavailable on this client." end
   local sources, items = LootLearner.Count()
   return string.format("Loot learner: %d item%s seen from %d creature%s, object%s and fishing spot%s on this account.", items, items == 1 and "" or "s",
@@ -268,5 +268,5 @@ function LootLearner.Init()
   Events.RegisterWoW("LOOT_CLOSED", function() LootLearner.CloseLoot() end)
   -- Imported loot counts are summed into the index.
   Events.On("FP_SHARED_DATA_CHANGED", function() LootLearner.index = nil end)
-  Log.Debug("%s", LootLearner.Status())
+  Log.Debug("%s", LootLearner.StatusLine())
 end

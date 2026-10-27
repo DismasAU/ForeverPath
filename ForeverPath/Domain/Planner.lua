@@ -17,7 +17,7 @@
 -- item itself as something to get (EvaluateObtain).
 local _, ns = ...
 
-local Status = ns.Status
+local Readiness = ns.Readiness
 local CraftingEngine = ns.CraftingEngine
 local RecipeModel = ns.RecipeModel
 local GoalModel = ns.GoalModel
@@ -147,10 +147,10 @@ local EVALUATORS = {
 }
 
 local function evaluate(goal, deps)
-  local view = { goal = goal, status = Status.OK, message = "", candidates = {} }
+  local view = { goal = goal, readiness = Readiness.OK, message = "", candidates = {} }
 
   if not goal or not GoalModel.IsSupported(goal.type) then
-    view.status = Status.UNSUPPORTED_GOAL
+    view.readiness = Readiness.UNSUPPORTED_GOAL
     view.message = "These goals are not supported by this version of ForeverPath."
     return view
   end
@@ -168,18 +168,18 @@ local function evaluate(goal, deps)
   end
   view.item = view.item or { itemID = itemID, exists = nil, loaded = false }
   if view.item.exists == false then
-    view.status = Status.ITEM_INVALID
+    view.readiness = Readiness.ITEM_INVALID
     view.message = string.format("Item %d does not exist on this client. Check the item ID.", itemID)
     return view
   end
   if view.item.unavailable then
-    view.status = Status.ITEM_UNAVAILABLE
+    view.readiness = Readiness.ITEM_UNAVAILABLE
     view.message = string.format("The server returned no data for item %d.", itemID)
     return view
   end
 
   if not deps.profession or not deps.profession.IsAvailable() then
-    view.status = Status.PROVIDER_UNAVAILABLE
+    view.readiness = Readiness.PROVIDER_UNAVAILABLE
     view.message = "This client does not expose the profession API ForeverPath needs (C_TradeSkillUI). Crafting goals cannot be evaluated here."
     return view
   end
@@ -191,7 +191,7 @@ local function evaluate(goal, deps)
   local catalogue = deps.catalogue and deps.catalogue.IsAvailable and deps.catalogue.IsAvailable() or false
 
   if #candidates == 0 and not obtain and not catalogue and not deps.profession.HasScanData() then
-    view.status = Status.RECIPES_NOT_SCANNED
+    view.readiness = Readiness.RECIPES_NOT_SCANNED
     view.message = "No profession data has been captured yet. Open each of your profession windows once (or use /fp scan) so ForeverPath can record your recipes."
     return view
   end
@@ -212,7 +212,7 @@ local function evaluate(goal, deps)
   if #candidates == 0 or obtain then
     local sources = Planner.Sources(itemID, deps)
     if not obtain and #sources == 0 then
-      view.status = Status.RECIPE_NOT_FOUND
+      view.readiness = Readiness.RECIPE_NOT_FOUND
       local scanned = professionList(deps)
       view.message = string.format(
         "No recipe producing this item was found in your scanned professions (%s), and no vendor, loot table or gathering source is recorded for it. It may belong to a profession you have not scanned, or come from somewhere ForeverPath does not know yet (/fp sources).",
@@ -235,7 +235,7 @@ local function evaluate(goal, deps)
 
   local valid, reason = RecipeModel.Validate(recipe)
   if not valid then
-    view.status = Status.RECIPE_DATA_INVALID
+    view.readiness = Readiness.RECIPE_DATA_INVALID
     view.message = string.format("Cached recipe data for %s is invalid (%s). Re-open the profession window to rescan.", recipe.name or "this recipe", reason)
     return view
   end
@@ -273,7 +273,7 @@ function buildCraftPlan(view, goal, deps, root, crafts)
     return direct[reagentID] or 0
   end, { includeBank = ctx.includeBank, includeAlts = ctx.includeAlts })
   if not plan then
-    view.status = Status.RECIPE_DATA_INVALID
+    view.readiness = Readiness.RECIPE_DATA_INVALID
     view.message = tostring(err)
     return nil
   end
@@ -431,7 +431,7 @@ function Planner.EvaluateObtain(view, goal, deps, sources)
       return direct[reagentID] or 0
     end, { includeBank = ctx.includeBank, includeAlts = ctx.includeAlts })
     if not plan then
-      view.status = Status.RECIPE_DATA_INVALID
+      view.readiness = Readiness.RECIPE_DATA_INVALID
       view.message = tostring(err)
       return view
     end

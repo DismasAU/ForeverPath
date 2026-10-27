@@ -25,7 +25,7 @@ ForeverPath/
     ItemClasses.lua          classID/subclassID -> gathering / drop hints
     QuestCatalogue.lua       curated quest facts (giver, turn-in, items with their sources); the shaman Call of Air chain, both factions
   Domain/                    pure Lua, no WoW API access
-    Status.lua               evaluation statuses and labels
+    Readiness.lua            whether the Planner could plan a goal (view.readiness) and its labels
     RecipeModel.lua          normalized recipe shape, schematic normalization, validation
     GoalModel.lua            generic goal shape, types registry (amount, title, name), ids, validation
     GoalStore.lua            goal collection over an injected storage table
@@ -114,8 +114,10 @@ compartment click handler the TOC requires.
 7. Names: accessors are bare nouns (`QuestProvider.Giver`, `GoalService.Views`),
    not `Get*`; the older `Get*` accessors (`ItemProvider.GetItem`, the
    Planner's provider interface) are renamed when their module is next
-   reworked, not in one sweep. `Describe` returns lines, `Status` a one-line
-   string, `StatusInfo` a table, `ItemHints(itemID)` resolver hints.
+   reworked, not in one sweep. `Describe` returns lines, `StatusLine` a
+   one-line diagnostics string, `StatusInfo` a table, `ItemHints(itemID)`
+   resolver hints. "Status" alone means a goal's lifecycle (`goal.status`);
+   whether the Planner could plan a goal is `view.readiness`.
 
 ## Data flow
 
@@ -141,7 +143,7 @@ FP_GOALS_CHANGED (or any other FP_* message)  ---->  MainFrame.RequestRefresh (d
                       |     |- Allocation ledger shared by all goals in EvaluateAll
                       |- CraftingEngine.BuildPlan(recipe, qty, DirectCounts(tree))
                       v
-                   view { status, message, item, recipe, plan, tree, inventoryNote, progress }
+                   view { readiness, message, item, recipe, plan, tree, inventoryNote, progress }
                              |   kept by GoalService (Views(), View(goalID))
                              v
                    screen:Refresh() for the visible screen, and the tracker

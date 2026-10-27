@@ -432,11 +432,11 @@ function AttuneProvider.StepText(step)
   return text
 end
 
-function AttuneProvider.Status()
+function AttuneProvider.StatusLine()
   if not AttuneProvider.IsAvailable() then return "Attune not installed" end
   return string.format("Attune: %d attunements for %s", #AttuneProvider.List(), Compat.PlayerFaction() or "all factions")
 end
 
 function AttuneProvider.Init()
-  Log.Debug("Attune bridge: %s", AttuneProvider.Status())
+  Log.Debug("Attune bridge: %s", AttuneProvider.StatusLine())
 end

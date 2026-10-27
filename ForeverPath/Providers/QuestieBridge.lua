@@ -202,7 +202,7 @@ function QuestieBridge.Eligible(entry, classID)
   return math.floor(mask / 2 ^ (classID - 1)) % 2 == 1
 end
 
-function QuestieBridge.Status()
+function QuestieBridge.StatusLine()
   if not _G.QuestieLoader then return "Questie: not installed (optional: its Forever port adds quest givers and chains)." end
   if not QuestieBridge.IsAvailable() then return "Questie: installed, but its quest database is not ready." end
   return "Questie: quest database available (givers, turn-ins, chains; behind Forever data, ahead of classic data)."
@@ -210,5 +210,5 @@ end
 
 function QuestieBridge.Init()
   QuestieBridge.Reset()
-  Log.Debug("%s", QuestieBridge.Status())
+  Log.Debug("%s", QuestieBridge.StatusLine())
 end

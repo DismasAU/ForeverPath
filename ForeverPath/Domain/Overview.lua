@@ -2,7 +2,7 @@
 -- recommended next steps. Pure Lua over Planner views.
 local _, ns = ...
 
-local Status = ns.Status
+local Readiness = ns.Readiness
 local GoalModel = ns.GoalModel
 
 local Overview = {}
@@ -219,11 +219,11 @@ function Overview.Build(entries, opts)
               badge = a.next.typeLabel, badgeKind = a.next.inLog and "ok" or "info",
             }
           end
-        elseif view and view.status == Status.RECIPES_NOT_SCANNED then
+        elseif view and view.readiness == Readiness.RECIPES_NOT_SCANNED then
           step = { title = "Open your profession windows", detail = "ForeverPath records recipes while a window is open", badge = "Scan", badgeKind = "partial" }
-        elseif view and view.status == Status.RECIPE_NOT_LEARNED and view.recipe then
+        elseif view and view.readiness == Readiness.RECIPE_NOT_LEARNED and view.recipe then
           step = { title = string.format("Learn %s", view.recipe.name or "the recipe"), detail = string.format("%s - needed for %s", view.recipe.professionName or "Profession", goalName), badge = "Recipe", badgeKind = "partial" }
-        elseif view and view.status == Status.RECIPE_NOT_FOUND then
+        elseif view and view.readiness == Readiness.RECIPE_NOT_FOUND then
           step = { title = string.format("Find a recipe for %s", goalName), detail = "No recorded profession makes this item", badge = "Unknown", badgeKind = "missing" }
         end
         if step then

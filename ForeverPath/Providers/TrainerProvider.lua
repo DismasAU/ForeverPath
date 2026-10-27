@@ -240,7 +240,7 @@ function TrainerProvider.Count()
   return recipes, trainers
 end
 
-function TrainerProvider.Status()
+function TrainerProvider.StatusLine()
   if not TrainerProvider.IsAvailable() then
     return "Trainer windows: API unavailable on this client; trainer requirements cannot be recorded."
   end

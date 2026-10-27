@@ -638,7 +638,7 @@ function ClassicDB.Counts()
   return d and count(d.quests) or 0, d and count(d.npcs) or 0, d and count(d.objects) or 0
 end
 
-function ClassicDB.Status()
+function ClassicDB.StatusLine()
   if not data() then
     return string.format("Classic data: %s is not loaded (%s); classic-era quests, givers and spawns are unavailable.", ClassicDB.ADDON, ClassicDB.loadError or "not installed")
   end
@@ -654,6 +654,6 @@ end
 function ClassicDB.Init()
   local loaded = ClassicDB.Load()
   ClassicDB.Reset()
-  Log.Debug("%s", ClassicDB.Status())
+  Log.Debug("%s", ClassicDB.StatusLine())
   return loaded
 end

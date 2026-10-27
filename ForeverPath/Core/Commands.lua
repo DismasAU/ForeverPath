@@ -101,16 +101,16 @@ function handlers.status()
     Log.output("  Character professions: " .. Util.Join(names))
   end
   Log.output(string.format("  Goals: %d open, %d completed", ns.GoalService.Count({ open = true }), ns.GoalService.Count({ status = "COMPLETED" })))
-  Log.output("  " .. ns.Data.Recipes.Status())
-  Log.output("  " .. ns.TrainerProvider.Status())
-  Log.output("  " .. ns.QuestProvider.Status())
-  Log.output("  " .. ns.QuestFactsProvider.Status())
-  Log.output("  " .. ns.ClassicDB.Status())
-  Log.output("  " .. ns.LootLearner.Status())
-  Log.output("  " .. ns.Share.Status())
-  Log.output("  " .. ns.QuestieBridge.Status())
-  Log.output("  " .. ns.EquipmentProvider.Status())
-  Log.output("  " .. ns.ReputationProvider.Status())
+  Log.output("  " .. ns.Data.Recipes.StatusLine())
+  Log.output("  " .. ns.TrainerProvider.StatusLine())
+  Log.output("  " .. ns.QuestProvider.StatusLine())
+  Log.output("  " .. ns.QuestFactsProvider.StatusLine())
+  Log.output("  " .. ns.ClassicDB.StatusLine())
+  Log.output("  " .. ns.LootLearner.StatusLine())
+  Log.output("  " .. ns.Share.StatusLine())
+  Log.output("  " .. ns.QuestieBridge.StatusLine())
+  Log.output("  " .. ns.EquipmentProvider.StatusLine())
+  Log.output("  " .. ns.ReputationProvider.StatusLine())
 end
 
 function handlers.goals()
@@ -207,7 +207,7 @@ end
 function handlers.reps()
   if not requireLoaded() then return end
   local RP = ns.ReputationProvider
-  Log.Print("%s", RP.Status())
+  Log.Print("%s", RP.StatusLine())
   for _, record in ipairs(RP.List()) do
     local goal = ns.GoalService.FindReputationGoal(record.factionID)
     Log.output(string.format("  %s: %s (%d / %d)%s", record.name, record.standingLabel, record.into or 0, record.span or 0,
@@ -218,7 +218,7 @@ end
 function handlers.equipment()
   if not requireLoaded() then return end
   local EP = ns.EquipmentProvider
-  Log.Print("%s", EP.Status())
+  Log.Print("%s", EP.StatusLine())
   local goals = ns.GoalService.List({ open = true })
   local analysis = EP.Analyze({ goals = goals, views = ns.Planner.EvaluateAll(goals) })
   for _, entry in ipairs(analysis.slots) do
@@ -234,7 +234,7 @@ end
 function handlers.quests()
   if not requireLoaded() then return end
   local QP = ns.QuestProvider
-  Log.Print("%s", QP.Status())
+  Log.Print("%s", QP.StatusLine())
   local goals = ns.GoalService.List({ open = true })
   local views = ns.Planner.EvaluateAll(goals)
   local feeds = QP.FeedsGoals(goals, views, ns.GoalService.Name)
@@ -313,7 +313,7 @@ function handlers.tree(rest)
   end
   local view = ns.Planner.Evaluate(goal)
   if not view.tree then
-    Log.Print("%s: %s", ns.GoalService.Title(goal), view.message or ns.StatusLabel[view.status] or "no plan")
+    Log.Print("%s: %s", ns.GoalService.Title(goal), view.message or ns.ReadinessLabel[view.readiness] or "no plan")
     return
   end
   Log.Print("Dependency tree for %s:", ns.GoalService.Title(goal))
@@ -389,18 +389,18 @@ end
 
 function handlers.catalogue()
   if not requireLoaded() then return end
-  Log.Print("%s", ns.Data.Recipes.Status())
+  Log.Print("%s", ns.Data.Recipes.StatusLine())
   local info = ns.Data.Recipes.Info()
   if info then
     Log.output(string.format("  Client build at extraction: %s (%s), hotfix cache build %s. Generated from the client's own tables by tools\\DbExtract; regenerate after a patch with scripts\\extract_db.ps1.",
       tostring(info.build), tostring(info.buildName), tostring(info.hotfixBuild)))
   end
-  Log.output("  " .. ns.TrainerProvider.Status())
+  Log.output("  " .. ns.TrainerProvider.StatusLine())
 end
 
 function handlers.trainers()
   if not requireLoaded() then return end
-  Log.Print("%s", ns.TrainerProvider.Status())
+  Log.Print("%s", ns.TrainerProvider.StatusLine())
   local trainers = {}
   for name, record in pairs(ns.TrainerProvider.Trainers() or {}) do
     trainers[#trainers + 1] = { name = name, record = record }
@@ -451,7 +451,7 @@ function handlers.shared(rest)
     end
     return
   end
-  Log.Print("%s", ns.Share.Status())
+  Log.Print("%s", ns.Share.StatusLine())
   for i, entry in ipairs(list) do
     Log.output(string.format("  %d. %s - %s - exported %s, imported %s", i, entry.label, ns.Share.CountsLabel(entry.counts),
       Util.FormatAgo(entry.at), Util.FormatAgo(entry.importedAt)))
@@ -521,7 +521,7 @@ function handlers.attunements()
     return
   end
   local list = AP.List()
-  Log.Print("%s:", AP.Status())
+  Log.Print("%s:", AP.StatusLine())
   for _, attune in ipairs(list) do
     local p = AP.Progress(attune.id)
     local goal = ns.GoalService.FindAttunementGoal(attune.id)

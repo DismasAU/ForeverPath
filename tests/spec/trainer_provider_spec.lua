@@ -26,7 +26,7 @@ describe("TrainerProvider", function()
 
   it("is absent until a trainer window exists, then records every recipe on offer with its requirement", function()
     assert_false(TP.IsAvailable())
-    assert_match(TP.Status(), "API unavailable")
+    assert_match(TP.StatusLine(), "API unavailable")
     assert_nil(TP.Requirement(WOOLEN))
     Mock.zone = "Stormwind City"
     Mock.subzone = "Mage Quarter"
@@ -49,7 +49,7 @@ describe("TrainerProvider", function()
     local recipes, trainers = TP.Count()
     assert_eq(recipes, 4)
     assert_eq(trainers, 1)
-    assert_match(TP.Status(), "^Trainer requirements: 4 recipes from 1 trainer%.$")
+    assert_match(TP.StatusLine(), "^Trainer requirements: 4 recipes from 1 trainer%.$")
     assert_match(TP.Label(WOOLEN), "^Georgio Bolero %(Stormwind City %- Mage Quarter%), needs Tailoring 75, ")
     assert_eq(ns.db.trainerNPCs["Georgio Bolero"].recipes, 4)
     assert_eq(ns.db.trainers[WOOLEN].rank, 75, "persisted account-wide")

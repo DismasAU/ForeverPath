@@ -2,7 +2,7 @@
 -- and questlines item goals use. Extends ns.Planner (Domain/Planner.lua).
 local _, ns = ...
 
-local Status = ns.Status
+local Readiness = ns.Readiness
 local DependencyResolver = ns.DependencyResolver
 local Planner = ns.Planner
 local Shared = Planner.Shared
@@ -15,13 +15,13 @@ function Planner.EvaluateAttunement(view, goal, deps)
   local attune = deps.attune
   view.item = { name = goal.target.name, icon = goal.target.icon, quality = 1, loaded = true, exists = true }
   if not attune or not attune.IsAvailable() then
-    view.status = Status.PROVIDER_UNAVAILABLE
+    view.readiness = Readiness.PROVIDER_UNAVAILABLE
     view.message = "Attunement chains come from the Attune addon. Install and enable Attune to plan this goal."
     return view
   end
   local progress = attune.Progress(goal.target.attuneID)
   if not progress then
-    view.status = Status.ITEM_INVALID
+    view.readiness = Readiness.ITEM_INVALID
     view.message = string.format("Attune has no attunement with id %s.", tostring(goal.target.attuneID))
     return view
   end
@@ -153,7 +153,7 @@ function Planner.EvaluateQuest(view, goal, deps)
   local questID = target.questID
   view.item = { name = target.name or ("Quest " .. tostring(questID)), icon = target.icon or (QP and QP.ICON) or nil, quality = 1, loaded = true, exists = true }
   if not QP or not QP.IsAvailable() then
-    view.status = Status.PROVIDER_UNAVAILABLE
+    view.readiness = Readiness.PROVIDER_UNAVAILABLE
     view.message = "This client does not expose the quest API ForeverPath needs (C_QuestLog)."
     return view
   end
@@ -274,13 +274,13 @@ function Planner.EvaluateReputation(view, goal, deps)
   local target = goal.target
   view.item = { name = target.name or ("Faction " .. tostring(target.factionID)), icon = target.icon or (RP and RP.ICON) or nil, quality = 1, loaded = true, exists = true }
   if not RP or not RP.IsAvailable() then
-    view.status = Status.PROVIDER_UNAVAILABLE
+    view.readiness = Readiness.PROVIDER_UNAVAILABLE
     view.message = "This client does not expose the faction API ForeverPath needs."
     return view
   end
   local progress = RP.Progress(target.factionID, target.standing, target.startValue)
   if not progress then
-    view.status = Status.ITEM_INVALID
+    view.readiness = Readiness.ITEM_INVALID
     view.message = string.format("%s is not in your reputation list yet.", target.name or ("Faction " .. tostring(target.factionID)))
     return view
   end

@@ -312,7 +312,7 @@ function Tracker.Refresh()
       frame.nextText:SetText(top and (string.format("Obtain %d x %s", top.missing, ns.ItemProvider.GetName(top.itemID)) .. (hint and (" - " .. hint) or "")) or (view.nextStep or ""))
     end
   else
-    frame.sub:SetText(view and (ns.StatusLabel[view.status] or "") or "")
+    frame.sub:SetText(view and (ns.ReadinessLabel[view.readiness] or "") or "")
     frame.bar:SetValue(0)
     frame.pool:HideFrom(1)
     frame.rows:SetHeight(1)
@@ -325,7 +325,7 @@ function Tracker.Refresh()
       frame.bar:SetValue(a.percent / 100)
       frame.nextText:SetText(a.complete and "Attuned" or (a.next and ns.AttuneProvider.StepText(a.next) or ""))
     else
-      frame.nextText:SetText(view and view.status == ns.Status.RECIPES_NOT_SCANNED and "Open a profession window" or (view and view.message or ""))
+      frame.nextText:SetText(view and view.readiness == ns.Readiness.RECIPES_NOT_SCANNED and "Open a profession window" or (view and view.message or ""))
     end
     height = height + 6
   end

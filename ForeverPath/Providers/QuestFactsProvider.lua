@@ -330,7 +330,7 @@ function QuestFactsProvider.ShippedCount()
   return n
 end
 
-function QuestFactsProvider.Status()
+function QuestFactsProvider.StatusLine()
   return string.format("Quest facts: %d quests shipped, %d learned at quest windows on this account.", QuestFactsProvider.ShippedCount(), QuestFactsProvider.Count())
 end
 
@@ -359,5 +359,5 @@ function QuestFactsProvider.Init()
       if next(QuestFactsProvider.pending) then Events.Debounce("quest-facts-retry", 1, retryPending) end
     end)
   end
-  Log.Debug("%s", QuestFactsProvider.Status())
+  Log.Debug("%s", QuestFactsProvider.StatusLine())
 end

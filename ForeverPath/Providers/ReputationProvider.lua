@@ -453,7 +453,7 @@ function ReputationProvider.ItemHints(itemID)
   return out
 end
 
-function ReputationProvider.Status()
+function ReputationProvider.StatusLine()
   if not ReputationProvider.IsAvailable() then
     return "Reputations: the faction API is unavailable on this client."
   end

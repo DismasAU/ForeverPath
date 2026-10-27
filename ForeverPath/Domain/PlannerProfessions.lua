@@ -2,7 +2,7 @@
 -- profession can train. Extends ns.Planner (Domain/Planner.lua).
 local _, ns = ...
 
-local Status = ns.Status
+local Readiness = ns.Readiness
 local Util = ns.Util
 local Log = ns.Log
 local DependencyResolver = ns.DependencyResolver
@@ -141,7 +141,7 @@ function Planner.EvaluateLearn(view, goal, deps)
   local recipe = Planner.RecipeByID(target.spellID, deps)
   view.item = { name = (recipe and recipe.name) or target.name or ("Recipe " .. tostring(target.spellID)), icon = (recipe and recipe.icon) or target.icon, quality = 1, loaded = true, exists = true }
   if not recipe then
-    view.status = Status.ITEM_INVALID
+    view.readiness = Readiness.ITEM_INVALID
     view.message = string.format("No recipe with spell id %s is in the catalogue or your recorded professions.", tostring(target.spellID))
     return view
   end
@@ -214,12 +214,12 @@ function Planner.EvaluateEnchant(view, goal, deps)
   local recipe = Planner.RecipeByID(target.spellID, deps)
   view.item = { name = (recipe and recipe.name) or target.name or ("Enchant " .. tostring(target.spellID)), icon = (recipe and recipe.icon) or target.icon, quality = 1, loaded = true, exists = true }
   if not recipe then
-    view.status = Status.ITEM_INVALID
+    view.readiness = Readiness.ITEM_INVALID
     view.message = string.format("No enchant with spell id %s is in the catalogue or your recorded professions.", tostring(target.spellID))
     return view
   end
   if not recipe.enchant then
-    view.status = Status.ITEM_INVALID
+    view.readiness = Readiness.ITEM_INVALID
     view.message = string.format("%s makes an item: add it as a crafting goal instead.", recipe.name or "That recipe")
     return view
   end
@@ -401,7 +401,7 @@ function Planner.EvaluateSkill(view, goal, deps)
   local profession = Planner.CurrentSkill(target.professionName, professionID, deps)
   view.item = { name = target.professionName, icon = (profession and profession.icon) or target.icon, quality = 1, loaded = true, exists = true }
   if not profession then
-    view.status = Status.PROFESSION_MISSING
+    view.readiness = Readiness.PROFESSION_MISSING
     view.message = string.format("%s is not one of this character's professions.", target.professionName or "That profession")
     return view
   end

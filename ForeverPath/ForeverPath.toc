@@ -25,7 +25,7 @@ Data\ItemIndex.lua
 Data\Recipes.lua
 Data\ItemClasses.lua
 Data\QuestCatalogue.lua
-Domain\Status.lua
+Domain\Readiness.lua
 Domain\RecipeModel.lua
 Domain\GoalModel.lua
 Domain\GoalStore.lua

@@ -173,7 +173,7 @@ function Share.Changed()
   Events.Fire("FP_SHARED_DATA_CHANGED")
 end
 
-function Share.Status()
+function Share.StatusLine()
   local list = Share.List()
   if #list == 0 then return "Shared data: none imported (/fp export, /fp import)." end
   local names = {}

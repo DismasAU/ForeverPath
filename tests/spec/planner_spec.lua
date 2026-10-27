@@ -1,11 +1,11 @@
 local H = require("harness")
 
 describe("Planner", function()
-  local ns, Planner, Status
+  local ns, Planner, Readiness
   before_each(function()
     ns = H.fresh()
     Planner = ns.Planner
-    Status = ns.Status
+    Readiness = ns.Readiness
   end)
 
   local recipe = {
@@ -36,27 +36,27 @@ describe("Planner", function()
 
   it("flags unsupported goal types", function()
     local view = Planner.Evaluate({ id = "q", type = "NOPE", target = {} }, deps())
-    assert_eq(view.status, Status.UNSUPPORTED_GOAL)
+    assert_eq(view.readiness, Readiness.UNSUPPORTED_GOAL)
     assert_match(view.message, "not supported")
   end)
 
   it("flags invalid items", function()
     local d = deps({ item = { GetItem = function(id) return { itemID = id, exists = false } end } })
     local view = Planner.Evaluate(goal, d)
-    assert_eq(view.status, Status.ITEM_INVALID)
+    assert_eq(view.readiness, Readiness.ITEM_INVALID)
     assert_match(view.message, "2996")
   end)
 
   it("flags items the server has no data for", function()
     local d = deps({ item = { GetItem = function(id) return { itemID = id, exists = true, unavailable = true } end } })
-    assert_eq(Planner.Evaluate(goal, d).status, Status.ITEM_UNAVAILABLE)
+    assert_eq(Planner.Evaluate(goal, d).readiness, Readiness.ITEM_UNAVAILABLE)
   end)
 
   it("flags a missing profession API", function()
     local d = deps()
     d.profession.IsAvailable = function() return false end
     local view = Planner.Evaluate(goal, d)
-    assert_eq(view.status, Status.PROVIDER_UNAVAILABLE)
+    assert_eq(view.readiness, Readiness.PROVIDER_UNAVAILABLE)
     assert_match(view.message, "C_TradeSkillUI")
   end)
 
@@ -65,7 +65,7 @@ describe("Planner", function()
     d.profession.FindRecipesForItem = function() return {} end
     d.profession.HasScanData = function() return false end
     local view = Planner.Evaluate(goal, d)
-    assert_eq(view.status, Status.RECIPES_NOT_SCANNED)
+    assert_eq(view.readiness, Readiness.RECIPES_NOT_SCANNED)
     assert_match(view.message, "/fp scan")
   end)
 
@@ -73,7 +73,7 @@ describe("Planner", function()
     local d = deps()
     d.profession.FindRecipesForItem = function() return {} end
     local view = Planner.Evaluate(goal, d)
-    assert_eq(view.status, Status.RECIPE_NOT_FOUND)
+    assert_eq(view.readiness, Readiness.RECIPE_NOT_FOUND)
     assert_match(view.message, "Tailoring")
   end)
 
@@ -81,7 +81,7 @@ describe("Planner", function()
     local d = deps()
     d.profession.FindRecipesForItem = function() return { { recipe = recipe, learned = false } } end
     local view = Planner.Evaluate(goal, d)
-    assert_eq(view.status, Status.OK)
+    assert_eq(view.readiness, Readiness.OK)
     assert_eq(view.recipeStatus, "unlearned")
     assert_eq(view.recipe, recipe)
     assert_true(view.obtain)
@@ -104,13 +104,13 @@ describe("Planner", function()
     local d = deps()
     d.profession.FindRecipesForItem = function() return { { recipe = other, learned = false }, { recipe = recipe, learned = true } } end
     local view = Planner.Evaluate(goal, d)
-    assert_eq(view.status, Status.OK)
+    assert_eq(view.readiness, Readiness.OK)
     assert_eq(view.recipe.recipeID, 2963)
   end)
 
   it("builds a plan from live recipe data", function()
     local view = Planner.Evaluate(goal, deps())
-    assert_eq(view.status, Status.OK)
+    assert_eq(view.readiness, Readiness.OK)
     assert_true(view.recipeIsLive)
     assert_eq(view.plan.craftsNeeded, 3)
     assert_eq(view.plan.materials[1].required, 6)
@@ -124,7 +124,7 @@ describe("Planner", function()
     local d = deps()
     d.profession.GetRecipe = function() return recipe, false end
     local view = Planner.Evaluate(goal, d)
-    assert_eq(view.status, Status.OK)
+    assert_eq(view.readiness, Readiness.OK)
     assert_false(view.recipeIsLive)
     assert_match(view.message, "cached from scan")
   end)
@@ -142,13 +142,13 @@ describe("Planner", function()
     d.profession.FindRecipesForItem = function() return { { recipe = broken, learned = true } } end
     d.profession.GetRecipe = function() return broken, false end
     local view = Planner.Evaluate(goal, d)
-    assert_eq(view.status, Status.RECIPE_DATA_INVALID)
+    assert_eq(view.readiness, Readiness.RECIPE_DATA_INVALID)
   end)
 
   it("still plans while the item name is loading", function()
     local d = deps({ item = { GetItem = function(id) return { itemID = id, exists = true, loaded = false } end } })
     local view = Planner.Evaluate(goal, d)
-    assert_eq(view.status, Status.OK)
+    assert_eq(view.readiness, Readiness.OK)
     assert_false(view.item.loaded)
   end)
 
@@ -215,7 +215,7 @@ describe("Planner", function()
     end } })
     d.profession.FindRecipesForItem = function() return {} end
     local view = Planner.Evaluate(goal, d)
-    assert_eq(view.status, Status.OK)
+    assert_eq(view.readiness, Readiness.OK)
     assert_true(view.obtain)
     assert_true(view.plan.obtain)
     assert_eq(#view.plan.materials, 1)
@@ -233,14 +233,14 @@ describe("Planner", function()
     -- Without any source the explicit status stays.
     d.sources = nil
     view = Planner.Evaluate(goal, d)
-    assert_eq(view.status, Status.RECIPE_NOT_FOUND)
+    assert_eq(view.readiness, Readiness.RECIPE_NOT_FOUND)
     assert_match(view.message, "no vendor, loot table or gathering source")
   end)
 
   it("evaluates obtain goals, crafting the shortfall when the recipe is learned", function()
     local obtain = { id = "o", type = "OBTAIN_ITEM", target = { itemID = 2996, quantity = 3 } }
     local view = Planner.Evaluate(obtain, deps())
-    assert_eq(view.status, Status.OK)
+    assert_eq(view.readiness, Readiness.OK)
     assert_true(view.obtain)
     assert_eq(view.tree.root.owned, 1)
     assert_eq(view.tree.root.craft.crafts, 2)
@@ -261,7 +261,7 @@ describe("Planner", function()
     d = deps()
     d.profession.FindRecipesForItem = function(id) if id == 2996 then return { { recipe = recipe, learned = false } } end return {} end
     view = Planner.Evaluate(obtain, d)
-    assert_eq(view.status, Status.OK)
+    assert_eq(view.readiness, Readiness.OK)
     assert_eq(view.tree.root.route, "buy")
     assert_false(view.tree.root.craftOption.learned)
     assert_true(view.plan.obtain)
@@ -271,7 +271,7 @@ describe("Planner", function()
     d.profession.FindRecipesForItem = function() return {} end
     d.profession.HasScanData = function() return false end
     view = Planner.Evaluate(obtain, d)
-    assert_eq(view.status, Status.OK)
+    assert_eq(view.readiness, Readiness.OK)
     assert_true(view.plan.obtain)
   end)
 
@@ -279,7 +279,7 @@ describe("Planner", function()
   it("evaluates attunement goals through the Attune bridge", function()
     local attuneGoal = { id = "a", type = "COMPLETE_ATTUNEMENT", target = { attuneID = "40", name = "Onyxia's Lair", icon = "ony" } }
     local view = Planner.Evaluate(attuneGoal, deps({ attune = { IsAvailable = function() return false end } }))
-    assert_eq(view.status, Status.PROVIDER_UNAVAILABLE)
+    assert_eq(view.readiness, Readiness.PROVIDER_UNAVAILABLE)
     assert_match(view.message, "Attune addon")
     assert_eq(view.item.name, "Onyxia's Lair", "icon and name still come from the goal")
     local fake = {
@@ -292,14 +292,14 @@ describe("Planner", function()
       StepText = function(step) return step.typeLabel .. ": " .. step.name .. " - " .. step.location end,
     }
     view = Planner.Evaluate(attuneGoal, deps({ attune = fake }))
-    assert_eq(view.status, Status.OK)
+    assert_eq(view.readiness, Readiness.OK)
     assert_eq(view.attunement.percent, 55)
     assert_eq(view.progress.percent, 55)
     assert_eq(view.item.icon, "ony2")
     assert_eq(view.message, "6 of 11 steps done. Next: Quest: Jail Break! - Blackrock Depths")
     assert_eq(ns.Overview.Percent(view), 55)
     view = Planner.Evaluate({ id = "b", type = "COMPLETE_ATTUNEMENT", target = { attuneID = "99", name = "Nope" } }, deps({ attune = fake }))
-    assert_eq(view.status, Status.ITEM_INVALID)
+    assert_eq(view.readiness, Readiness.ITEM_INVALID)
   end)
 
 end)

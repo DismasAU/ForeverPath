@@ -24,11 +24,11 @@ describe("Overview", function()
   it("aggregates missing materials across active goals", function()
     local entries = {
       { goal = { id = "a", status = "ACTIVE", type = "CRAFT_ITEM", target = { itemID = 1, quantity = 1 } },
-        view = { status = "OK", plan = plan({ { itemID = 10, required = 8, owned = 2, missing = 6, perCraft = 4 }, { itemID = 11, required = 2, owned = 2, missing = 0, perCraft = 1 } }, false) } },
+        view = { readiness = "OK", plan = plan({ { itemID = 10, required = 8, owned = 2, missing = 6, perCraft = 4 }, { itemID = 11, required = 2, owned = 2, missing = 0, perCraft = 1 } }, false) } },
       { goal = { id = "b", status = "ACTIVE", type = "CRAFT_ITEM", target = { itemID = 2, quantity = 1 } },
-        view = { status = "OK", plan = plan({ { itemID = 10, required = 4, owned = 0, missing = 4, perCraft = 2 }, { itemID = 12, required = 1, owned = 0, missing = 1, perCraft = 1 } }, false) } },
+        view = { readiness = "OK", plan = plan({ { itemID = 10, required = 4, owned = 0, missing = 4, perCraft = 2 }, { itemID = 12, required = 1, owned = 0, missing = 1, perCraft = 1 } }, false) } },
       { goal = { id = "c", status = "PAUSED", type = "CRAFT_ITEM", target = { itemID = 2, quantity = 1 } },
-        view = { status = "OK", plan = plan({ { itemID = 12, required = 50, owned = 0, missing = 50, perCraft = 1 } }, false) } },
+        view = { readiness = "OK", plan = plan({ { itemID = 12, required = 50, owned = 0, missing = 50, perCraft = 1 } }, false) } },
     }
     local overview = Overview.Build(entries, { nameOf = nameOf, craftableBy = function(id) return id == 10 and "Mining" or nil end })
     assert_eq(overview.activeCount, 2)
@@ -47,13 +47,13 @@ describe("Overview", function()
   it("recommends crafting when everything is on hand and explains blockers", function()
     local entries = {
       { goal = { id = "a", status = "ACTIVE", type = "CRAFT_ITEM", target = { itemID = 1, quantity = 2 } },
-        view = { status = "OK", plan = plan({ { itemID = 10, required = 2, owned = 5, missing = 0, perCraft = 1 } }, true) } },
+        view = { readiness = "OK", plan = plan({ { itemID = 10, required = 2, owned = 5, missing = 0, perCraft = 1 } }, true) } },
       { goal = { id = "b", status = "ACTIVE", type = "CRAFT_ITEM", target = { itemID = 2, quantity = 1 } },
-        view = { status = ns.Status.RECIPES_NOT_SCANNED } },
+        view = { readiness = ns.Readiness.RECIPES_NOT_SCANNED } },
       { goal = { id = "c", status = "ACTIVE", type = "CRAFT_ITEM", target = { itemID = 2, quantity = 1 } },
-        view = { status = ns.Status.RECIPE_NOT_LEARNED, recipe = { name = "Beta Potion", professionName = "Alchemy" } } },
+        view = { readiness = ns.Readiness.RECIPE_NOT_LEARNED, recipe = { name = "Beta Potion", professionName = "Alchemy" } } },
       { goal = { id = "d", status = "ACTIVE", type = "CRAFT_ITEM", target = { itemID = 2, quantity = 1 } },
-        view = { status = ns.Status.RECIPE_NOT_FOUND } },
+        view = { readiness = ns.Readiness.RECIPE_NOT_FOUND } },
     }
     local overview = Overview.Build(entries, { nameOf = nameOf })
     assert_eq(#overview.nextSteps, 3, "capped at three steps")
@@ -93,7 +93,7 @@ describe("Overview", function()
       })
       local direct = R.DirectCounts(tree)
       local plan = ns.CraftingEngine.BuildPlan(bagRecipe, 1, function(id) return direct[id] or 0 end)
-      return { goal = { id = "a", status = "ACTIVE", type = "CRAFT_ITEM", target = { itemID = 1, quantity = 1 } }, view = { status = "OK", plan = plan, tree = tree } }
+      return { goal = { id = "a", status = "ACTIVE", type = "CRAFT_ITEM", target = { itemID = 1, quantity = 1 } }, view = { readiness = "OK", plan = plan, tree = tree } }
     end
     local names2 = { [1] = "Bag", [20] = "Bolt", [10] = "Ore", [12] = "Thread" }
     local function nameOf2(id) return names2[id] or ("Item " .. id) end
@@ -116,7 +116,7 @@ describe("Overview", function()
     local done = plan({ { itemID = 2, required = 1, owned = 1, missing = 0, perCraft = 1 } }, true)
     done.obtain, done.quantityWanted = true, 1
     local entries = {
-      { goal = { id = "a", status = "ACTIVE", type = "OBTAIN_ITEM", target = { itemID = 2, quantity = 1 } }, view = { status = "OK", plan = done } },
+      { goal = { id = "a", status = "ACTIVE", type = "OBTAIN_ITEM", target = { itemID = 2, quantity = 1 } }, view = { readiness = "OK", plan = done } },
     }
     local overview = Overview.Build(entries, { nameOf = nameOf })
     assert_eq(overview.nextSteps[1].title, "1 x Beta Potion on hand")
@@ -129,7 +129,7 @@ describe("Overview", function()
     })
     local open = plan({ { itemID = 1, required = 2, owned = 0, missing = 2, perCraft = 1 } }, false)
     open.obtain = true
-    overview = Overview.Build({ { goal = { id = "b", status = "ACTIVE", type = "OBTAIN_ITEM", target = { itemID = 1, quantity = 2 } }, view = { status = "OK", plan = open, tree = tree } } }, { nameOf = nameOf })
+    overview = Overview.Build({ { goal = { id = "b", status = "ACTIVE", type = "OBTAIN_ITEM", target = { itemID = 1, quantity = 2 } }, view = { readiness = "OK", plan = open, tree = tree } } }, { nameOf = nameOf })
     assert_eq(overview.nextSteps[1].title, "Obtain 2 x Alpha Sword")
     assert_eq(overview.nextSteps[1].badge, "Drop")
     assert_match(overview.nextSteps[1].detail, "^Wailing Caverns %- For Alpha Sword")
@@ -139,7 +139,7 @@ describe("Overview", function()
 
 
   it("turns the next attunement step into a recommended step", function()
-    local view = { status = "OK", attunement = { done = 6, total = 11, percent = 55, complete = false,
+    local view = { readiness = "OK", attunement = { done = 6, total = 11, percent = 55, complete = false,
       next = { typeLabel = "Quest", name = "Jail Break!", location = "Blackrock Depths", inLog = true } } }
     local goal = { id = "a", status = "ACTIVE", type = "COMPLETE_ATTUNEMENT", target = { attuneID = "40", name = "Onyxia's Lair" } }
     local overview = Overview.Build({ { goal = goal, view = view } }, { nameOf = nameOf })

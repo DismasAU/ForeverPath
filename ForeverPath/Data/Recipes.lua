@@ -412,7 +412,7 @@ function Recipes.SpellIDByName(name, professionName)
 end
 
 -- One line for the status bar and /fp catalogue.
-function Recipes.Status()
+function Recipes.StatusLine()
   local info = Recipes.Info()
   if not info or Recipes.Count() == 0 then
     return "Recipe catalogue missing: run scripts\\extract_db.ps1 to generate it from the client."

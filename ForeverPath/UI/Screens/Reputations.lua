@@ -305,7 +305,7 @@ local function Create(parent)
     self.empty:Hide()
     list:Show()
     side:Show()
-    status:SetText(Theme.ColorText("text3", RP.Status():gsub("^Reputations: ", "")))
+    status:SetText(Theme.ColorText("text3", RP.StatusLine():gsub("^Reputations: ", "")))
     local ui = ns.chardb and ns.chardb.ui or {}
     local goal = ns.GoalService.GetSelected()
     local goalFaction = goal and goal.type == "REACH_REPUTATION" and goal.target.factionID or nil
