@@ -29,14 +29,7 @@ local function markerFor(label)
 end
 
 local function createGroupRow(content)
-  local row = Widgets.Frame(content, nil, { bg = C.sidebar })
-  row:SetHeight(GROUP_ROW)
-  local label = Widgets.Text(row, "label", "", { caps = true, color = C.text })
-  label:SetPoint("LEFT", row, "LEFT", 10, 0)
-  local count = Widgets.Text(row, "small", "")
-  count:SetPoint("LEFT", label, "RIGHT", 8, 0)
-  row.label, row.count = label, count
-  return row
+  return Widgets.GroupHeaderRow(content, { height = GROUP_ROW })
 end
 
 local function createQuestRow(content, index, screen)

@@ -930,6 +930,34 @@ function Widgets.ScrollArea(parent)
 end
 
 -- Row pool over a content frame. factory(content, index) creates a row.
+-- A group header for grouped lists: a caps label with a count beside it,
+-- led by a gold arrow when opts.arrow. opts.height is the row height.
+function Widgets.GroupHeaderRow(content, opts)
+  local row = Widgets.Frame(content, nil, { bg = C.sidebar })
+  row:SetHeight(opts.height)
+  local label = Widgets.Text(row, "label", "", { caps = true, color = C.text })
+  if opts.arrow then
+    local arrow = Widgets.Arrow(row, 8, "down", C.gold)
+    arrow:SetPoint("LEFT", row, "LEFT", 10, 0)
+    label:SetPoint("LEFT", arrow, "RIGHT", 8, 0)
+  else
+    label:SetPoint("LEFT", row, "LEFT", 10, 0)
+  end
+  local count = Widgets.Text(row, "small", "")
+  count:SetPoint("LEFT", label, "RIGHT", 8, 0)
+  row.label, row.count = label, count
+  return row
+end
+
+-- The label of the sort option `key` in a { { key, label } } list (the first
+-- option's when the key is unknown), for sort dropdowns.
+function Widgets.SortLabel(sorts, key)
+  for _, option in ipairs(sorts) do
+    if option.key == key then return option.label end
+  end
+  return sorts[1].label
+end
+
 function Widgets.Pool(content, factory)
   local pool = { rows = {}, content = content, factory = factory }
   function pool:Get(index)

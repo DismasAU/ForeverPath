@@ -14,11 +14,6 @@ local COLUMNS = { need = 40, have = 40, missing = 54, price = 74, subtotal = 74,
 local SORTS = { { key = "missing", label = "Sort: Missing" }, { key = "name", label = "Sort: Name" }, { key = "need", label = "Sort: Need" } }
 local CHECK = "Interface\\Buttons\\UI-CheckBox-Check"
 
-local function sortLabel(key)
-  for _, s in ipairs(SORTS) do if s.key == key then return s.label end end
-  return SORTS[1].label
-end
-
 local function createMaterialRow(content, index)
   local row = Widgets.Frame(content, nil, { frameType = "Button" })
   row:SetHeight(ROW)
@@ -225,7 +220,7 @@ local function Create(parent)
   tabs:SetPoint("TOPRIGHT", hero, "BOTTOMRIGHT", -330, -10)
   screen.tabs = tabs
   screen.tab = "requirements"
-  local sort = Widgets.Dropdown(screen, sortLabel("missing"), 150, function(self)
+  local sort = Widgets.Dropdown(screen, Widgets.SortLabel(SORTS, "missing"), 150, function(self)
     local current = ns.chardb and ns.chardb.ui.materialSort or "missing"
     local items = {}
     for _, s in ipairs(SORTS) do items[#items + 1] = { text = s.label:gsub("Sort: ", ""), value = s.key, selected = s.key == current } end
@@ -565,7 +560,7 @@ local function Create(parent)
     end
 
     local sortKey = ns.chardb and ns.chardb.ui.materialSort or "missing"
-    sort:SetLabel(sortLabel(sortKey))
+    sort:SetLabel(Widgets.SortLabel(SORTS, sortKey))
     if self.tab == "tree" then
       table_:Hide()
       sort:Hide()

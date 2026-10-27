@@ -13,11 +13,6 @@ local ROW = 52
 local GROUP_ROW = 26
 local SORTS = { { key = "priority", label = "Sort: Priority" }, { key = "name", label = "Sort: Name" }, { key = "progress", label = "Sort: Progress" } }
 
-local function sortLabel(key)
-  for _, s in ipairs(SORTS) do if s.key == key then return s.label end end
-  return SORTS[1].label
-end
-
 local ONE_ROW, TWO_ROWS = 50, 84
 local MIN_INPUT = 200
 
@@ -148,16 +143,7 @@ local function createGoalRow(content, index)
 end
 
 local function createGroupRow(content)
-  local row = Widgets.Frame(content, nil, { bg = C.sidebar })
-  row:SetHeight(GROUP_ROW)
-  local arrow = Widgets.Arrow(row, 8, "down", C.gold)
-  arrow:SetPoint("LEFT", row, "LEFT", 10, 0)
-  local label = Widgets.Text(row, "label", "", { caps = true, color = C.text })
-  label:SetPoint("LEFT", arrow, "RIGHT", 8, 0)
-  local count = Widgets.Text(row, "small", "")
-  count:SetPoint("LEFT", label, "RIGHT", 8, 0)
-  row.label, row.count = label, count
-  return row
+  return Widgets.GroupHeaderRow(content, { height = GROUP_ROW, arrow = true })
 end
 
 local function createSettings(screen)
@@ -376,13 +362,13 @@ local function Create(parent)
   tabs:SetPoint("TOPRIGHT", body, "TOPRIGHT", -180, -8)
   screen.tabs = tabs
   screen.tab = "open"
-  local sort = Widgets.Dropdown(body, sortLabel("priority"), 160, function(self)
+  local sort = Widgets.Dropdown(body, Widgets.SortLabel(SORTS, "priority"), 160, function(self)
     local current = ns.chardb and ns.chardb.ui.goalSort or "priority"
     local items = {}
     for _, s in ipairs(SORTS) do items[#items + 1] = { text = s.label:gsub("Sort: ", ""), value = s.key, selected = s.key == current } end
     Widgets.Menu(self, items, function(value)
       if ns.chardb then ns.chardb.ui.goalSort = value end
-      self:SetLabel(sortLabel(value))
+      self:SetLabel(Widgets.SortLabel(SORTS, value))
       screen:Refresh()
     end)
   end)
@@ -501,7 +487,7 @@ local function Create(parent)
     tabs:SetLabel("open", string.format("Open - %d", openCount))
     tabs:SetLabel("completed", string.format("Completed - %d", completedCount))
     local sortKey = ns.chardb and ns.chardb.ui.goalSort or "priority"
-    sort:SetLabel(sortLabel(sortKey))
+    sort:SetLabel(Widgets.SortLabel(SORTS, sortKey))
 
     local selected = ns.GoalService.GetSelected()
     local y = 0

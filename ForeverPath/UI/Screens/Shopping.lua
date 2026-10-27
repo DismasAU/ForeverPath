@@ -15,11 +15,6 @@ local TABS = { { key = "all", label = "All" }, { key = "buy", label = "Auction H
 local STEP_ICON = "Interface\\Icons\\INV_Misc_Book_09"
 local MAX_CHIPS = 4
 
-local function sortLabel(key)
-  for _, s in ipairs(SORTS) do if s.key == key then return s.label end end
-  return SORTS[1].label
-end
-
 -- Shopping state; Database.DEFAULTS.char.shopping gives it its shape at load.
 local function settings()
   return ns.chardb.shopping
@@ -199,7 +194,7 @@ local function Create(parent)
   tabs:SetPoint("TOPLEFT", summary, "BOTTOMLEFT", 0, -10)
   tabs:SetPoint("TOPRIGHT", summary, "BOTTOMRIGHT", -200, -10)
   screen.tabs = tabs
-  local sort = Widgets.Dropdown(screen, sortLabel("missing"), 150, function(self)
+  local sort = Widgets.Dropdown(screen, Widgets.SortLabel(SORTS, "missing"), 150, function(self)
     local current = settings().sort or "missing"
     local items = {}
     for _, s in ipairs(SORTS) do items[#items + 1] = { text = s.label:gsub("Sort: ", ""), value = s.key, selected = s.key == current } end
@@ -383,7 +378,7 @@ local function Create(parent)
     local filter = s.filter or "all"
     if filter ~= "all" and (list.counts[filter] or 0) == 0 then filter = "all" end
     tabs:Select(filter)
-    sort:SetLabel(sortLabel(s.sort or "missing"))
+    sort:SetLabel(Widgets.SortLabel(SORTS, s.sort or "missing"))
 
     -- Rows
     local rows = ShoppingList.Filter(list.rows, filter)
