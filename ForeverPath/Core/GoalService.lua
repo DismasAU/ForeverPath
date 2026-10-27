@@ -11,7 +11,17 @@ local Util = ns.Util
 local GoalService = {}
 ns.GoalService = GoalService
 
+-- Open goals as a character snapshot records them (for alts' cards).
+function GoalService.OpenGoalSummaries()
+  local out = {}
+  for _, goal in ipairs(GoalService.List({ open = true })) do
+    out[#out + 1] = { id = goal.id, title = GoalService.Title(goal), status = goal.status, itemID = goal.target and goal.target.itemID }
+  end
+  return out
+end
+
 function GoalService.Init()
+  ns.CharacterProvider.openGoals = GoalService.OpenGoalSummaries
   if not ns.chardb then
     return nil
   end

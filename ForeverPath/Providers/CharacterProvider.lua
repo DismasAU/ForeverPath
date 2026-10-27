@@ -101,12 +101,7 @@ function CharacterProvider.Snapshot()
   for recipeID, learned in pairs(ns.chardb.knownRecipes or {}) do
     if learned == true then knownRecipes[recipeID] = true end
   end
-  local goals = {}
-  if ns.GoalService then
-    for _, goal in ipairs(ns.GoalService.List({ open = true })) do
-      goals[#goals + 1] = { id = goal.id, title = ns.GoalService.Title(goal), status = goal.status, itemID = goal.target and goal.target.itemID }
-    end
-  end
+  local goals = CharacterProvider.openGoals()
   local record = {
     key = key, name = id.name, realm = id.realm, level = id.level, class = id.class, classFile = id.classFile, race = id.race,
     gold = id.gold, lastSeen = Util.Now(), bags = bags, bank = bank, professions = professions, professionSource = professionSource,
@@ -368,6 +363,13 @@ function CharacterProvider.BestCoverage(needs)
     end
   end
   return best
+end
+
+-- The open goals a snapshot records: { { id, title, status, itemID } }.
+-- GoalService installs the real list at Init, so this provider never
+-- reaches up into goals itself.
+function CharacterProvider.openGoals()
+  return {}
 end
 
 local function scheduleSnapshot()
