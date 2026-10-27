@@ -35,19 +35,19 @@ function TrainerProvider.Trainers()
   return ns.db.trainerNPCs
 end
 
-local function call(name, ...)
+local function callGlobal(name, ...)
   return Util.SafeCall(_G[name], ...)
 end
 
 local function currentNPC()
-  local name = call("UnitName", "npc")
+  local name = callGlobal("UnitName", "npc")
   if type(name) ~= "string" or name == "" then return nil end
   return name
 end
 
 local function currentZone()
-  local zone = call("GetZoneText")
-  local sub = call("GetSubZoneText")
+  local zone = callGlobal("GetZoneText")
+  local sub = callGlobal("GetSubZoneText")
   if sub == "" then sub = nil end
   return zone, sub
 end
@@ -70,26 +70,26 @@ end
 
 -- Reads one trainer line. Returns a record or nil.
 function TrainerProvider.ReadService(index)
-  local name, second, third = call("GetTrainerServiceInfo", index)
+  local name, second, third = callGlobal("GetTrainerServiceInfo", index)
   if type(name) ~= "string" then return nil end
   local kind = serviceType(second, third)
   if kind == "header" then return nil end
   local record = { name = name, kind = kind }
-  local skill, rank, hasReq = call("GetTrainerServiceSkillReq", index)
+  local skill, rank, hasReq = callGlobal("GetTrainerServiceSkillReq", index)
   if type(skill) == "string" and skill ~= "" and (hasReq ~= false) and tonumber(rank) then
     record.skill = skill
     record.rank = tonumber(rank)
   end
   -- The spell link names the recipe exactly; without one, the catalogue is
   -- searched by recipe name within the required profession.
-  local spellID = spellIDFromLink(call("GetTrainerServiceItemLink", index))
+  local spellID = spellIDFromLink(callGlobal("GetTrainerServiceItemLink", index))
   if not spellID and ns.Data and ns.Data.Recipes and ns.Data.Recipes.SpellIDByName then
     spellID = ns.Data.Recipes.SpellIDByName(name, record.skill)
     record.byName = spellID ~= nil or nil
   end
   if not spellID then return nil end
   record.spellID = spellID
-  local cost = call("GetTrainerServiceCost", index)
+  local cost = callGlobal("GetTrainerServiceCost", index)
   if tonumber(cost) then record.cost = tonumber(cost) end
   return record
 end
@@ -102,11 +102,11 @@ function TrainerProvider.EnsureFilters()
   end
   local changed = false
   for _, filter in ipairs(TrainerProvider.FILTERS) do
-    local on = call("GetTrainerServiceTypeFilter", filter)
+    local on = callGlobal("GetTrainerServiceTypeFilter", filter)
     if not on or on == 0 then
       TrainerProvider.restoreFilters = TrainerProvider.restoreFilters or {}
       TrainerProvider.restoreFilters[filter] = true
-      call("SetTrainerServiceTypeFilter", filter, 1)
+      callGlobal("SetTrainerServiceTypeFilter", filter, 1)
       changed = true
     end
   end
@@ -118,7 +118,7 @@ function TrainerProvider.RestoreFilters()
   TrainerProvider.restoreFilters = nil
   if not restore then return end
   for filter in pairs(restore) do
-    call("SetTrainerServiceTypeFilter", filter, 0)
+    callGlobal("SetTrainerServiceTypeFilter", filter, 0)
   end
 end
 
@@ -144,7 +144,7 @@ function TrainerProvider.ScanTrainer()
   if not store or not TrainerProvider.open or not TrainerProvider.IsAvailable() then return 0 end
   local npc = currentNPC()
   if not npc then return 0 end
-  local count = call("GetNumTrainerServices")
+  local count = callGlobal("GetNumTrainerServices")
   if type(count) ~= "number" then return 0 end
   local tradeskill = isProfessionTrainer()
   if tradeskill == false then return 0 end

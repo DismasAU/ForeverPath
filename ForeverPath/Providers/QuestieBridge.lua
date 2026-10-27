@@ -63,7 +63,7 @@ local function sideOf(races)
   return "Both"
 end
 
-local function call(q, fn, ...)
+local function callQuestie(q, fn, ...)
   if type(q[fn]) ~= "function" then return nil end
   -- QuestieDB mixes "." and ":" methods; GetQuest takes the id first, GetNPC / GetObject / GetItem take self.
   local ok, result
@@ -117,11 +117,11 @@ function QuestieBridge.PlaceOf(npcIDs, objectIDs)
   local q = db()
   if not q then return nil end
   for _, id in ipairs(npcIDs or {}) do
-    local p = place(call(q, "GetNPC", id))
+    local p = place(callQuestie(q, "GetNPC", id))
     if p then return p end
   end
   for _, id in ipairs(objectIDs or {}) do
-    local p = place(call(q, "GetObject", id))
+    local p = place(callQuestie(q, "GetObject", id))
     if p then return p end
   end
   return nil
@@ -134,7 +134,7 @@ function QuestieBridge.Quest(questID)
   local cached = QuestieBridge.entries[questID]
   if cached ~= nil then return cached or nil end
   local q = db()
-  local raw = q and call(q, "GetQuest", questID)
+  local raw = q and callQuestie(q, "GetQuest", questID)
   if not raw or type(raw.name) ~= "string" then
     QuestieBridge.entries[questID] = false
     return nil
@@ -185,7 +185,7 @@ end
 -- Quests Questie says reward itemID (entries).
 function QuestieBridge.QuestsRewarding(itemID)
   local q = db()
-  local item = q and call(q, "GetItem", tonumber(itemID))
+  local item = q and callQuestie(q, "GetItem", tonumber(itemID))
   local out = {}
   for _, questID in ipairs(item and list(item.questRewards) or {}) do
     local entry = QuestieBridge.Quest(questID)
