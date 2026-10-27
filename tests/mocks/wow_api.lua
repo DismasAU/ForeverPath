@@ -223,15 +223,43 @@ function Mock.FireEvent(event, ...)
   end
 end
 
--- Runs pending C_Timer callbacks (delays are ignored; order is preserved).
+-- The pending timer due first (earliest Mock.now + delay; ties in the order
+-- they were scheduled), removed from the queue; nil when none is due by
+-- `untilTime` (any time when it is nil).
+local function nextTimer(untilTime)
+  local best
+  for index, timer in ipairs(Mock.timers) do
+    if (not untilTime or timer.due <= untilTime) and (not best or timer.due < Mock.timers[best].due) then
+      best = index
+    end
+  end
+  return best and table.remove(Mock.timers, best) or nil
+end
+
+-- Runs every pending C_Timer callback, earliest due first, without moving
+-- the clock (callbacks scheduled meanwhile run too).
 function Mock.RunTimers(limit)
   local runs = 0
-  while #Mock.timers > 0 and runs < (limit or 1000) do
-    local timer = table.remove(Mock.timers, 1)
+  while runs < (limit or 1000) do
+    local timer = nextTimer(nil)
+    if not timer then break end
     runs = runs + 1
     timer.fn()
   end
   return runs
+end
+
+-- Moves the clock forward by `seconds`, running the callbacks that fall
+-- due on the way, each at its own time.
+function Mock.Advance(seconds)
+  local target = Mock.now + seconds
+  while true do
+    local timer = nextTimer(target)
+    if not timer then break end
+    Mock.now = math.max(Mock.now, timer.due)
+    timer.fn()
+  end
+  Mock.now = target
 end
 
 function Mock.ItemLink(itemID)
@@ -908,7 +936,7 @@ function Mock.install()
     TradeskillRecipeType = { Item = 1, Salvage = 2, Enchant = 3, Gathering = 4 },
   }
   _G.C_Timer = {
-    After = function(delay, fn) table.insert(Mock.timers, { delay = delay, fn = fn }) end,
+    After = function(delay, fn) table.insert(Mock.timers, { due = Mock.now + (tonumber(delay) or 0), fn = fn }) end,
   }
   _G.C_AddOns = {
     GetAddOnMetadata = function(name, field)

@@ -184,6 +184,29 @@ describe("ProfessionProvider", function()
     assert_deep_eq(Mock.tradeskill.openCalls, { 185 }, "only the unrecorded profession is opened")
   end)
 
+  it("gives up on a profession whose recipe list never arrives and moves on", function()
+    local tailoring = seedTailoring()
+    Mock.CloseProfession()
+    -- Mining's window opens, but its recipe list never loads.
+    Mock.tradeskill.openable[186] = { professionID = 186, name = "Mining", recipeIDs = {} }
+    Mock.tradeskill.openable[197] = tailoring
+    Mock.SetProfessions({
+      { slot = 1, name = "Mining", skillLevel = 10, maxSkillLevel = 75, skillLine = 186 },
+      { slot = 2, name = "Tailoring", skillLevel = 75, maxSkillLevel = 150, skillLine = 197 },
+    })
+    ns.chardb.professions[197] = nil
+    assert_true(Prof.RequestScan(false))
+    assert_deep_eq(Mock.tradeskill.openCalls, { 186 }, "Mining opens first")
+    Mock.Advance(7)
+    assert_deep_eq(Mock.tradeskill.openCalls, { 186 }, "still waiting before the timeout")
+    Mock.Advance(2)
+    assert_output("No recipe list arrived for Mining")
+    assert_deep_eq(Mock.tradeskill.openCalls, { 186, 197 }, "the queue moves on to Tailoring")
+    Mock.RunTimers()
+    assert_nil(ns.chardb.professions[186])
+    assert_not_nil(ns.chardb.professions[197])
+  end)
+
   it("defers automatic scanning while in combat", function()
     local tailoring = seedTailoring()
     Mock.CloseProfession()
