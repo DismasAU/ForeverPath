@@ -46,27 +46,27 @@ local QUEST_STEP = { Quest = true, ["Pick Up"] = true, ["Turn In"] = true }
 
 -- "Pick up Elemental Aid from Prate Cloudseer in Thousand Needles" for a
 -- questline step (or a bare quest: { questID, name }).
-function Planner.QuestStepText(QP, step)
-  local t = step.type or "Quest"
-  if t == "Level" then return "Reach level " .. tostring(step.wowheadID or step.name) end
-  if t == "Item" then
+function Planner.QuestStepText(quest, step)
+  local stepType = step.type or "Quest"
+  if stepType == "Level" then return "Reach level " .. tostring(step.wowheadID or step.name) end
+  if stepType == "Item" then
     return string.format("Collect %d x %s", step.count or 1, step.name or "item") .. (step.location and (" - " .. step.location) or "")
   end
-  if not QUEST_STEP[t] then return (step.typeLabel or t) .. ": " .. tostring(step.name) end
+  if not QUEST_STEP[stepType] then return (step.typeLabel or stepType) .. ": " .. tostring(step.name) end
   local questID = step.questID
-  local s = step.questState or (questID and QP.State(questID)) or {}
-  local name = step.name or (questID and QP.Name(questID)) or "the quest"
-  local entry = step.entry or (questID and QP.Get and QP.Get(questID)) or nil
+  local state = step.questState or (questID and quest.State(questID)) or {}
+  local name = step.name or (questID and quest.Name(questID)) or "the quest"
+  local entry = step.entry or (questID and quest.Get and quest.Get(questID)) or nil
   local fallbackZone = step.location or (entry and entry.location) or nil
-  if s.ready or (t == "Turn In" and s.inLog) then
-    local turnin = questID and QP.Turnin and QP.Turnin(questID) or nil
+  if state.ready or (stepType == "Turn In" and state.inLog) then
+    local turnin = questID and quest.Turnin and quest.Turnin(questID) or nil
     local zone = (turnin and turnin.zone) or fallbackZone
     return "Turn in " .. name .. (turnin and turnin.name and (" to " .. turnin.name) or "") .. (zone and (" in " .. zone) or "")
-  elseif s.inLog then
-    local progress = QP.ObjectiveText(s)
+  elseif state.inLog then
+    local progress = quest.ObjectiveText(state)
     return "Finish " .. name .. (progress ~= "" and (": " .. progress) or "")
   end
-  local giver = questID and QP.Giver and QP.Giver(questID) or nil
+  local giver = questID and quest.Giver and quest.Giver(questID) or nil
   local zone = (giver and giver.zone) or fallbackZone
   return "Pick up " .. name .. (giver and giver.name and (" from " .. giver.name) or "") .. (zone and (" in " .. zone) or "")
 end

@@ -78,6 +78,15 @@ describe("Questlines", function()
     QP.Invalidate()
   end)
 
+  it("words each kind of questline step", function()
+    local text = ns.Planner.QuestStepText
+    assert_eq(text(QP, { type = "Level", wowheadID = 60 }), "Reach level 60")
+    assert_eq(text(QP, { type = "Item", count = 3, name = "Runecloth", location = "Felwood" }), "Collect 3 x Runecloth - Felwood")
+    assert_eq(text(QP, { type = "Kill", typeLabel = "Slay", name = "Onyxia" }), "Slay: Onyxia")
+    assert_match(text(QP, { type = "Quest", name = "A Test", questState = {} }), "^Pick up A Test")
+    assert_match(text(QP, { type = "Quest", name = "A Test", questState = { ready = true } }), "^Turn in A Test")
+  end)
+
   it("finds the chain that leads to a quest for this class and faction", function()
     -- A warrior has no shaman chain; a Horde shaman does.
     assert_nil(QP.Questline(TEMPEST), "class chains are filtered by class")
