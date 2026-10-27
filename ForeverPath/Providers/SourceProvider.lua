@@ -155,7 +155,8 @@ function SourceProvider.BuildJournalIndex()
     Log.Debug("Indexed DungeonJournal: %d loot and quest entries for %d items", added, journal.items)
   else
     journal.state = "failed"
-    Log.Debug("DungeonJournal index failed: %s", tostring(added))
+    -- Visible in /fp errors: the drop and quest sources it feeds are missing.
+    Log.Error("DungeonJournal index failed: %s", tostring(added))
   end
   return journal.state
 end
@@ -348,7 +349,7 @@ function SourceProvider.BuildAtlasIndex()
     if ok then
       Log.Debug("Indexed AtlasLoot module %s: %d loot entries", moduleName, added)
     else
-      Log.Debug("AtlasLoot index failed for %s: %s", moduleName, tostring(added))
+      Log.Error("AtlasLoot index failed for %s: %s", moduleName, tostring(added))
     end
     pending = pending - 1
     if pending <= 0 then

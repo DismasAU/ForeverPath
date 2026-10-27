@@ -401,7 +401,11 @@ function ReputationProvider.EnsureAtlas()
   atlas.state = "loading"
   local function finish()
     local ok, added = pcall(ReputationProvider.IndexAtlas)
-    Log.Debug("Indexed AtlasLoot factions: %s", ok and tostring(added) or tostring(added))
+    if ok then
+      Log.Debug("Indexed AtlasLoot factions: %s", tostring(added))
+    else
+      Log.Error("AtlasLoot faction index failed: %s", tostring(added))
+    end
     atlas.state = "ready"
     Events.Fire("FP_REPUTATION_UPDATED", "atlasloot")
   end
