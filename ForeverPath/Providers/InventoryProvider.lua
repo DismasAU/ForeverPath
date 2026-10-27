@@ -160,6 +160,14 @@ function InventoryProvider.GetCounts(itemID)
   return result
 end
 
+-- Bags plus the bank (when it is known and settings.includeBank is on):
+-- what goal progress and attunement steps count as owned. Alts never count.
+function InventoryProvider.OwnedCount(itemID)
+  local counts = InventoryProvider.GetCounts(itemID)
+  local includeBank = not (ns.db and ns.db.settings and ns.db.settings.includeBank == false)
+  return counts.bags + (includeBank and counts.bank or 0)
+end
+
 function InventoryProvider.MarkDirty()
   InventoryProvider.bags.dirty = true
 end

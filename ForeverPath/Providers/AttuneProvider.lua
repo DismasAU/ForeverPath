@@ -235,8 +235,7 @@ function AttuneProvider.DefaultContext()
     end,
     level = Compat.PlayerLevel(),
     itemCount = function(itemID)
-      if ns.GoalCompletion then return ns.GoalCompletion.Count(itemID) end
-      return 0
+      return ns.InventoryProvider.OwnedCount(itemID)
     end,
     surveyed = function(key) return survey ~= nil and survey[key] ~= nil end,
   }

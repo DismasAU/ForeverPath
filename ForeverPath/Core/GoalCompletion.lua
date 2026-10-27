@@ -27,23 +27,6 @@ local function setting(key, default)
   return default
 end
 
--- Bags plus bank (when the bank is known and counted) for this character.
-function GoalCompletion.Count(itemID)
-  local provider = ns.InventoryProvider
-  if not provider then return 0 end
-  if provider.bags and provider.bags.dirty and provider.ScanBags then
-    provider.ScanBags()
-  end
-  local counts = provider.GetCounts(itemID)
-  if type(counts) == "number" then return counts end
-  if type(counts) ~= "table" then return 0 end
-  local total = tonumber(counts.bags) or 0
-  if setting("includeBank", true) and tonumber(counts.bank) then
-    total = total + counts.bank
-  end
-  return total
-end
-
 local function itemGoal(goal)
   local def = goal and GoalModel.Types[goal.type]
   return def and def.targetKind == "item" and goal.target and goal.target.itemID ~= nil
@@ -53,7 +36,7 @@ end
 function GoalCompletion.Baseline(goal, force)
   if not itemGoal(goal) then return end
   if force or goal.target.baseline == nil then
-    goal.target.baseline = GoalCompletion.Count(goal.target.itemID)
+    goal.target.baseline = ns.InventoryProvider.OwnedCount(goal.target.itemID)
     goal.target.peak = 0
   end
 end
@@ -61,7 +44,7 @@ end
 -- Progress for one goal: { count, gained, peak, needed, done }
 function GoalCompletion.Progress(goal)
   if not itemGoal(goal) then return nil end
-  local count = GoalCompletion.Count(goal.target.itemID)
+  local count = ns.InventoryProvider.OwnedCount(goal.target.itemID)
   local quantity = goal.target.quantity or 1
   if goal.type == "OBTAIN_ITEM" then
     return { count = count, needed = quantity, done = count >= quantity }

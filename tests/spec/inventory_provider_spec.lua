@@ -70,6 +70,16 @@ describe("InventoryProvider", function()
     assert_eq(counts.total, 8)
   end)
 
+  it("counts bags plus the bank as owned unless the bank is switched off", function()
+    Mock.SetBag(0, 16, { { 2589, 1 } })
+    Mock.bankTabIDs = { 6 }
+    Mock.SetBag(6, 98, { { 2589, 7 } })
+    assert_eq(Inv.OwnedCount(2589), 8)
+    ns.db.settings.includeBank = false
+    assert_eq(Inv.OwnedCount(2589), 1)
+    assert_eq(Inv.OwnedCount(1), 0)
+  end)
+
   it("uses GetItemCount when container scanning is unavailable", function()
     ns = H.fresh({ setup = function() _G.C_Container = nil end })
     H.login(ns)
