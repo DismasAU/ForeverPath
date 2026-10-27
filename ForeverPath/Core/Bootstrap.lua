@@ -42,6 +42,7 @@ function Bootstrap.OnAddonLoaded(addonName)
   ns.UI.MainFrame.Init()
   ns.UI.Tracker.Init()
   ns.UI.MinimapButton.Init()
+  ns.UI.Toast.Init()
 
   ns.loaded = true
   Log.Debug("ForeverPath %s loaded on %s build %s (interface %s)", tostring(ns.VERSION),

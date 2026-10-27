@@ -113,6 +113,10 @@ function Toast.Dismiss()
   end
 end
 
+function Toast.Init()
+  ns.Events.On("FP_GOAL_COMPLETED", function(_, toast) Toast.Show(toast) end)
+end
+
 -- A sample toast for /fp celebrate test.
 function Toast.Test()
   Toast.Show({ title = "Goal complete", name = "Linen Bag", quality = 1, detail = "Crafted 1x Linen Bag", sub = "this is a test", icon = 133639 })

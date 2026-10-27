@@ -15,6 +15,7 @@
 --   FP_REPUTATION_UPDATED    faction standings changed
 --   FP_CHARACTERS_UPDATED    an alt snapshot was saved
 --   FP_PLAYER_CHANGED        the player's level or profession skills changed
+--   FP_GOAL_COMPLETED        a goal was completed automatically (goal, toast)
 --   FP_READY                 database loaded and providers initialised
 local _, ns = ...
 

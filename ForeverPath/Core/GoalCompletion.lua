@@ -162,7 +162,8 @@ local ANNOUNCEMENTS = {
   APPLY_ENCHANT = { title = "Enchant applied", detail = function(name, quantity) return string.format("Cast %dx %s", quantity, name) end },
 }
 
--- Toast + sound + chat line. info = Progress() result (optional).
+-- Chat line + sound, and FP_GOAL_COMPLETED(goal, toast) for the UI's toast
+-- (when settings.toasts is on). info = Progress() result (optional).
 function GoalCompletion.Celebrate(goal, info)
   local name = ns.GoalService.Name(goal)
   local quantity = goal.target and goal.target.quantity or 1
@@ -174,9 +175,9 @@ function GoalCompletion.Celebrate(goal, info)
     local kit = (type(SOUNDKIT) == "table" and SOUNDKIT.LEVELUP) or GoalCompletion.SOUND
     pcall(PlaySound, kit, "Master")
   end
-  if setting("toasts", true) and ns.UI and ns.UI.Toast then
-    local item = goal.target.itemID and ns.ItemProvider and ns.ItemProvider.GetItem(goal.target.itemID) or { icon = goal.target.icon, quality = 1 }
-    ns.UI.Toast.Show({
+  if setting("toasts", true) then
+    local item = goal.target.itemID and ns.ItemProvider.GetItem(goal.target.itemID) or { icon = goal.target.icon, quality = 1 }
+    Events.Fire("FP_GOAL_COMPLETED", goal, {
       title = announce and announce.title or "Goal complete",
       name = name,
       quality = item.quality,
