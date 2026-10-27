@@ -23,7 +23,9 @@ ForeverPath/
     CraftingEngine.lua       crafts needed, requirements, owned/missing
     Allocation.lua           inventory ledger: claims per item so nothing is counted twice
     DependencyResolver.lua   recursive tree of reagents, routes, cycle/depth guards, flatten
-    Planner.lua              goal -> view model, with injected providers
+    Planner.lua              goal -> view model, with injected providers: dispatch, craft/obtain goals, shared plan helpers
+    PlannerProfessions.lua   learn-recipe, enchant and reach-skill goals, trainable recipes
+    PlannerQuests.lua        attunement, quest and reputation goals, quest step text, reward questlines
   Providers/                 wrap the WoW API behind small interfaces
     ItemProvider.lua         item parsing, C_Item lookups, async loading, name cache/search
     ProfessionProvider.lua   C_TradeSkillUI scanning, recipe cache, learned flags, /fp scan

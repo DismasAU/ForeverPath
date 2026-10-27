@@ -30,6 +30,8 @@ Domain\Farming.lua
 Domain\DependencyResolver.lua
 Domain\SkillPlanner.lua
 Domain\Planner.lua
+Domain\PlannerProfessions.lua
+Domain\PlannerQuests.lua
 Domain\Overview.lua
 Domain\ShoppingList.lua
 Domain\CraftWise.lua
