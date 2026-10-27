@@ -185,6 +185,19 @@ function Util.FormatMoney(copper)
   return string.format("%dc", bronze)
 end
 
+-- Money text for hints, chat and messages: plain FormatMoney until the UI
+-- installs its coin-coloured renderer (Widgets.Money) through
+-- Util.SetMoneyRenderer, so lower layers never reach up into the UI.
+local moneyRenderer
+function Util.Money(copper)
+  if moneyRenderer then return moneyRenderer(copper) end
+  return Util.FormatMoney(copper)
+end
+
+function Util.SetMoneyRenderer(fn)
+  moneyRenderer = fn
+end
+
 function Util.Join(list, separator)
   local parts = {}
   for i = 1, #list do

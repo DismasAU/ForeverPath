@@ -370,9 +370,6 @@ function ClassicDB.ItemHints(itemID, opts)
   local out = {}
   if not data() then return out end
   local limits = ClassicDB.HINT_LIMITS
-  local function money(copper)
-    return ns.UI and ns.UI.Widgets and ns.UI.Widgets.Money(copper, true) or (tostring(copper) .. "c")
-  end
   if not opts.skipVendors then
     for i, v in ipairs(ClassicDB.Vendors(itemID)) do
       if i > limits.vendor then break end
@@ -380,7 +377,7 @@ function ClassicDB.ItemHints(itemID, opts)
       out[#out + 1] = { kind = "vendor", name = v.npc.name, price = v.price, zone = v.place and v.place.zone, classic = true,
         mapID = v.place and v.place.mapID, x = v.place and v.place.x, y = v.place and v.place.y,
         label = "Buy from " .. v.npc.name,
-        detail = string.format("%s - %s each%s (classic data)", where, v.price and v.price > 0 and money(v.price) or "price unknown", v.limited and ", limited stock" or "") }
+        detail = string.format("%s - %s each%s (classic data)", where, v.price and v.price > 0 and ns.Util.Money(v.price) or "price unknown", v.limited and ", limited stock" or "") }
     end
   end
   local list, total = ClassicDB.Loot("gathered", itemID)

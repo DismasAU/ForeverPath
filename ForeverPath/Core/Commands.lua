@@ -356,7 +356,7 @@ function handlers.sources(rest)
   end
   for _, line in ipairs(lines) do Log.output("  " .. line) end
   local price = ns.PriceProvider.GetPrice(itemID)
-  if price then Log.output("  Price: " .. ns.UI.Widgets.Money(price.copper, true) .. " each (" .. price.source .. ")") end
+  if price then Log.output("  Price: " .. Util.Money(price.copper) .. " each (" .. price.source .. ")") end
 end
 
 function handlers.vendors()
@@ -466,12 +466,11 @@ function handlers.train(rest)
     Log.Print(name ~= "" and ("You do not have " .. name .. ".") or "This character has no profession with trainer recipes.")
     return
   end
-  local function money(copper) return ns.UI and ns.UI.Widgets and ns.UI.Widgets.Money(copper, true) or (copper .. "c") end
   for _, plan in ipairs(plans) do
     Log.Print("%s %d/%d: %d recipe%s to train now%s.", plan.profession, plan.skill, plan.max, #plan.now, #plan.now == 1 and "" or "s",
-      plan.cost > 0 and (" (" .. money(plan.cost) .. ")") or "")
+      plan.cost > 0 and (" (" .. Util.Money(plan.cost) .. ")") or "")
     for _, row in ipairs(plan.now) do
-      Log.output(string.format("  %d  %s - %s%s%s%s", row.rank, row.recipe.name or "?", row.cost > 0 and money(row.cost) or "free",
+      Log.output(string.format("  %d  %s - %s%s%s%s", row.rank, row.recipe.name or "?", row.cost > 0 and Util.Money(row.cost) or "free",
         row.trainer and (" - " .. row.trainer) or "", row.zone and (" (" .. row.zone .. ")") or "", row.classic and " [classic data]" or ""))
     end
     if #plan.soon > 0 then
@@ -509,7 +508,7 @@ function handlers.prices(rest)
     return
   end
   Log.Print("Prices for %s:", ns.ItemProvider.GetName(itemID))
-  for _, line in ipairs(ns.PriceProvider.Describe(itemID, function(c) return ns.UI.Widgets.Money(c, true) end)) do
+  for _, line in ipairs(ns.PriceProvider.Describe(itemID, Util.Money)) do
     Log.output("  " .. line)
   end
 end

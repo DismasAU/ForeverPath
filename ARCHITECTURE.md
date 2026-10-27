@@ -154,8 +154,8 @@ stored as a timestamped snapshot in `ForeverPathCharDB.bankCache`.
 | `FP_LOOT_LEARNED` | - | LootLearner after a loot window |
 | `FP_TRAINERS_UPDATED` | npc | TrainerProvider after a trainer window |
 | `FP_SHARED_DATA_CHANGED` | - | Share after an import or removal (LootLearner and decoded recipes drop their caches) |
-| `FP_EQUIPMENT_UPDATED` | - | EquipmentProvider |
-| `FP_REPUTATION_UPDATED` | - | ReputationProvider |
+| `FP_EQUIPMENT_UPDATED` | reason | EquipmentProvider |
+| `FP_REPUTATION_UPDATED` | reason | ReputationProvider |
 | `FP_PLAYER_CHANGED` | "skill" or "quest" | GoalCompletion after its skill-up and quest/level checks |
 | (listener) MainFrame | | refreshes on every message above except `FP_READY` and `FP_CHARACTERS_UPDATED` (that one only on the Characters screen) |
 | (listener) `FP_INVENTORY_UPDATED`, `FP_GOALS_CHANGED` | | GoalCompletion checks open item goals after every bag change, baselines new goals and re-baselines reopened ones |

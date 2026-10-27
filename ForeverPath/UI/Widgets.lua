@@ -1068,6 +1068,8 @@ function Widgets.Money(copper, compact)
   end
   return string.format("%s%dc|r", Theme.Hex.coinCopper, bronze)
 end
+-- Hints, chat lines and messages built below the UI get coin colours too.
+ns.Util.SetMoneyRenderer(function(copper) return Widgets.Money(copper, true) end)
 
 function Widgets.ResizeGrip(frame, onStop)
   local grip = CreateFrame("Button", nil, frame)

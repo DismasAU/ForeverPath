@@ -133,7 +133,7 @@ function VendorProvider.ItemHints(itemID)
     if vendor.subzone then where = where .. " (" .. vendor.subzone .. ")" end
     local cost
     if vendor.price then
-      cost = ns.UI and ns.UI.Widgets and ns.UI.Widgets.Money(vendor.price, true) or (vendor.price .. "c")
+      cost = Util.Money(vendor.price)
     elseif vendor.extended then
       cost = "costs other items"
     else

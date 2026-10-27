@@ -49,6 +49,13 @@ describe("Util", function()
     assert_eq(original.nested.value, 1)
   end)
 
+  it("renders money plainly until the UI installs its coloured renderer", function()
+    assert_match(ns.Util.Money(1234), "|r", "the UI's renderer is installed when Widgets loads")
+    ns.Util.SetMoneyRenderer(nil)
+    assert_eq(ns.Util.Money(1234), "12s 34c")
+    assert_eq(ns.Util.Money(5), "5c")
+  end)
+
   it("safe-calls functions, passing every result through", function()
     local a, b, c, d, e = ns.Util.SafeCall(function(x) return x, 2, 3, 4, 5 end, 1)
     assert_eq(a, 1)
