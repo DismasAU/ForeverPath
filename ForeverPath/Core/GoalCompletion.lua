@@ -146,7 +146,6 @@ function GoalCompletion.RecordCast(spellID)
   end
   if touched > 0 then
     GoalCompletion.Check("cast")
-    if ns.UI and ns.UI.MainFrame then ns.UI.MainFrame.RequestRefresh() end
   end
   return touched
 end
@@ -219,7 +218,7 @@ function GoalCompletion.Init()
   Events.RegisterWoW("SKILL_LINES_CHANGED", function()
     Events.Debounce("skill-goal-check", 1, function()
       GoalCompletion.Check("skill")
-      if ns.UI and ns.UI.MainFrame then ns.UI.MainFrame.RequestRefresh() end
+      Events.Fire("FP_PLAYER_CHANGED", "skill")
     end)
   end)
   Events.RegisterWoW("UPDATE_FACTION", function()
@@ -238,7 +237,7 @@ function GoalCompletion.Init()
     Events.RegisterWoW(event, function()
       Events.Debounce("attunement-check", 1, function()
         GoalCompletion.Check("quest")
-        if ns.UI and ns.UI.MainFrame then ns.UI.MainFrame.RequestRefresh() end
+        Events.Fire("FP_PLAYER_CHANGED", "quest")
       end)
     end)
   end

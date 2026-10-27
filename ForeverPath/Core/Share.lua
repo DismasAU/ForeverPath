@@ -171,7 +171,6 @@ end
 -- FP_SHARED_DATA_CHANGED.
 function Share.Changed()
   Events.Fire("FP_SHARED_DATA_CHANGED")
-  if ns.UI and ns.UI.MainFrame and ns.UI.MainFrame.RequestRefresh then ns.UI.MainFrame.RequestRefresh() end
 end
 
 function Share.Status()

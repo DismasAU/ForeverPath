@@ -1,11 +1,21 @@
 -- Game event registration plus a tiny internal message bus.
 --
 -- Internal messages (prefixed FP_) decouple providers from the UI:
---   FP_GOALS_CHANGED       goals added, removed, selected or edited
---   FP_RECIPES_UPDATED     a profession scan finished (professionID)
---   FP_INVENTORY_UPDATED   bag or bank counts changed
---   FP_ITEM_LOADED         item data arrived from the server (itemID, success)
---   FP_READY               database loaded and providers initialised
+--   FP_GOALS_CHANGED         goals added, removed, selected or edited
+--   FP_RECIPES_UPDATED       a profession scan finished (professionID)
+--   FP_INVENTORY_UPDATED     bag or bank counts changed
+--   FP_ITEM_LOADED           item data arrived from the server (itemID, success)
+--   FP_QUESTS_UPDATED        the quest log or quest index changed (reason)
+--   FP_QUEST_FACTS_UPDATED   a quest giver, turn-in or item list was learned
+--   FP_LOOT_LEARNED          a loot window added to the learned drops
+--   FP_SOURCES_UPDATED       vendor or AtlasLoot sources changed (kind, npc)
+--   FP_TRAINERS_UPDATED      a trainer window was recorded (npc)
+--   FP_SHARED_DATA_CHANGED   another player's data was imported or removed
+--   FP_EQUIPMENT_UPDATED     worn gear or GearQuest picks changed
+--   FP_REPUTATION_UPDATED    faction standings changed
+--   FP_CHARACTERS_UPDATED    an alt snapshot was saved
+--   FP_PLAYER_CHANGED        the player's level or profession skills changed
+--   FP_READY                 database loaded and providers initialised
 local _, ns = ...
 
 local Events = {

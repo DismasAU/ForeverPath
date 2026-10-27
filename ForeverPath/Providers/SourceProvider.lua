@@ -498,7 +498,4 @@ end
 
 function SourceProvider.Init()
   if ns.ItemProvider and ns.ItemProvider.RegisterNameSource then ns.ItemProvider.RegisterNameSource(SourceProvider.JournalNames) end
-  Events.On("FP_SOURCES_UPDATED", function()
-    if ns.UI and ns.UI.MainFrame then ns.UI.MainFrame.RequestRefresh() end
-  end)
 end
