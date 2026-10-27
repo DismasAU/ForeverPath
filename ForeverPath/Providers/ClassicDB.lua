@@ -36,6 +36,22 @@ ns.ClassicDB = ClassicDB
 ClassicDB.ADDON = "ForeverPath_ClassicDB"
 ClassicDB.ALLIANCE, ClassicDB.HORDE = 1, 2
 ClassicDB.CHAIN_LIMIT = 40
+
+-- Column positions in the generated rows (layouts in the header above).
+local QUEST = {
+  TITLE = 1, LEVEL = 2, MIN_LEVEL = 3, SIDE = 4, CLASS_MASK = 5, ZONE_OR_SORT = 6,
+  STARTER_NPCS = 7, STARTER_OBJECTS = 8, STARTER_ITEM = 9, ENDER_NPCS = 10, ENDER_OBJECTS = 11,
+  ITEMS = 12, KILLS = 13, CHOICE_REWARDS = 14, REWARDS = 15, REPUTATION = 16,
+  PREREQUISITES = 17, FOLLOW_UP = 18, PROVIDED_ITEM = 19, OBJECTIVES = 20,
+  GROUP_SIZE = 21, SKILL = 22, BREADCRUMB_FOR = 23, TYPE = 24,
+}
+local NPC = { NAME = 1, SUB_NAME = 2, MIN_LEVEL = 3, MAX_LEVEL = 4, NPC_FLAGS = 5, SPAWNS = 6, SIDE = 7, RANK = 8 }
+local OBJECT = { NAME = 1, TYPE = 2, SPAWNS = 3, LOCK_SKILL = 4, SKILL_VALUE = 5 }
+local WORLD_DROP = { MIN_LEVEL = 1, MAX_LEVEL = 2 }
+-- vendors: price, stack, then { npcID, limited } pairs from FIRST_NPC.
+local VENDOR = { PRICE = 1, STACK = 2, FIRST_NPC = 3 }
+-- trainers: skillLine, skill, cost, then npcIDs from FIRST_NPC.
+local TRAINER = { SKILL_LINE = 1, SKILL = 2, COST = 3, FIRST_NPC = 4 }
 -- The table layout this file reads; tools/ClassicDbExtract writes it into
 -- meta.format (FORMAT there). Data in any other format is ignored.
 ClassicDB.FORMAT = 1
@@ -109,9 +125,9 @@ function ClassicDB.Eligible(questID, side, classID)
   if not row then return false end
   side = side or ClassicDB.PlayerSide()
   classID = classID or select(2, Compat.PlayerClass())
-  local questSide = row[4] or 0
+  local questSide = row[QUEST.SIDE] or 0
   if questSide ~= 0 and side and questSide ~= side then return false end
-  return hasClassBit(row[5], classID)
+  return hasClassBit(row[QUEST.CLASS_MASK], classID)
 end
 
 ---------------------------------------------------------------------------
@@ -155,8 +171,8 @@ function ClassicDB.Npc(npcID)
   local d = data()
   local row = d and d.npcs[tonumber(npcID) or 0]
   if not row then return nil end
-  return { id = tonumber(npcID), name = row[1], subName = row[2], minLevel = row[3], maxLevel = row[4], npcFlags = row[5], spawns = ClassicDB.Spawns(row[6]),
-    side = row[7], rank = row[8] }
+  return { id = tonumber(npcID), name = row[NPC.NAME], subName = row[NPC.SUB_NAME], minLevel = row[NPC.MIN_LEVEL], maxLevel = row[NPC.MAX_LEVEL],
+    npcFlags = row[NPC.NPC_FLAGS], spawns = ClassicDB.Spawns(row[NPC.SPAWNS]), side = row[NPC.SIDE], rank = row[NPC.RANK] }
 end
 
 ClassicDB.LOCK_SKILLS = { "Herbalism", "Mining", "Fishing", "Lockpicking" }
@@ -165,8 +181,9 @@ function ClassicDB.Object(objectID)
   local d = data()
   local row = d and d.objects and d.objects[tonumber(objectID) or 0]
   if not row then return nil end
-  return { id = tonumber(objectID), name = row[1], type = row[2], spawns = ClassicDB.Spawns(row[3]),
-    skill = row[4] and ClassicDB.LOCK_SKILLS[row[4]] or nil, skillValue = row[5] }
+  local lockSkill = row[OBJECT.LOCK_SKILL]
+  return { id = tonumber(objectID), name = row[OBJECT.NAME], type = row[OBJECT.TYPE], spawns = ClassicDB.Spawns(row[OBJECT.SPAWNS]),
+    skill = lockSkill and ClassicDB.LOCK_SKILLS[lockSkill] or nil, skillValue = row[OBJECT.SKILL_VALUE] }
 end
 
 -- Can this character deal with the NPC (not hostile to its faction)?
@@ -233,26 +250,28 @@ function ClassicDB.Quest(questID)
   local cached = ClassicDB.entries[questID]
   if cached then return cached end
   local rewards, choice = {}, false
-  for _, r in ipairs(pairList(row[15], { "itemID", "count" })) do
+  for _, r in ipairs(pairList(row[QUEST.REWARDS], { "itemID", "count" })) do
     r.fixed = true
     rewards[#rewards + 1] = r
   end
-  for _, r in ipairs(pairList(row[14], { "itemID", "count" })) do
+  for _, r in ipairs(pairList(row[QUEST.CHOICE_REWARDS], { "itemID", "count" })) do
     rewards[#rewards + 1] = r
     choice = true
   end
-  local giver = ClassicDB.PlaceOf(row[7], row[8])
+  local giver = ClassicDB.PlaceOf(row[QUEST.STARTER_NPCS], row[QUEST.STARTER_OBJECTS])
+  local level, minLevel = row[QUEST.LEVEL], row[QUEST.MIN_LEVEL]
   local entry = {
-    id = questID, name = row[1], level = row[2] ~= 0 and row[2] or nil, requires = row[3] ~= 0 and row[3] or nil,
-    faction = SIDE_NAMES[row[4] or 0] or "Both", classMask = row[5] or 0,
+    id = questID, name = row[QUEST.TITLE], level = level ~= 0 and level or nil, requires = minLevel ~= 0 and minLevel or nil,
+    faction = SIDE_NAMES[row[QUEST.SIDE] or 0] or "Both", classMask = row[QUEST.CLASS_MASK] or 0,
     instance = (giver and giver.zone) or "Classic quests", location = giver and giver.zone or nil,
-    objective = row[20], rewards = rewards, rewardChoice = choice,
+    objective = row[QUEST.OBJECTIVES], rewards = rewards, rewardChoice = choice,
     source = "classic", classic = true,
-    prerequisites = row[17], followUp = row[18], providedItem = row[19],
-    starterNpcs = row[7], starterObjects = row[8], starterItem = row[9], enderNpcs = row[10], enderObjects = row[11],
-    items = pairList(row[12], { "itemID", "count" }), kills = pairList(row[13], { "id", "count" }),
-    reputation = pairList(row[16], { "factionID", "value" }),
-    groupSize = row[21], skill = row[22], breadcrumbFor = row[23], questType = row[24],
+    prerequisites = row[QUEST.PREREQUISITES], followUp = row[QUEST.FOLLOW_UP], providedItem = row[QUEST.PROVIDED_ITEM],
+    starterNpcs = row[QUEST.STARTER_NPCS], starterObjects = row[QUEST.STARTER_OBJECTS], starterItem = row[QUEST.STARTER_ITEM],
+    enderNpcs = row[QUEST.ENDER_NPCS], enderObjects = row[QUEST.ENDER_OBJECTS],
+    items = pairList(row[QUEST.ITEMS], { "itemID", "count" }), kills = pairList(row[QUEST.KILLS], { "id", "count" }),
+    reputation = pairList(row[QUEST.REPUTATION], { "factionID", "value" }),
+    groupSize = row[QUEST.GROUP_SIZE], skill = row[QUEST.SKILL], breadcrumbFor = row[QUEST.BREADCRUMB_FOR], questType = row[QUEST.TYPE],
   }
   ClassicDB.entries[questID] = entry
   return entry
@@ -311,7 +330,7 @@ function ClassicDB.WorldDrop(itemID)
   local d = data()
   local row = d and d.worldDrops and d.worldDrops[tonumber(itemID) or 0]
   if not row then return nil end
-  return { minLevel = row[1], maxLevel = row[2] }
+  return { minLevel = row[WORLD_DROP.MIN_LEVEL], maxLevel = row[WORLD_DROP.MAX_LEVEL] }
 end
 
 -- Vendors that sell itemID and deal with this character's faction:
@@ -321,10 +340,10 @@ function ClassicDB.Vendors(itemID, side)
   local row = d and d.vendors and d.vendors[tonumber(itemID) or 0]
   local out = {}
   if not row then return out end
-  for i = 3, #row, 2 do
+  for i = VENDOR.FIRST_NPC, #row, 2 do
     local npc = ClassicDB.Npc(row[i])
     if npc and ClassicDB.Friendly(npc, side) then
-      out[#out + 1] = { npc = npc, place = ClassicDB.PlaceOf({ row[i] }), price = row[1], stack = row[2], limited = row[i + 1] == 1 }
+      out[#out + 1] = { npc = npc, place = ClassicDB.PlaceOf({ row[i] }), price = row[VENDOR.PRICE], stack = row[VENDOR.STACK], limited = row[i + 1] == 1 }
     end
   end
   return out
@@ -345,9 +364,10 @@ function ClassicDB.Trainer(recipeSpellID, side)
   local row = d and d.trainers and d.trainers[tonumber(recipeSpellID) or 0]
   if not row then return nil end
   local catalogue = ns.Data.Catalogue
-  local profession = catalogue and catalogue.professions and catalogue.professions[row[1]]
-  local record = { skill = profession and profession[1] or nil, skillLine = row[1], rank = row[2], cost = row[3], classic = true, trainers = {} }
-  for i = 4, #row do
+  local skillLine = row[TRAINER.SKILL_LINE]
+  local profession = catalogue and catalogue.professions and catalogue.professions[skillLine]
+  local record = { skill = profession and profession[1] or nil, skillLine = skillLine, rank = row[TRAINER.SKILL], cost = row[TRAINER.COST], classic = true, trainers = {} }
+  for i = TRAINER.FIRST_NPC, #row do
     local npc = ClassicDB.Npc(row[i])
     if npc and ClassicDB.Friendly(npc, side) then
       local place = ClassicDB.PlaceOf({ row[i] })
@@ -503,7 +523,7 @@ local function buildIndexes()
   local rewards, reputation, titles = {}, {}, {}
   if d then
     for questID, row in pairs(d.quests) do
-      for _, field in ipairs({ 14, 15 }) do
+      for _, field in ipairs({ QUEST.CHOICE_REWARDS, QUEST.REWARDS }) do
         local list = row[field]
         if type(list) == "table" then
           for i = 1, #list, 2 do
@@ -513,16 +533,17 @@ local function buildIndexes()
           end
         end
       end
-      if type(row[16]) == "table" then
-        for i = 1, #row[16], 2 do
-          local factionID, value = row[16][i], row[16][i + 1]
+      local gains = row[QUEST.REPUTATION]
+      if type(gains) == "table" then
+        for i = 1, #gains, 2 do
+          local factionID, value = gains[i], gains[i + 1]
           if value and value > 0 then
             reputation[factionID] = reputation[factionID] or {}
             table.insert(reputation[factionID], { questID = questID, amount = value })
           end
         end
       end
-      titles[#titles + 1] = { questID = questID, lower = string.lower(row[1] or "") }
+      titles[#titles + 1] = { questID = questID, lower = string.lower(row[QUEST.TITLE] or "") }
     end
     for _, list in pairs(rewards) do table.sort(list) end
     for _, list in pairs(reputation) do
