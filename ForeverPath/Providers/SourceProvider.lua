@@ -516,7 +516,7 @@ function SourceProvider.MaterialTags(material)
       break
     end
   end
-  local crafter = ns.CharacterProvider.CanCraft(material.itemID)[1]
+  local crafter = ns.CharacterProvider.AltCrafters(material.itemID)[1]
   if crafter then
     tags[#tags + 1] = "Craft - Alt: " .. crafter.name
   end

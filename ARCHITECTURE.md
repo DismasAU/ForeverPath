@@ -275,7 +275,7 @@ order.
 ```
 
 Readers never see the current character as an alt. `Alts(itemID)` /
-`AltTotal` feed `InventoryProvider.GetCounts().alts`; `CanCraft(itemID)`
+`AltTotal` feed `InventoryProvider.GetCounts().alts`; `AltCrafters(itemID)`
 checks alts' `knownRecipes` against `itemRecipes`; `Sources(itemID)` turns
 both into resolver hints; `BestCoverage(needs)` drives the Characters banner.
 The ledger draws bags, then bank, then alts, and only touches alts when

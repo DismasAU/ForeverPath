@@ -290,7 +290,7 @@ end
 
 -- Alts that have learned a recipe producing itemID.
 -- Returns { { record, name, recipe, professionName, skillLevel } }.
-function CharacterProvider.CanCraft(itemID)
+function CharacterProvider.AltCrafters(itemID)
   local out = {}
   if not ns.db or type(ns.db.itemRecipes) ~= "table" then return out end
   local ids = ns.db.itemRecipes[itemID]
@@ -326,7 +326,7 @@ function CharacterProvider.Sources(itemID)
       detail = string.format("%s has %d (%s)", alt.name, alt.total, alt.freshness),
     }
   end
-  for _, crafter in ipairs(CharacterProvider.CanCraft(itemID)) do
+  for _, crafter in ipairs(CharacterProvider.AltCrafters(itemID)) do
     options[#options + 1] = {
       kind = "altcraft", name = crafter.name,
       label = "Craft on " .. crafter.name,
