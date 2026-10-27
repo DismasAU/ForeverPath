@@ -16,13 +16,13 @@
 -- Quests in the player's log are read from C_QuestLog whether or not either
 -- addon knows them; titles of other quests are requested from the client
 -- (RequestLoadQuestByID) and arrive with QUEST_DATA_LOAD_RESULT.
--- Classic-era quests (CMaNGOS classic-db, Providers/ClassicDB.lua)
+-- Classic-era quests (CMaNGOS classic-db, Providers/Integrations/ClassicDB.lua)
 -- are the baseline under all of it: Get() falls back to them, and givers,
 -- turn-ins, required items, rewards and prerequisite chains come from them
 -- when nothing Forever-specific knows the quest.
 -- Questlines (the chain of steps that leads to a quest) come from Attune's
 -- attunement and class-quest chains, else the classic prerequisites; quest givers, turn-ins and the items a
--- quest asks for from Providers/QuestFactsProvider.lua (shipped catalogue +
+-- quest asks for from Providers/Learners/QuestFactsProvider.lua (shipped catalogue +
 -- what this account has learned at quest windows).
 local _, ns = ...
 

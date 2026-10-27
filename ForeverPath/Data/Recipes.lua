@@ -179,7 +179,7 @@ function Recipes.Get(spellID)
 end
 
 -- The client's tables do not carry the skill a trainer requires (it is
--- server data), so the trainer recorder (Providers/TrainerProvider.lua)
+-- server data), so the trainer recorder (Providers/Learners/TrainerProvider.lua)
 -- supplies it through Recipes.trainerLookup(spellID) -> { skill, rank, cost,
 -- trainer, zone, subzone }. The recorded rank replaces a lower catalogue
 -- value and the recipe remembers where it is taught.

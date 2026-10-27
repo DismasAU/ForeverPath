@@ -35,24 +35,27 @@ ForeverPath/
     Overview.lua             dashboard aggregation (missing materials, next steps)
     ShoppingList.lua         cross-goal shopping rows, categories, mail plan, chat lines
     CraftWise.lua            buy / craft / hybrid comparison over a full tree, route plan, presets
-  Providers/                 wrap the WoW API behind small interfaces
-    ItemProvider.lua         item parsing, C_Item lookups, async loading, name cache/search
-    ProfessionProvider.lua   C_TradeSkillUI scanning, recipe cache, learned flags, /fp scan
-    InventoryProvider.lua    bag index, bank snapshot, counts (plus alts' totals), owned count
-    CharacterProvider.lua    account-wide character snapshots, alt stock / crafters / coverage
-    VendorProvider.lua       merchant recorder (account-wide vendor stock + prices), vendor price source
-    TrainerProvider.lua      trainer recorder (required skill, cost, trainer and zone per recipe; feeds the catalogue)
+  Providers/                 wrap the WoW API and other addons behind small interfaces
     SourceProvider.lua       item sources in a fixed order (vendors, learned loot, journal, AtlasLoot, quests, GearQuest, reputation, classic data, class heuristics)
-    AttuneProvider.lua       attunement chains from the Attune addon, progress from quest flags / log / level / bags / survey; questlines
-    ClassicDB.lua            classic-era quests, NPCs, objects and spawns (ForeverPath_ClassicDB, CMaNGOS classic-db): places, eligibility, indexes, chains
-    LootLearner.lua          what this account loots on Forever (LOOT_READY, GetLootSourceInfo), per creature / object / fishing zone; first in item sources
-    QuestieBridge.lua        Questie's quest database read at runtime (QuestieLoader modules), ranked between Forever data and classic data
-    QuestFactsProvider.lua   quest givers, turn-ins and item objectives learned at quest windows (account-wide) + the shipped catalogue
-    QuestProvider.lua        quest log, objectives and completed flags plus the quest knowledge of the journal, Attune, Questie and classic data
-    EquipmentProvider.lua    worn gear per slot, item stats, GearQuest Forever upgrade picks
-    ReputationProvider.lua   standings (C_Reputation or legacy), thresholds, reputation quests and AtlasLoot faction rewards
     PriceProvider.lua        pricing boundary: cheapest of registered sources, freshness, status
-    AuctionPriceProvider.lua Auctionator v1 API adapter (lowest buyout, age, 7-day mean, listings)
+    Client/                  the client's own data
+      ItemProvider.lua       item parsing, C_Item lookups, async loading, name cache/search
+      InventoryProvider.lua  bag index, bank snapshot, counts (plus alts' totals), owned count
+      ProfessionProvider.lua C_TradeSkillUI scanning, recipe cache, learned flags, /fp scan
+      CharacterProvider.lua  account-wide character snapshots, alt stock / crafters / coverage
+      EquipmentProvider.lua  worn gear per slot, item stats, GearQuest Forever upgrade picks
+      ReputationProvider.lua standings (C_Reputation or legacy), thresholds, reputation quests and AtlasLoot faction rewards
+      QuestProvider.lua      quest log, objectives and completed flags plus the quest knowledge of the journal, Attune, Questie and classic data
+    Integrations/            other addons' data, read at runtime
+      AttuneProvider.lua     attunement chains from the Attune addon, progress from quest flags / log / level / bags / survey; questlines
+      AuctionPriceProvider.lua Auctionator v1 API adapter (lowest buyout, age, 7-day mean, listings)
+      QuestieBridge.lua      Questie's quest database read at runtime (QuestieLoader modules), ranked between Forever data and classic data
+      ClassicDB.lua          classic-era quests, NPCs, objects and spawns (ForeverPath_ClassicDB, CMaNGOS classic-db): places, eligibility, indexes, chains
+    Learners/                what this account records as it plays
+      LootLearner.lua        what this account loots on Forever (LOOT_READY, GetLootSourceInfo), per creature / object / fishing zone; first in item sources
+      QuestFactsProvider.lua quest givers, turn-ins and item objectives learned at quest windows (account-wide) + the shipped catalogue
+      TrainerProvider.lua    trainer recorder (required skill, cost, trainer and zone per recipe; feeds the catalogue)
+      VendorProvider.lua     merchant recorder (account-wide vendor stock + prices), vendor price source
   App/                       application services and wiring over the layers above
     PlannerDeps.lua          the Planner's composition root: Planner.DefaultDeps over the providers
     Share.lua                /fp export / import of learned data, sanitised against per-kind schemas
@@ -319,7 +322,7 @@ Skill-plan craft nodes (`forSkill`) and enchant roots have no `itemID`:
 they carry `name` / `icon`, `Summarize` lists crafts with `name` and
 `enchant`, and screens use `displayOf` / `labelOf` fallbacks.
 
-**Reputation planning.** `Providers/ReputationProvider.lua` normalises
+**Reputation planning.** `Providers/Client/ReputationProvider.lua` normalises
 `C_Reputation.GetFactionDataByIndex` / `GetFactionDataByID` (or the legacy
 tuples) into `{ factionID, name, standing (1..8), standingLabel, value,
 min, max, into, span, percentWithin, header }` (`List()`, cached until
@@ -338,7 +341,7 @@ progress, quests, rewards, targetLabel }`, `nextStep` (the first open quest
 that gives reputation) and a `StepPlan`; `GoalCompletion` finishes the goal
 on `UPDATE_FACTION`.
 
-**Equipment.** `Providers/EquipmentProvider.lua` is a read-only view, not a
+**Equipment.** `Providers/Client/EquipmentProvider.lua` is a read-only view, not a
 goal type: `SLOTS` (display order, inventory slot ids, GearQuest slot names,
 equip locations), `Equipped()` (ids and links per slot, names and icons
 through ItemProvider, item levels), `Stats(linkOrID)` (client item stats
@@ -355,7 +358,7 @@ The Equipment screen is a consumer of `Analyze`; a target becomes a
 CRAFT_ITEM or OBTAIN_ITEM goal through `GoalService.AddItemGoal`.
 `FP_EQUIPMENT_UPDATED` follows the equipment events.
 
-**Quest planning.** `Providers/QuestProvider.lua` builds a static index
+**Quest planning.** `Providers/Client/QuestProvider.lua` builds a static index
 (`Index()`, lazily, dropped on `FP_READY`) from ForeverDungeonJournal
 (`DB[dungeon].quests`, `QUEST_PREREQ_CHAINS`, `QUEST_START_MAPS`,
 `FOREVER_QUEST_XP_FALLBACK`; chain prerequisites that are not dungeon
@@ -475,7 +478,7 @@ recipes are never under-provisioned.
 ForeverPath`, `## LoadOnDemand: 1`) generated by `tools/ClassicDbExtract`
 from CMaNGOS classic-db. Its files write `ForeverPath.ClassicData.quests /
 npcs / objects / zones / instances / meta` (compact positional rows; layouts
-in `Providers/ClassicDB.lua`). `ClassicDB.Init` (before the quest
+in `Providers/Integrations/ClassicDB.lua`). `ClassicDB.Init` (before the quest
 providers) calls `Compat.LoadAddOn` once; without the addon every classic
 call returns nothing and `Status` says why.
 

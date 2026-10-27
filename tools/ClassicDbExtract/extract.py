@@ -825,7 +825,7 @@ def lua(v):
 
 
 # Layout version of the generated tables. Bump it whenever their shape
-# changes; ForeverPath/Providers/ClassicDB.lua (ClassicDB.FORMAT) refuses
+# changes; ForeverPath/Providers/Integrations/ClassicDB.lua (ClassicDB.FORMAT) refuses
 # data written for another format.
 FORMAT = 1
 

@@ -30,15 +30,15 @@ Database.DEFAULTS = {
       toasts = true,        -- celebration toast on completion
       completeSound = true, -- level-up fanfare on completion
     },
-    characters = {},   -- "Name-Realm" -> snapshot (see Providers/CharacterProvider.lua)
+    characters = {},   -- "Name-Realm" -> snapshot (see Providers/Client/CharacterProvider.lua)
     vendors = {},      -- itemID -> { [npcName] = { price, stack, limited, zone, subzone, seenAt } }
-    trainers = {},     -- recipe spellID -> { skill, rank, cost, trainer, zone, subzone, seenAt } (see Providers/TrainerProvider.lua)
+    trainers = {},     -- recipe spellID -> { skill, rank, cost, trainer, zone, subzone, seenAt } (see Providers/Learners/TrainerProvider.lua)
     trainerNPCs = {},  -- trainer name -> { zone, subzone, recipes, seenAt }
     recipes = {},      -- recipeID -> normalized recipe (see Domain/RecipeModel.lua)
     itemRecipes = {},  -- outputItemID -> { [recipeID] = true }
     itemNames = {},    -- itemID -> name (cheap cache for display and name search)
-    questFacts = {},   -- questID -> { giver, turnin, items } learned at quest windows (see Providers/QuestFactsProvider.lua)
-    lootSeen = {},     -- "c:<npcID>" / "o:<objectID>" / "f:<zone>" -> what was looted there (see Providers/LootLearner.lua)
+    questFacts = {},   -- questID -> { giver, turnin, items } learned at quest windows (see Providers/Learners/QuestFactsProvider.lua)
+    lootSeen = {},     -- "c:<npcID>" / "o:<objectID>" / "f:<zone>" -> what was looted there (see Providers/Learners/LootLearner.lua)
     minimap = { hide = false, minimapPos = 225 }, -- minimap button (see UI/MinimapButton.lua)
     imported = {},     -- author token -> { label, at, importedAt, lootSeen, questFacts, vendors, trainers, trainerNPCs } (see App/Share.lua)
   },
