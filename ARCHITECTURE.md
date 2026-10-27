@@ -7,68 +7,77 @@ ForeverPath/
   ForeverPath.toc            manifest (Interface 16001); ForeverPath_Camelot.toc is an identical copy
   Core/
     Namespace.lua            shared `ns` table, version, the single global `ForeverPath`
-    Util.lua                 pure helpers (parsing, defaults, copies, time formatting)
-    Log.lua                  chat output, debug flag, error capture, protected calls
-    Compat.lua               WoW API discovery; the only file that asks "which client is this?"
+    Util.lua                 pure helpers (parsing, defaults, copies, time/money formatting, SafeCall, MatchRank)
+    Log.lua                  chat output, debug flag, error capture, protected calls (Call, Try)
+    Compat.lua               WoW API discovery and player context; the only file that asks "which client is this?"
     Events.lua               game event registration + internal FP_* message bus, debounce, combat deferral
     Database.lua             SavedVariables defaults, migrations, loading
-    GoalService.lua          application service: GoalStore instance + "input text -> goal"
-    Commands.lua             /fp
+    Codec.lua                plain-data serialisation for sharing (nothing executed)
+    Share.lua                /fp export / import of learned data, sanitised against per-kind schemas
+    GoalService.lua          application service: GoalStore instance, "input text -> goal", shopping state (loads after Data)
+    GoalCompletion.lua       auto-completes goals (bag counts, casts, skill, quests, reputation) and celebrates
+    Commands.lua             /fp (loads near last)
     Bootstrap.lua            ADDON_LOADED wiring (loads last)
   Domain/                    pure Lua, no WoW API access
     Status.lua               evaluation statuses and labels
     RecipeModel.lua          normalized recipe shape, schematic normalization, validation
-    GoalModel.lua            generic goal shape, types registry, ids, validation
+    GoalModel.lua            generic goal shape, types registry (amount, title, name), ids, validation
     GoalStore.lua            goal collection over an injected storage table
     CraftingEngine.lua       crafts needed, requirements, owned/missing
     Allocation.lua           inventory ledger: claims per item so nothing is counted twice
+    Farming.lua              kills / nodes / casts it takes to farm the missing units from a source's chance
     DependencyResolver.lua   recursive tree of reagents, routes, cycle/depth guards, flatten
+    SkillPlanner.lua         which recipes to craft how many times to reach a skill level
     Planner.lua              goal -> view model, with injected providers: dispatch, craft/obtain goals, shared plan helpers
     PlannerProfessions.lua   learn-recipe, enchant and reach-skill goals, trainable recipes
     PlannerQuests.lua        attunement, quest and reputation goals, quest step text, reward questlines
+    Overview.lua             dashboard aggregation (missing materials, next steps)
+    ShoppingList.lua         cross-goal shopping rows, categories, mail plan, chat lines
+    CraftWise.lua            buy / craft / hybrid comparison over a full tree, route plan, presets
   Providers/                 wrap the WoW API behind small interfaces
     ItemProvider.lua         item parsing, C_Item lookups, async loading, name cache/search
     ProfessionProvider.lua   C_TradeSkillUI scanning, recipe cache, learned flags, /fp scan
-    InventoryProvider.lua    bag index, bank snapshot, counts (plus alts' totals)
+    InventoryProvider.lua    bag index, bank snapshot, counts (plus alts' totals), owned count
     CharacterProvider.lua    account-wide character snapshots, alt stock / crafters / coverage
     VendorProvider.lua       merchant recorder (account-wide vendor stock + prices), vendor price source
     TrainerProvider.lua      trainer recorder (required skill, cost, trainer and zone per recipe; feeds the catalogue)
-    SourceProvider.lua       item sources: vendors + item-class heuristics + DungeonJournal and AtlasLoot bridges
+    SourceProvider.lua       item sources in a fixed order (vendors, learned loot, journal, AtlasLoot, quests, GearQuest, reputation, classic data, class heuristics)
     AttuneProvider.lua       attunement chains from the Attune addon, progress from quest flags / log / level / bags / survey; questlines
     ClassicDB.lua            classic-era quests, NPCs, objects and spawns (ForeverPath_ClassicDB, CMaNGOS classic-db): places, eligibility, indexes, chains
-    QuestieBridge.lua        Questie's quest database read at runtime (QuestieLoader modules), ranked between Forever data and classic data
     LootLearner.lua          what this account loots on Forever (LOOT_READY, GetLootSourceInfo), per creature / object / fishing zone; first in item sources
+    QuestieBridge.lua        Questie's quest database read at runtime (QuestieLoader modules), ranked between Forever data and classic data
     QuestFactsProvider.lua   quest givers, turn-ins and item objectives learned at quest windows (account-wide) + the shipped catalogue
+    QuestProvider.lua        quest log, objectives and completed flags plus the quest knowledge of the journal, Attune, Questie and classic data
+    EquipmentProvider.lua    worn gear per slot, item stats, GearQuest Forever upgrade picks
+    ReputationProvider.lua   standings (C_Reputation or legacy), thresholds, reputation quests and AtlasLoot faction rewards
     PriceProvider.lua        pricing boundary: cheapest of registered sources, freshness, status
     AuctionPriceProvider.lua Auctionator v1 API adapter (lowest buyout, age, 7-day mean, listings)
   Data/
     RecipeCatalogue.lua      GENERATED by tools/DbExtract from the client's database: recipes, combines, items, professions
     ItemIndex.lua            GENERATED by tools/DbExtract: every searchable item (name, quality, binding, class, item level, required level)
     Recipes.lua              decodes the catalogue into RecipeModel recipes (Lookup, Get, GetCombine, item names / binding, status)
-    QuestCatalogue.lua       curated quest facts (giver, turn-in, items with their sources); the shaman Call of Air chain, both factions
     ItemClasses.lua          classID/subclassID -> gathering / drop hints
+    QuestCatalogue.lua       curated quest facts (giver, turn-in, items with their sources); the shaman Call of Air chain, both factions
   UI/
     Theme.lua                design tokens (colours, gradients, quality colours, font roles)
-    Widgets.lua              component kit from the handoff sheet (panel, buttons, tabs, badges, bars, menu...)
+    Widgets.lua              component kit from the handoff sheet (panel, buttons, tabs, badges, bars, menu, group rows...)
     Screens/Dashboard.lua    screen 01: character strip, active goals, next steps, missing materials
     Screens/Goals.lua        screen 12: new-goal bar, grouped goal list, goal settings
-    Views/CraftingTree.lua   screen 03: dependency tree tab of Crafting (tree panel + selected node)
-    Views/CraftWiseView.lua  screen 04: CraftWise tab of Crafting: strategy cards, breakdown table, "Use this plan"
     Screens/Crafting.lua     screen 02: hero panel, tabs, requirements table
-    Screens/Quests.lua       quests by zone / goal / completed, details, chain, rewards
-    Screens/Equipment.lua    slots, GearQuest picks, stat comparison, targets as goals
-    Screens/Reputations.lua  factions by group, standing, target, quests, rewards
     Screens/Characters.lua   screen 07: character cards, coverage banner, account-wide scope
     Screens/Shopping.lua     screen 05: goal chips, summary, filter tabs, bought ticks, send to chat
     Screens/Attunements.lua  screen 06: picker, header, step timeline, current step
+    Screens/Quests.lua       quests by zone / goal / completed, details, chain, rewards
+    Screens/Equipment.lua    slots, GearQuest picks, stat comparison, targets as goals
+    Screens/Reputations.lua  factions by group, standing, target, quests, rewards
+    Views/CraftingTree.lua   screen 03: the Dependency Tree tab of Crafting (tree panel + selected node)
+    Views/CraftWiseView.lua  screen 04: the CraftWise tab of Crafting: strategy cards, breakdown table, "Use this plan"
+    ShareFrame.lua           the export / import text window
     MainFrame.lua            shell: window, header, sidebar, status bar, screen switching, link hook
     Tracker.lua              screen 08: compact goal tracker (separate frame)
-    MinimapButton.lua        minimap button with the mark (no library; angle in ForeverPathDB.minimap)
-  Domain/Overview.lua        dashboard aggregation (missing materials, next steps) - pure
-  Domain/ShoppingList.lua    cross-goal shopping rows, categories, mail plan, chat lines - pure
-  Domain/CraftWise.lua       buy / craft / hybrid comparison over a full tree, route plan, presets - pure
-  Core/GoalCompletion.lua    auto-completes item goals from bag counts (baseline + peak gain), celebrates
-  UI/Toast.lua               queued celebration toast at the top of the screen
+    MinimapButton.lua        minimap button with the mark: through LibDBIcon / LibDataBroker when another addon loaded them, else its own button
+    Toast.lua                queued celebration toast at the top of the screen
+ForeverPath_ClassicDB/       load-on-demand data addon GENERATED by tools/ClassicDbExtract (format-checked by ClassicDB)
 design/handoff/              the UI/UX design handoff (tokens, screens, component generator)
 tests/                       offline suite (see TESTING.md)
 ```
@@ -107,13 +116,13 @@ player input ("2996", item link, "Linen Bag")
 GoalService.AddFromInput  --ItemProvider.ParseInput / SearchByName / Exists-->  itemID
    |  GoalStore:Create / SetQuantity / Select      (writes ForeverPathCharDB.goals)
    v
-FP_GOALS_CHANGED  ---->  MainFrame.RequestRefresh (debounced)
+FP_GOALS_CHANGED (or any other FP_* message)  ---->  MainFrame.RequestRefresh (debounced)
                              |
                              v
-                   GoalDetails.Refresh(goal)
+                   MainFrame.Refresh -> MainFrame.EvaluateViews
                              |
                              v
-                   Planner.Evaluate(goal, deps)
+                   Planner.EvaluateAll(open goals)  -> Planner.Evaluate(goal, deps) per goal
                       |- ItemProvider.GetItem(itemID)              exists? loaded? name/icon
                       |- ProfessionProvider.FindRecipesForItem     cached recipes + learned flags
                       |- ProfessionProvider.GetRecipe(id, true)    live schematic when available
@@ -123,9 +132,9 @@ FP_GOALS_CHANGED  ---->  MainFrame.RequestRefresh (debounced)
                       |- CraftingEngine.BuildPlan(recipe, qty, DirectCounts(tree))
                       v
                    view { status, message, item, recipe, plan, tree, inventoryNote, progress }
-                             |
+                             |   stored in MainFrame.views[goal.id]
                              v
-                   MaterialList.SetMaterials(plan.materials)
+                   screen:Refresh() for the visible screen, and the tracker
 ```
 
 Recipe data arrives independently of goals: whenever a profession window is
@@ -177,9 +186,9 @@ inventory.GetCounts(itemID) -> { bags, bank|nil, bankSource = "live"|"cached"|"c
                                  alts|nil, altSources = { { name, count, freshness } } }   (alts never in total)
 characters.Sources(itemID)  -> { { kind = "alt"|"altcraft", name, count, label, detail } }
 sources.Sources(itemID)     -> { { kind = "vendor"|"drop"|"gather", name, price, label, detail, ... } }  (SourceProvider)
-price.GetPrice(itemID)      -> { copper, source = "vendor", timestamp, kind, vendor } | nil   (vendor prices in 0.6.0)
+price.GetPrice(itemID)      -> { copper, source, timestamp, kind, vendor? } | nil   (cheapest source; unknown is nil, never 0)
 data.Lookup(itemID)         -> static recipes or nil
-price.GetPrice(itemID)      -> { copper, source, timestamp, kind } | nil, reason   (unknown is nil, never 0)
+attune / quest / reputation -> AttuneProvider, QuestProvider, ReputationProvider (their own evaluators' needs)
 ```
 
 ## Normalized models

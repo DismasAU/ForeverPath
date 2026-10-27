@@ -7,12 +7,13 @@ how many crafts you need, which reagents that takes, how many you already own
 in your bags and bank, and what is still missing.
 
 It plans crafting goals, items to obtain (boss drops, quest rewards, vendor
-stock) and raid attunements, across every character on the account: a
-recursive dependency tree with route choices per node, a shopping list with
-Auction House and vendor prices, a buy-versus-craft comparison, trainer and
-vendor recorders, and a recipe catalogue generated from the client's own
-database. Quests, reputations and equipment goals are next; the architecture
-is built to take them without a rewrite (see `ARCHITECTURE.md`).
+stock), recipes to learn, profession skill targets, enchants to cast, quests,
+reputations and raid attunements, plus equipment upgrades, across every
+character on the account: a recursive dependency tree with route choices per
+node, a shopping list with Auction House and vendor prices, a
+buy-versus-craft comparison, trainer, vendor, loot and quest recorders, and a
+recipe catalogue generated from the client's own database (see
+`ARCHITECTURE.md`).
 
 ## Status
 
@@ -58,7 +59,7 @@ is built to take them without a rewrite (see `ARCHITECTURE.md`).
 | 0.17.0 questlines: a quest reward or a quest plans the whole chain that leads to it (Attune's attunement and class-quest chains), the items the chain's quests ask for go on the requirement rows, the tree and the shopping list, and quest givers, turn-ins and map pins are learned at quest windows (plus a shipped catalogue) with "Set waypoint" buttons | Implemented, offline-tested, **not yet verified in game** |
 | 0.16.2 item name search matches anywhere in a name (word starts ranked above inner matches, room kept for them) and knows ForeverDungeonJournal loot and GearQuest gear names | Implemented, offline-tested, **not yet verified in game** |
 
-`TESTING.md` has the in-game checklist for 0.2.0. `API_COMPATIBILITY.md`
+`TESTING.md` has the in-game checklist for every release. `API_COMPATIBILITY.md`
 lists the API evidence and the remaining open questions.
 
 ## Installation
