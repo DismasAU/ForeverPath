@@ -303,8 +303,8 @@ describe("Classic quests in ForeverPath", function()
     tv = ns.Planner.Evaluate(threadGoal)
     assert_eq(tv.questline.quest.id, 100, "a quest item is quested for")
     -- Adding by name finds classic quests too.
-    local ok, message, byName = ns.GoalService.AddQuestFromInput("gather hides")
-    assert_true(ok, message)
+    local byName, message = ns.GoalService.AddQuestFromInput("gather hides")
+    assert_not_nil(byName, message)
     assert_eq(byName.target.questID, 100)
   end)
 

@@ -660,9 +660,9 @@ function MainFrame.SubmitSearch(box)
     return
   end
   MainFrame.HideSuggestions()
-  local ok, message = ns.GoalService.AddFromInput(text, 1)
-  MainFrame.SetStatus(message, ok and "ok" or "error")
-  if ok then
+  local goal, message = ns.GoalService.AddFromInput(text, 1)
+  MainFrame.SetStatus(message, goal and "ok" or "error")
+  if goal then
     box:SetText("")
     box:ClearFocus()
     MainFrame.ShowScreen("crafting")
@@ -696,7 +696,7 @@ end
 
 -- Type-ahead popup under an input. hits come from GoalService.Suggest;
 -- clicking a row adds its goal. opts.quantity() supplies the quantity for
--- item and enchant goals, opts.onAdd(ok, message, goal) runs after a pick.
+-- item and enchant goals, opts.onAdd(goal, message, isNew) runs after a pick.
 function MainFrame.ShowSuggestions(box, hits, opts)
   local frame = MainFrame.frame
   opts = opts or {}
@@ -737,9 +737,9 @@ function MainFrame.ShowSuggestions(box, hits, opts)
     row:SetScript("OnClick", function(self)
       MainFrame.HideSuggestions()
       local quantity = opts.quantity and opts.quantity() or 1
-      local ok, message, goal = self.hit.add(quantity)
-      MainFrame.SetStatus(message, ok and "ok" or "error")
-      if opts.onAdd then ns.Log.Call(opts.onAdd, ok, message, goal) end
+      local goal, message, isNew = self.hit.add(quantity)
+      MainFrame.SetStatus(message, goal and "ok" or "error")
+      if opts.onAdd then ns.Log.Call(opts.onAdd, goal, message, isNew) end
     end)
     row:Show()
   end
@@ -758,11 +758,11 @@ function MainFrame.UpdateSuggestions(box)
     return
   end
   MainFrame.ShowSuggestions(box, ns.GoalService.Suggest("all", text, 8), {
-    onAdd = function(ok, _, goal)
-      if not ok then return end
+    onAdd = function(goal)
+      if not goal then return end
       box:SetText("")
       box:ClearFocus()
-      if goal and MainFrame.OpenGoal then MainFrame.OpenGoal(goal.id) else MainFrame.ShowScreen("crafting") end
+      if MainFrame.OpenGoal then MainFrame.OpenGoal(goal.id) else MainFrame.ShowScreen("crafting") end
     end,
   })
 end

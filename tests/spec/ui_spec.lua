@@ -660,8 +660,8 @@ describe("UI shell and screens (mock widgets)", function()
       { name = "Kresh", npcID = 3653, loot = { { 10411, "Footpads of the Fang", "Feet, Leather", 3 } } },
       { name = "Lord Cobrahn", npcID = 3669, loot = { { 10410, "Leggings of the Fang", "Legs, Leather", 3 } } },
     } } })
-    local ok, message, goal = ns.GoalService.AddFromInput("10411", 1)
-    assert_true(ok)
+    local goal, message = ns.GoalService.AddFromInput("10411", 1)
+    assert_not_nil(goal, message)
     assert_eq(goal.type, "OBTAIN_ITEM", "no recipe is recorded for it, professions are scanned")
     assert_match(message, "Obtain 1x Footpads of the Fang")
     assert_eq(ns.GoalService.AddFromInput("2996", 1) and ns.GoalService.GetSelected().type, "CRAFT_ITEM", "craftable items stay crafting goals")

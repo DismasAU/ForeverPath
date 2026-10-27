@@ -139,9 +139,9 @@ local function addGoal(rest, goalType)
   if head and head ~= "" then
     itemText, quantity = head, tonumber(tail)
   end
-  local ok, message = ns.GoalService.AddFromInput(itemText, quantity, goalType)
+  local goal, message = ns.GoalService.AddFromInput(itemText, quantity, goalType)
   Log.Print("%s", message)
-  if ok and ns.UI.MainFrame.IsShown() then
+  if goal and ns.UI.MainFrame.IsShown() then
     ns.UI.MainFrame.SetStatus(message, "ok")
   end
 end
@@ -154,9 +154,9 @@ function handlers.obtain(rest)
   addGoal(rest, "OBTAIN_ITEM")
 end
 
-local function addTypedGoal(ok, message)
+local function addTypedGoal(goal, message)
   Log.Print("%s", message)
-  if ok and ns.UI.MainFrame.IsShown() then
+  if goal and ns.UI.MainFrame.IsShown() then
     ns.UI.MainFrame.SetStatus(message, "ok")
     ns.UI.MainFrame.ShowScreen("crafting")
   end
@@ -186,9 +186,9 @@ end
 
 function handlers.quest(rest)
   if not requireLoaded() then return end
-  local ok, message = ns.GoalService.AddQuestFromInput(rest)
+  local goal, message = ns.GoalService.AddQuestFromInput(rest)
   Log.Print("%s", message)
-  if ok and ns.UI.MainFrame.IsShown() then
+  if goal and ns.UI.MainFrame.IsShown() then
     ns.UI.MainFrame.SetStatus(message, "ok")
     ns.UI.MainFrame.ShowScreen("quests")
   end
@@ -196,9 +196,9 @@ end
 
 function handlers.rep(rest)
   if not requireLoaded() then return end
-  local ok, message = ns.GoalService.AddReputationFromInput(rest)
+  local goal, message = ns.GoalService.AddReputationFromInput(rest)
   Log.Print("%s", message)
-  if ok and ns.UI.MainFrame.IsShown() then
+  if goal and ns.UI.MainFrame.IsShown() then
     ns.UI.MainFrame.SetStatus(message, "ok")
     ns.UI.MainFrame.ShowScreen("reputations")
   end
@@ -533,9 +533,9 @@ end
 
 function handlers.attune(rest)
   if not requireLoaded() then return end
-  local ok, message = ns.GoalService.AddAttunementFromInput(rest)
+  local goal, message = ns.GoalService.AddAttunementFromInput(rest)
   Log.Print("%s", message)
-  if ok and ns.UI.MainFrame.IsShown() then
+  if goal and ns.UI.MainFrame.IsShown() then
     ns.UI.MainFrame.SetStatus(message, "ok")
     ns.UI.MainFrame.ShowScreen("attunements")
   end

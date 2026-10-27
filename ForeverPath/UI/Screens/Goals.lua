@@ -439,8 +439,8 @@ local function Create(parent)
     end
     MainFrame.ShowSuggestions(newGoal.input, ns.GoalService.Suggest(kind, text, 8), {
       quantity = function() return newGoal.stepper:GetValue() end,
-      onAdd = function(ok)
-        if not ok then return end
+      onAdd = function(goal)
+        if not goal then return end
         newGoal.input:SetText("")
         newGoal.input:ClearFocus()
         newGoal.stepper:SetValue(1)
@@ -457,29 +457,29 @@ local function Create(parent)
       ns.UI.MainFrame.SetStatus(kind == "attunement" and "Type an attunement name, or pick one on the Attunements screen." or "Enter an item ID, Shift-click an item link, or type an item name.", "info")
       return false
     end
-    local ok, message
+    local goal, message
     if kind == "attunement" then
-      ok, message = ns.GoalService.AddAttunementFromInput(text)
+      goal, message = ns.GoalService.AddAttunementFromInput(text)
     elseif kind == "recipe" then
-      ok, message = ns.GoalService.AddRecipeFromInput(text)
+      goal, message = ns.GoalService.AddRecipeFromInput(text)
     elseif kind == "enchant" then
-      ok, message = ns.GoalService.AddEnchantFromInput(text, newGoal.stepper:GetValue())
+      goal, message = ns.GoalService.AddEnchantFromInput(text, newGoal.stepper:GetValue())
     elseif kind == "skill" then
-      ok, message = ns.GoalService.AddSkillFromInput(text)
+      goal, message = ns.GoalService.AddSkillFromInput(text)
     elseif kind == "quest" then
-      ok, message = ns.GoalService.AddQuestFromInput(text)
+      goal, message = ns.GoalService.AddQuestFromInput(text)
     elseif kind == "reputation" then
-      ok, message = ns.GoalService.AddReputationFromInput(text)
+      goal, message = ns.GoalService.AddReputationFromInput(text)
     else
-      ok, message = ns.GoalService.AddFromInput(text, newGoal.stepper:GetValue())
+      goal, message = ns.GoalService.AddFromInput(text, newGoal.stepper:GetValue())
     end
-    ns.UI.MainFrame.SetStatus(message, ok and "ok" or "error")
-    if ok then
+    ns.UI.MainFrame.SetStatus(message, goal and "ok" or "error")
+    if goal then
       newGoal.input:SetText("")
       newGoal.input:ClearFocus()
       newGoal.stepper:SetValue(1)
     end
-    return ok
+    return goal ~= nil
   end
 
   local function sortedGoals(goals, views, sortKey)
