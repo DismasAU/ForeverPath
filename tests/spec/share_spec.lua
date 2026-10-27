@@ -191,6 +191,32 @@ describe("Sharing learned data", function()
     assert_match(message, "damaged export %(lootSeen%)")
   end)
 
+  it("stores only the fields and types each kind is known to hold", function()
+    local ns = H.fresh()
+    H.login(ns)
+    local text = ns.Codec.Pack({ v = 1, author = "stranger", label = "Someone",
+      lootSeen = { ["c:525"] = { name = "Mangy Wolf", looted = "3", items = { [LINEN] = { times = 2, quantity = "4", junk = true }, bad = { times = 1 } } },
+        ["nonsense"] = { name = "x" } },
+      questFacts = { [STORM] = { giver = { name = "Prate", x = "0.5", y = {} }, items = { { name = "Feather", count = 2 }, "loose" } } },
+      vendors = { [THREAD] = { ["Tharynn"] = { price = "8", stack = 1, limited = "yes" }, [7] = { price = 1 } } },
+      trainers = { ["2964"] = { trainer = "Georgio", rank = "75", cost = {} }, oops = { rank = 1 } },
+      trainerNPCs = { Georgio = { zone = "Stormwind", recipes = "4" } },
+    })
+    local ok, message = ns.Share.Import(text)
+    assert_true(ok, message)
+    local entry = ns.db.imported.stranger
+    local wolf = entry.lootSeen["c:525"]
+    assert_eq(wolf.looted, 3)
+    assert_deep_eq(wolf.items, { [LINEN] = { times = 2, quantity = 4 } })
+    assert_nil(entry.lootSeen.nonsense)
+    local facts = entry.questFacts[STORM]
+    assert_deep_eq(facts.giver, { name = "Prate", x = 0.5 })
+    assert_deep_eq(facts.items, { { name = "Feather", count = 2 } })
+    assert_deep_eq(entry.vendors[THREAD], { Tharynn = { price = 8, stack = 1 } })
+    assert_deep_eq(entry.trainers, { [WOOLEN_BOLT] = { trainer = "Georgio", rank = 75 } })
+    assert_deep_eq(entry.trainerNPCs, { Georgio = { zone = "Stormwind", recipes = 4 } })
+  end)
+
   it("rebuilds imported trainer records from typed fields only", function()
     local ns = H.fresh()
     H.login(ns)

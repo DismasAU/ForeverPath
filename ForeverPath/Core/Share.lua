@@ -3,7 +3,8 @@
 -- Export packs the account's own observations (ForeverPathDB.lootSeen,
 -- questFacts, vendors, trainers, trainerNPCs) into one "FPX1:" string with
 -- an author token (random, made once per account), a label (the exporting
--- character) and the time. Import validates the shape and stores it under
+-- character) and the time. Import checks the version, reduces each kind to
+-- the fields and types the providers write (Share.SCHEMAS) and stores it under
 -- ForeverPathDB.imported[author]; importing the same author again replaces
 -- the earlier copy, so nothing is ever counted twice. Nothing a goal or
 -- character holds is exported.
@@ -72,6 +73,50 @@ end
 
 local function validTable(t) return t == nil or type(t) == "table" end
 
+-- What each kind may hold, so an import is reduced to the shapes the
+-- providers write themselves. A spec is a leaf type ("string", "number" -
+-- coerced with tonumber - or "boolean"), a record { field = spec }, a map
+-- { each = spec, keys = "number" | pattern } or a list { list = spec }.
+local PLACE = { name = "string", mapID = "number", x = "number", y = "number", zone = "string", subzone = "string", seenAt = "number" }
+local LOOT_COUNTS = { each = { times = "number", quantity = "number" }, keys = "number" }
+Share.SCHEMAS = {
+  lootSeen = { keys = "^[cof]:", each = {
+    name = "string", kind = "string", zone = "string", mapID = "number", x = "number", y = "number",
+    looted = "number", seenAt = "number", items = LOOT_COUNTS, skinned = LOOT_COUNTS,
+  } },
+  questFacts = { keys = "number", each = {
+    giver = PLACE, turnin = PLACE, itemsAt = "number",
+    items = { list = { name = "string", count = "number", itemID = "number" } },
+  } },
+  vendors = { keys = "number", each = { keys = ".", each = {
+    price = "number", stack = "number", limited = "boolean", extended = "boolean",
+    zone = "string", subzone = "string", seenAt = "number",
+  } } },
+  trainers = { keys = "number", each = {
+    skill = "string", rank = "number", cost = "number", trainer = "string", zone = "string", subzone = "string", seenAt = "number",
+  } },
+  trainerNPCs = { keys = ".", each = { zone = "string", subzone = "string", recipes = "number", seenAt = "number" } },
+}
+
+local function sanitize(value, spec)
+  if spec == "number" then return tonumber(value) end
+  if type(spec) == "string" then return type(value) == spec and value or nil end
+  if type(value) ~= "table" then return nil end
+  local out = {}
+  if spec.each then
+    for key, item in pairs(value) do
+      if spec.keys == "number" then key = tonumber(key)
+      elseif type(key) ~= "string" or not key:match(spec.keys) then key = nil end
+      if key ~= nil then out[key] = sanitize(item, spec.each) end
+    end
+  elseif spec.list then
+    for _, item in ipairs(value) do out[#out + 1] = sanitize(item, spec.list) end
+  else
+    for field, fieldSpec in pairs(spec) do out[field] = sanitize(value[field], fieldSpec) end
+  end
+  return out
+end
+
 -- Imports a string. Returns ok, message.
 function Share.Import(text)
   local d = db()
@@ -90,7 +135,7 @@ function Share.Import(text)
   d.imported = d.imported or {}
   local replaced = d.imported[payload.author] ~= nil
   local entry = { label = type(payload.label) == "string" and payload.label or "someone", at = tonumber(payload.at), importedAt = Util.Now(), addon = payload.addon }
-  for _, kind in ipairs(Share.KINDS) do entry[kind] = payload[kind] or {} end
+  for _, kind in ipairs(Share.KINDS) do entry[kind] = sanitize(payload[kind] or {}, Share.SCHEMAS[kind]) end
   d.imported[payload.author] = entry
   Share.Changed()
   local counts = Share.Counts(entry)
