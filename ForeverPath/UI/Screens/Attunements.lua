@@ -102,7 +102,7 @@ local function Create(parent)
   meta:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -4)
   local chips = {}
   for i = 1, 3 do
-    local chip = Widgets.Chip(hb, "info", "")
+    local chip = Widgets.Chip(hb, "", "info")
     if i == 1 then chip:SetPoint("TOPLEFT", meta, "BOTTOMLEFT", 0, -8) else chip:SetPoint("LEFT", chips[i - 1], "RIGHT", 6, 0) end
     chip:Hide()
     chips[i] = chip
@@ -152,7 +152,7 @@ local function Create(parent)
   sMeta:SetPoint("RIGHT", sb, "RIGHT", -12, 0)
   local sChips = {}
   for i = 1, 3 do
-    local chip = Widgets.Chip(sb, "info", "")
+    local chip = Widgets.Chip(sb, "", "info")
     if i == 1 then chip:SetPoint("TOPLEFT", sIcon, "BOTTOMLEFT", 0, -12) else chip:SetPoint("TOPLEFT", sChips[i - 1], "BOTTOMLEFT", 0, -6) end
     chip:Hide()
     sChips[i] = chip
@@ -268,9 +268,9 @@ local function Create(parent)
     if attune.levels then metaParts[#metaParts + 1] = "Level " .. attune.levels end
     if attune.groupSize then metaParts[#metaParts + 1] = attune.groupSize .. " players" end
     header.meta:SetText(table.concat(metaParts, " - "))
-    local chipData = { { progress.complete and "ok" or "info", string.format("%d of %d steps", progress.done, progress.total) } }
-    if progress.next then chipData[#chipData + 1] = { "info", "Next: " .. progress.next.name } end
-    if progress.complete then chipData[#chipData + 1] = { "ok", "Attuned" } end
+    local chipData = { { string.format("%d of %d steps", progress.done, progress.total), progress.complete and "ok" or "info" } }
+    if progress.next then chipData[#chipData + 1] = { "Next: " .. progress.next.name, "info" } end
+    if progress.complete then chipData[#chipData + 1] = { "Attuned", "ok" } end
     for i, chip in ipairs(header.chips) do
       if chipData[i] then chip:SetChip(chipData[i][1], chipData[i][2]) chip:Show() else chip:Hide() end
     end
@@ -343,13 +343,13 @@ local function Create(parent)
     side.meta:SetText(step.typeLabel .. (step.location and (" - " .. step.location) or "") .. (step.state == "done" and " - done" or (step.state == "locked" and " - locked" or "")))
     local sideChips = {}
     if step.groupSize and step.groupSize > 1 then
-      sideChips[#sideChips + 1] = { "info", (step.groupSize > 5 and "Raid quest - " or "Group quest - ") .. step.groupSize .. " players" }
+      sideChips[#sideChips + 1] = { (step.groupSize > 5 and "Raid quest - " or "Group quest - ") .. step.groupSize .. " players", "info" }
     elseif step.groupSize == 1 then
-      sideChips[#sideChips + 1] = { "ok", "Solo quest" }
+      sideChips[#sideChips + 1] = { "Solo quest", "ok" }
     end
-    if step.questLevel then sideChips[#sideChips + 1] = { "info", "Requires level " .. step.questLevel } end
-    if step.inLog then sideChips[#sideChips + 1] = { "ok", "Quest in your log" } end
-    if step.type == "Item" then sideChips[#sideChips + 1] = { "info", string.format("Collect %d", step.count) } end
+    if step.questLevel then sideChips[#sideChips + 1] = { "Requires level " .. step.questLevel, "info" } end
+    if step.inLog then sideChips[#sideChips + 1] = { "Quest in your log", "ok" } end
+    if step.type == "Item" then sideChips[#sideChips + 1] = { string.format("Collect %d", step.count), "info" } end
     for i, chip in ipairs(side.chips) do
       if sideChips[i] then chip:SetChip(sideChips[i][1], sideChips[i][2]) chip:Show() else chip:Hide() end
     end

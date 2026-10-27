@@ -112,7 +112,7 @@ local function createHero(screen)
   meta:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -4)
   hero.chips = {}
   for i = 1, 3 do
-    local chip = Widgets.Chip(body, "info", "")
+    local chip = Widgets.Chip(body, "", "info")
     if i == 1 then
       chip:SetPoint("TOPLEFT", meta, "BOTTOMLEFT", 0, -10)
     else
@@ -444,93 +444,93 @@ local function Create(parent)
     local chips = {}
     if enchant then
       if enchant.learned then
-        chips[#chips + 1] = { "ok", "Known" }
+        chips[#chips + 1] = { "Known", "ok" }
       elseif enchant.blocked == "profession" then
-        chips[#chips + 1] = { "missing", "No " .. (enchant.recipe.professionName or "profession") }
+        chips[#chips + 1] = { "No " .. (enchant.recipe.professionName or "profession"), "missing" }
       elseif enchant.blocked == "skill" then
-        chips[#chips + 1] = { "partial", string.format("Needs %s %d - you have %d", enchant.recipe.professionName or "skill", enchant.need, enchant.have or 0) }
+        chips[#chips + 1] = { string.format("Needs %s %d - you have %d", enchant.recipe.professionName or "skill", enchant.need, enchant.have or 0), "partial" }
       else
-        chips[#chips + 1] = { "partial", "Not learned" }
+        chips[#chips + 1] = { "Not learned", "partial" }
       end
       if not enchant.learned then
         if enchant.kind == "plans" then
-          chips[#chips + 1] = { "info", view.plan and view.plan.stepsMissing == 0 and "Formula in bags" or "Needs the formula" }
+          chips[#chips + 1] = { view.plan and view.plan.stepsMissing == 0 and "Formula in bags" or "Needs the formula", "info" }
         else
-          chips[#chips + 1] = { "info", enchant.trainer and enchant.trainer.name and ("Trainer: " .. enchant.trainer.name) or "Trainer (not recorded yet)" }
+          chips[#chips + 1] = { enchant.trainer and enchant.trainer.name and ("Trainer: " .. enchant.trainer.name) or "Trainer (not recorded yet)", "info" }
         end
       end
-      chips[#chips + 1] = { enchant.remaining <= 0 and "ok" or "info", string.format("%d of %d cast%s", enchant.casts, enchant.quantity, enchant.quantity == 1 and "" or "s") }
-      if not enchant.learned and #enchant.knownBy > 0 then chips[#chips + 1] = { "info", Util.Join(enchant.knownBy) .. " know" .. (#enchant.knownBy == 1 and "s" or "") .. " it" } end
+      chips[#chips + 1] = { string.format("%d of %d cast%s", enchant.casts, enchant.quantity, enchant.quantity == 1 and "" or "s"), enchant.remaining <= 0 and "ok" or "info" }
+      if not enchant.learned and #enchant.knownBy > 0 then chips[#chips + 1] = { Util.Join(enchant.knownBy) .. " know" .. (#enchant.knownBy == 1 and "s" or "") .. " it", "info" } end
     elseif learn then
       if learn.learned then
-        chips[#chips + 1] = { "ok", "Learned" }
+        chips[#chips + 1] = { "Learned", "ok" }
       elseif learn.blocked == "profession" then
-        chips[#chips + 1] = { "missing", "No " .. (learn.recipe.professionName or "profession") }
+        chips[#chips + 1] = { "No " .. (learn.recipe.professionName or "profession"), "missing" }
       elseif learn.blocked == "skill" then
-        chips[#chips + 1] = { "partial", string.format("Needs %s %d - you have %d", learn.recipe.professionName or "skill", learn.need, learn.have or 0) }
+        chips[#chips + 1] = { string.format("Needs %s %d - you have %d", learn.recipe.professionName or "skill", learn.need, learn.have or 0), "partial" }
       else
-        chips[#chips + 1] = { "ok", string.format("%s %d", learn.recipe.professionName or "Profession", learn.have or 0) }
+        chips[#chips + 1] = { string.format("%s %d", learn.recipe.professionName or "Profession", learn.have or 0), "ok" }
       end
       if learn.kind == "plans" then
-        chips[#chips + 1] = { "info", view.plan and view.plan.isComplete and "Plans in bags" or "Needs the plans" }
+        chips[#chips + 1] = { view.plan and view.plan.isComplete and "Plans in bags" or "Needs the plans", "info" }
       elseif learn.kind == "trainer" then
-        chips[#chips + 1] = { "info", learn.trainer and learn.trainer.name and ("Trainer: " .. learn.trainer.name) or "Trainer (not recorded yet)" }
+        chips[#chips + 1] = { learn.trainer and learn.trainer.name and ("Trainer: " .. learn.trainer.name) or "Trainer (not recorded yet)", "info" }
       end
-      if #learn.knownBy > 0 then chips[#chips + 1] = { "info", Util.Join(learn.knownBy) .. " know" .. (#learn.knownBy == 1 and "s" or "") .. " it" } end
+      if #learn.knownBy > 0 then chips[#chips + 1] = { Util.Join(learn.knownBy) .. " know" .. (#learn.knownBy == 1 and "s" or "") .. " it", "info" } end
     elseif skill then
-      chips[#chips + 1] = { skill.reached and "ok" or "info", string.format("%s %d / %d", skill.professionName, skill.current, skill.target) }
+      chips[#chips + 1] = { string.format("%s %d / %d", skill.professionName, skill.current, skill.target), skill.reached and "ok" or "info" }
       if skill.reached then
-        chips[#chips + 1] = { "ok", "Reached" }
+        chips[#chips + 1] = { "Reached", "ok" }
       elseif view.skillPlan then
-        chips[#chips + 1] = { view.skillPlan.covered and "ok" or "partial", string.format("%d craft%s over %d recipe%s", view.skillPlan.total, view.skillPlan.total == 1 and "" or "s", #view.skillPlan.list, #view.skillPlan.list == 1 and "" or "s") }
-        if not view.skillPlan.covered then chips[#chips + 1] = { "missing", string.format("No recipe for %d-%d", view.skillPlan.gaps[1].from, view.skillPlan.gaps[1].to) } end
+        chips[#chips + 1] = { string.format("%d craft%s over %d recipe%s", view.skillPlan.total, view.skillPlan.total == 1 and "" or "s", #view.skillPlan.list, #view.skillPlan.list == 1 and "" or "s"), view.skillPlan.covered and "ok" or "partial" }
+        if not view.skillPlan.covered then chips[#chips + 1] = { string.format("No recipe for %d-%d", view.skillPlan.gaps[1].from, view.skillPlan.gaps[1].to), "missing" } end
       end
-      if skill.capBlocked then chips[#chips + 1] = { "partial", "Cap " .. skill.max .. " - train the next rank" } end
+      if skill.capBlocked then chips[#chips + 1] = { "Cap " .. skill.max .. " - train the next rank", "partial" } end
     elseif view.recipe then
       local skill
       for _, p in ipairs(ns.ProfessionProvider.GetCharacterProfessions()) do
         if p.name == view.recipe.professionName then skill = p end
       end
       if skill then
-        chips[#chips + 1] = { "ok", string.format("%s - you have %d", skill.name, skill.skillLevel or 0) }
+        chips[#chips + 1] = { string.format("%s - you have %d", skill.name, skill.skillLevel or 0), "ok" }
       elseif view.recipe.professionName then
-        chips[#chips + 1] = { "info", view.recipe.professionName }
+        chips[#chips + 1] = { view.recipe.professionName, "info" }
       end
       if view.status == Status.RECIPE_NOT_LEARNED or view.recipeStatus == "unlearned" then
         local craft = view.tree and view.tree.root and view.tree.root.craft
         if craft and craft.combine then
-          chips[#chips + 1] = { "ok", "Combine - anyone can" }
+          chips[#chips + 1] = { "Combine - anyone can", "ok" }
         elseif craft and craft.unavailable then
-          chips[#chips + 1] = { "missing", "Recipe not learned - " .. craft.unavailable }
+          chips[#chips + 1] = { "Recipe not learned - " .. craft.unavailable, "missing" }
         elseif craft and craft.crafter and not craft.crafter.isCurrent then
-          chips[#chips + 1] = { "partial", craft.crafter.name .. " can learn it" }
+          chips[#chips + 1] = { craft.crafter.name .. " can learn it", "partial" }
         else
-          chips[#chips + 1] = { "partial", "Recipe not learned" }
+          chips[#chips + 1] = { "Recipe not learned", "partial" }
         end
         if view.recipe.skill and view.recipe.skill.min > 1 then
-          chips[#chips + 1] = { "info", string.format("Needs %s %d", view.recipe.professionName or "skill", view.recipe.skill.min) }
+          chips[#chips + 1] = { string.format("Needs %s %d", view.recipe.professionName or "skill", view.recipe.skill.min), "info" }
         end
       else
-        chips[#chips + 1] = { "ok", "Recipe known" }
+        chips[#chips + 1] = { "Recipe known", "ok" }
       end
       if (view.recipe.quantityMax or 1) > 1 or (view.recipe.quantityMin or 1) > 1 then
         local yield = view.recipe.quantityMin == view.recipe.quantityMax and tostring(view.recipe.quantityMin) or (view.recipe.quantityMin .. "-" .. view.recipe.quantityMax)
-        chips[#chips + 1] = { "info", "Makes " .. yield .. " per craft" }
+        chips[#chips + 1] = { "Makes " .. yield .. " per craft", "info" }
       end
     elseif view.obtain then
-      chips[#chips + 1] = { "info", "Obtain" }
+      chips[#chips + 1] = { "Obtain", "info" }
       if view.hint and view.hint.label then
-        chips[#chips + 1] = { "info", view.hint.label }
+        chips[#chips + 1] = { view.hint.label, "info" }
       end
       if view.questline and view.questline.line then
         local line = view.questline.line
-        chips[#chips + 1] = { line.complete and "ok" or "info", string.format("%s - %d of %d steps", line.attune.name, line.done, line.total) }
+        chips[#chips + 1] = { string.format("%s - %d of %d steps", line.attune.name, line.done, line.total), line.complete and "ok" or "info" }
       end
       if goal.type == "CRAFT_ITEM" then
-        chips[#chips + 1] = { "missing", "No known recipe" }
+        chips[#chips + 1] = { "No known recipe", "missing" }
       end
     else
-      chips[#chips + 1] = { "missing", ns.StatusLabel[view.status] or "Unknown" }
+      chips[#chips + 1] = { ns.StatusLabel[view.status] or "Unknown", "missing" }
     end
     for i, chip in ipairs(hero.chips) do
       if chips[i] then

@@ -557,7 +557,7 @@ function Widgets.LayoutTags(frame, list)
 end
 
 -- 20 px chip with a coloured mark: kind "ok" (check), "missing" (x) or "info" (dot).
-function Widgets.Chip(parent, kind, text)
+function Widgets.Chip(parent, text, kind)
   local chip = Widgets.Frame(parent, nil, { bg = C.tagBg, border = C.trackBorder })
   chip:SetHeight(20)
   local check = chip:CreateTexture(nil, "OVERLAY")
@@ -569,7 +569,7 @@ function Widgets.Chip(parent, kind, text)
   local label = Widgets.Text(chip, "small", text, { color = C.text })
   label:SetPoint("LEFT", chip, "LEFT", 22, 0)
   chip.label = label
-  function chip:SetChip(newKind, value)
+  function chip:SetChip(value, newKind)
     label:SetText(value or "")
     if newKind == "ok" then
       check:Show()
@@ -582,7 +582,7 @@ function Widgets.Chip(parent, kind, text)
     end
     self:SetWidth((label:GetStringWidth() or 40) + 30)
   end
-  chip:SetChip(kind, text)
+  chip:SetChip(text, kind)
   return chip
 end
 
