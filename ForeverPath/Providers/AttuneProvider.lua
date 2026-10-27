@@ -35,14 +35,6 @@ function AttuneProvider.IsAvailable()
   return data() ~= nil
 end
 
-function AttuneProvider.Faction()
-  if type(UnitFactionGroup) == "function" then
-    local ok, faction = pcall(UnitFactionGroup, "player")
-    if ok and type(faction) == "string" then return faction end
-  end
-  return nil
-end
-
 local function lang(key, fallback)
   local l = _G.AttuneLang
   if type(l) == "table" then
@@ -63,15 +55,6 @@ local function normalizeAttune(raw)
   }
 end
 
--- The player's class token ("SHAMAN"), or nil when the client cannot say.
-function AttuneProvider.PlayerClass()
-  if type(UnitClass) == "function" then
-    local ok, _, file = pcall(UnitClass, "player")
-    if ok and type(file) == "string" and file ~= "" then return string.upper(file) end
-  end
-  return nil
-end
-
 local function factionOK(raw, faction)
   return not faction or raw.FACTION == faction or raw.FACTION == "Both" or raw.FACTION == nil
 end
@@ -86,7 +69,7 @@ function AttuneProvider.List(faction)
   local d = data()
   local out = {}
   if not d then return out end
-  faction = faction or AttuneProvider.Faction()
+  faction = faction or Compat.PlayerFaction()
   for _, raw in ipairs(d.attunes) do
     if type(raw) == "table" and raw.ID and (not faction or raw.FACTION == faction or raw.FACTION == "Both" or raw.FACTION == nil) then
       out[#out + 1] = normalizeAttune(raw)
@@ -250,7 +233,7 @@ function AttuneProvider.DefaultContext()
       end
       return false
     end,
-    level = (type(UnitLevel) == "function" and select(1, UnitLevel("player"))) or 0,
+    level = Compat.PlayerLevel(),
     itemCount = function(itemID)
       if ns.GoalCompletion then return ns.GoalCompletion.Count(itemID) end
       return 0
@@ -364,8 +347,8 @@ function AttuneProvider.AttunementsWithQuest(questID, faction, class)
   local d = data()
   questID = tonumber(questID)
   if not d or not questID then return {} end
-  faction = faction or AttuneProvider.Faction()
-  class = class or AttuneProvider.PlayerClass()
+  faction = faction or Compat.PlayerFaction()
+  class = class or Compat.PlayerClass()
   local byID = {}
   for _, raw in ipairs(d.attunes) do
     if type(raw) == "table" and raw.ID then byID[tostring(raw.ID)] = raw end
@@ -452,7 +435,7 @@ end
 
 function AttuneProvider.Status()
   if not AttuneProvider.IsAvailable() then return "Attune not installed" end
-  return string.format("Attune: %d attunements for %s", #AttuneProvider.List(), AttuneProvider.Faction() or "all factions")
+  return string.format("Attune: %d attunements for %s", #AttuneProvider.List(), Compat.PlayerFaction() or "all factions")
 end
 
 function AttuneProvider.Init()

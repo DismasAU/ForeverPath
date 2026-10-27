@@ -235,18 +235,16 @@ function QuestProvider.Eligible(entry)
   if entry.faction and entry.faction ~= "Both" and faction and entry.faction ~= faction then return false end
   if entry.classic and ns.ClassicDB then return ns.ClassicDB.Eligible(entry.id) end
   if entry.questie and ns.QuestieBridge then
-    local classID = type(UnitClass) == "function" and select(3, UnitClass("player")) or nil
-    return ns.QuestieBridge.Eligible(entry, tonumber(classID))
+    local _, classID = Compat.PlayerClass()
+    return ns.QuestieBridge.Eligible(entry, classID)
   end
   return true
 end
 
+-- The player's faction and level, through the provider so the Planner can
+-- take them from its injected deps.quest.
 function QuestProvider.Faction()
-  if type(UnitFactionGroup) == "function" then
-    local ok, faction = pcall(UnitFactionGroup, "player")
-    if ok and type(faction) == "string" then return faction end
-  end
-  return nil
+  return Compat.PlayerFaction()
 end
 
 local function factionMatches(entry, faction)
@@ -271,8 +269,7 @@ function QuestProvider.List(faction)
 end
 
 function QuestProvider.PlayerLevel()
-  local level = call(UnitLevel, "player")
-  return tonumber(level) or 0
+  return Compat.PlayerLevel()
 end
 
 -- "trivial" (grey), "easy" (green), "standard" (yellow), "hard" (orange), "impossible" (red).

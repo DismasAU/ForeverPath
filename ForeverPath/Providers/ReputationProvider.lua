@@ -158,8 +158,8 @@ end
 -- The character's race and class ids (the third returns of UnitRace / UnitClass).
 function ReputationProvider.PlayerIDs()
   local raceID = select(3, call(_G.UnitRace, "player"))
-  local classID = select(3, call(_G.UnitClass, "player"))
-  return tonumber(raceID), tonumber(classID)
+  local _, classID = ns.Compat.PlayerClass()
+  return tonumber(raceID), classID
 end
 
 -- Starting reputation with a catalogue faction row for a race and class:

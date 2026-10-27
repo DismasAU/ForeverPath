@@ -428,7 +428,7 @@ local function Create(parent)
         end
       end
     elseif step.type == "Level" then
-      local level = ns.QuestProvider and ns.QuestProvider.PlayerLevel() or 0
+      local level = ns.Compat.PlayerLevel()
       local target = tonumber(step.wowheadID) or 0
       add("You are", level >= target and ("level " .. level .. " - done") or string.format("level %d - %d to go", level, target - level))
     end

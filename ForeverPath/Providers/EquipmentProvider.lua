@@ -103,25 +103,11 @@ function EquipmentProvider.HasGearQuest()
   return gearQuest() ~= nil
 end
 
-function EquipmentProvider.ClassFile()
-  local _, classFile = call(UnitClass, "player")
-  return type(classFile) == "string" and classFile or nil
-end
-
-function EquipmentProvider.Faction()
-  local faction = call(UnitFactionGroup, "player")
-  return type(faction) == "string" and faction or nil
-end
-
-function EquipmentProvider.PlayerLevel()
-  return tonumber(call(UnitLevel, "player")) or 0
-end
-
 -- GearQuest's idea of the player's spec (talents, or the player's pick), and its label.
 function EquipmentProvider.Spec()
   local gq = gearQuest()
   if not gq or type(gq.Spec) ~= "table" then return nil end
-  local classFile = EquipmentProvider.ClassFile()
+  local classFile = Compat.PlayerClass()
   local ok, spec = pcall(function() return gq.Spec:GetDisplaySpec(classFile) end)
   if not ok or type(spec) ~= "string" then return nil end
   local label = spec
@@ -290,11 +276,11 @@ function EquipmentProvider.Candidates(slotKey, opts)
   local slot = EquipmentProvider.SlotByKey[slotKey]
   local gq = gearQuest()
   if not slot or not gq then return {} end
-  local classFile = EquipmentProvider.ClassFile()
+  local classFile = Compat.PlayerClass()
   if not ensureClass(gq, classFile) then return {} end
   local spec = EquipmentProvider.Spec()
-  local faction = EquipmentProvider.Faction()
-  local level = EquipmentProvider.PlayerLevel()
+  local faction = Compat.PlayerFaction()
+  local level = Compat.PlayerLevel()
   local group
   for _, g in ipairs(EquipmentProvider.SourceGroups) do if g.key == (opts.source or "any") then group = g end end
   local best = {}

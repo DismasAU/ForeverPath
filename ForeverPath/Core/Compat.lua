@@ -196,4 +196,24 @@ function Compat.Describe()
   }
 end
 
+-- The logged-in character, read at call time. Each returns nil (0 for the
+-- level) while the client API is missing or the unit is not ready.
+
+-- "Alliance" or "Horde".
+function Compat.PlayerFaction()
+  local faction = ns.Util.SafeCall(_G.UnitFactionGroup, "player")
+  return type(faction) == "string" and faction or nil
+end
+
+-- The class token ("SHAMAN") and the numeric class id (7).
+function Compat.PlayerClass()
+  local _, classFile, classID = ns.Util.SafeCall(_G.UnitClass, "player")
+  classFile = type(classFile) == "string" and classFile ~= "" and string.upper(classFile) or nil
+  return classFile, tonumber(classID)
+end
+
+function Compat.PlayerLevel()
+  return tonumber((ns.Util.SafeCall(_G.UnitLevel, "player"))) or 0
+end
+
 Compat.Detect()

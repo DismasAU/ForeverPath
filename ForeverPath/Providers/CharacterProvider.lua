@@ -24,7 +24,7 @@ local call = Util.SafeCall
 function CharacterProvider.Identity()
   local info = { name = "Adventurer", realm = "", level = 0, class = "", classFile = nil, race = "", gold = nil }
   info.name = call(UnitName, "player") or info.name
-  info.level = call(UnitLevel, "player") or 0
+  info.level = ns.Compat.PlayerLevel()
   local className, classFile = call(UnitClass, "player")
   info.class = className or ""
   info.classFile = classFile

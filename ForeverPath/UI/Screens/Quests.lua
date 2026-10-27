@@ -289,7 +289,7 @@ local function Create(parent)
       if goal.type == "COMPLETE_QUEST" and goal.target then questGoals[goal.target.questID] = goal end
     end
     local feedOnly = self.feedOnly:GetChecked()
-    local playerLevel = QP.PlayerLevel()
+    local playerLevel = ns.Compat.PlayerLevel()
     local groups, byKey = {}, {}
     local seen = {}
     local function group(key, label)
@@ -379,7 +379,7 @@ local function Create(parent)
     for _, w in ipairs(s.content) do w:Show() end
     local entry = QP.Get(questID)
     local state = QP.State(questID)
-    local playerLevel = QP.PlayerLevel()
+    local playerLevel = ns.Compat.PlayerLevel()
     local label, kind = QP.StateLabel(state, entry, playerLevel)
     s.icon:SetItem(state.ready and QP.ICON_READY or QP.ICON, 1)
     s.title:SetText(QP.Name(questID))
@@ -547,7 +547,7 @@ local function Create(parent)
         row.questID = r.questID
         local mark, markColor = markerFor(r.label)
         row.marker:SetText(Theme.ColorText(markColor, mark))
-        row.level:SetText(r.level and (Theme.Hex[DIFFICULTY_HEX[QP.Difficulty(r.level, QP.PlayerLevel())]] .. "[" .. r.level .. "]|r") or "")
+        row.level:SetText(r.level and (Theme.Hex[DIFFICULTY_HEX[QP.Difficulty(r.level, ns.Compat.PlayerLevel())]] .. "[" .. r.level .. "]|r") or "")
         row.name:SetText(r.name)
         row.feeds:SetText(#r.feeds > 0 and ("Feeds " .. table.concat(r.feeds, ", ")) or Theme.ColorText("text3", r.entry and r.entry.instance and r.entry.source == "attune" and (r.entry.attunement or "Attunement") or ""))
         row.badge:SetBadge(r.label, r.kind)

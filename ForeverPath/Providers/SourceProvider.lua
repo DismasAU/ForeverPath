@@ -441,7 +441,7 @@ function SourceProvider.Sources(itemID)
       if existing.boss then names[string.lower(existing.boss)] = true end
       if existing.kind == "vendor" then recordedVendor = true end
     end
-    local classID = type(UnitClass) == "function" and select(3, UnitClass("player")) or nil
+    local _, classID = Compat.PlayerClass()
     for _, hint in ipairs(Log.Try(CDB.ItemHints, itemID, { skipVendors = recordedVendor, skipNames = names, classID = classID }) or {}) do
       if hint.kind == "gather" then
         hint = SourceProvider.QualifyGatherHint(hint)

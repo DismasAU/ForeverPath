@@ -77,20 +77,11 @@ end
 ---------------------------------------------------------------------------
 -- Player context
 ---------------------------------------------------------------------------
+-- The player's faction as the classic-db side flag.
 function ClassicDB.PlayerSide()
-  if type(UnitFactionGroup) == "function" then
-    local ok, faction = pcall(UnitFactionGroup, "player")
-    if ok and faction == "Alliance" then return ClassicDB.ALLIANCE end
-    if ok and faction == "Horde" then return ClassicDB.HORDE end
-  end
-  return nil
-end
-
-function ClassicDB.PlayerClassID()
-  if type(UnitClass) == "function" then
-    local ok, _, _, classID = pcall(UnitClass, "player")
-    if ok and tonumber(classID) then return tonumber(classID) end
-  end
+  local faction = Compat.PlayerFaction()
+  if faction == "Alliance" then return ClassicDB.ALLIANCE end
+  if faction == "Horde" then return ClassicDB.HORDE end
   return nil
 end
 
@@ -104,7 +95,7 @@ function ClassicDB.Eligible(questID, side, classID)
   local row = data() and data().quests[questID]
   if not row then return false end
   side = side or ClassicDB.PlayerSide()
-  classID = classID or ClassicDB.PlayerClassID()
+  classID = classID or select(2, Compat.PlayerClass())
   local questSide = row[4] or 0
   if questSide ~= 0 and side and questSide ~= side then return false end
   return hasClassBit(row[5], classID)
