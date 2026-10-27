@@ -16,7 +16,7 @@
 -- Quests in the player's log are read from C_QuestLog whether or not either
 -- addon knows them; titles of other quests are requested from the client
 -- (RequestLoadQuestByID) and arrive with QUEST_DATA_LOAD_RESULT.
--- Classic-era quests (CMaNGOS classic-db, Providers/ClassicDBProvider.lua)
+-- Classic-era quests (CMaNGOS classic-db, Providers/ClassicDB.lua)
 -- are the baseline under all of it: Get() falls back to them, and givers,
 -- turn-ins, required items, rewards and prerequisite chains come from them
 -- when nothing Forever-specific knows the quest.

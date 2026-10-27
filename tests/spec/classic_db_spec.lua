@@ -1,7 +1,7 @@
 local H = require("harness")
 local Mock = H.Mock
 
--- A small classic-db in the generated layout (see Providers/ClassicDBProvider.lua):
+-- A small classic-db in the generated layout (see Providers/ClassicDB.lua):
 -- Gather Hides (100) -> Report to Sally (101, Alliance) -> The Final Test (102),
 -- which also needs Option A (103) or Option B (104); a Horde-only quest (200)
 -- and a shaman-only one (300).

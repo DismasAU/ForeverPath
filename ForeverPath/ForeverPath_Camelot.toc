@@ -41,7 +41,7 @@ Providers\VendorProvider.lua
 Providers\TrainerProvider.lua
 Providers\SourceProvider.lua
 Providers\AttuneProvider.lua
-Providers\ClassicDBProvider.lua
+Providers\ClassicDB.lua
 Providers\LootLearner.lua
 Providers\QuestieBridge.lua
 Providers\QuestFactsProvider.lua
@@ -62,7 +62,7 @@ UI\Widgets.lua
 UI\Screens\Dashboard.lua
 UI\Screens\Goals.lua
 UI\Screens\CraftingTree.lua
-UI\Screens\CraftWise.lua
+UI\Screens\CraftWiseView.lua
 UI\Screens\Crafting.lua
 UI\Screens\Characters.lua
 UI\Screens\Shopping.lua
@@ -75,5 +75,5 @@ UI\MainFrame.lua
 UI\Tracker.lua
 UI\MinimapButton.lua
 UI\Toast.lua
-Core\SlashCommands.lua
+Core\Commands.lua
 Core\Bootstrap.lua
