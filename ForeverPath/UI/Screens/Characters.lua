@@ -281,15 +281,12 @@ local function createCard(content, index, screen)
     local crafts = {}
     for _, itemID in ipairs(needOrder) do
       if #crafts >= LINES then break end
-      local ids = ns.db and ns.db.itemRecipes and ns.db.itemRecipes[itemID]
-      if type(ids) == "table" then
-        for recipeID in pairs(ids) do
-          local recipe = ns.db.recipes[recipeID]
-          local known = entry.isCurrent and ns.ProfessionProvider.IsLearned(recipeID) or (record.knownRecipes and record.knownRecipes[recipeID])
-          if recipe and known then
-            crafts[#crafts + 1] = string.format("%s %s- %s|r", ns.ItemProvider.GetName(itemID), Theme.Hex.text2, recipe.professionName or "?")
-            break
-          end
+      for _, candidate in ipairs(ns.ProfessionProvider.FindRecipesForItem(itemID)) do
+        local recipe = candidate.recipe
+        local known = entry.isCurrent and candidate.learned or (record.knownRecipes and record.knownRecipes[recipe.recipeID])
+        if known then
+          crafts[#crafts + 1] = string.format("%s %s- %s|r", ns.ItemProvider.GetName(itemID), Theme.Hex.text2, recipe.professionName or "?")
+          break
         end
       end
     end
