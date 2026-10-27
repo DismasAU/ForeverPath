@@ -23,7 +23,9 @@ powershell -ExecutionPolicy Bypass -File scripts\extract_classicdb.ps1 [-Commit 
 - Output: `ForeverPath_ClassicDB/Quests.lua`, `Loot.lua`, `Vendors.lua`,
   `Trainers.lua`, `Npcs.lua`, `Objects.lua`, `Maps.lua`, `Meta.lua`
   (layouts in each file's header and in
-  `ForeverPath/Providers/ClassicDBProvider.lua`).
+  `ForeverPath/Providers/ClassicDB.lua`). `Meta.lua` carries `format`
+  (`FORMAT` in `extract.py`); bump it together with `ClassicDB.FORMAT`
+  whenever a table layout changes, or the addon ignores the data.
 - Loot: references are expanded (chance x the reference row's chance x its
   rolls), grouped rows with no chance share what the group's explicit
   chances leave, negative chances are quest-only drops. A reference table

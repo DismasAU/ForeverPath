@@ -103,7 +103,7 @@ describe("Questie bridge", function()
     ns.Data.QuestCatalogue[AID] = nil
     -- Questie wins over classic-db for a quest both know.
     local classic = {
-      meta = { source = "CMaNGOS classic-db", commit = "abc" }, zones = { [1454] = "Orgrimmar" }, instances = {},
+      meta = { format = 1, source = "CMaNGOS classic-db", commit = "abc" }, zones = { [1454] = "Orgrimmar" }, instances = {},
       quests = { [CALL_A] = { "Call of Air (classic)", 30, 30, 2, 64, -82, { 999 }, nil, nil, { 999 }, nil } },
       npcs = { [999] = { "Classic Giver", nil, 30, 30, 2, { 1454, 100, 100 } } }, objects = {},
     }

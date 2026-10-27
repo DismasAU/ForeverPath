@@ -36,10 +36,17 @@ ns.ClassicDB = ClassicDB
 ClassicDB.ADDON = "ForeverPath_ClassicDB"
 ClassicDB.ALLIANCE, ClassicDB.HORDE = 1, 2
 ClassicDB.CHAIN_LIMIT = 40
+-- The table layout this file reads; tools/ClassicDbExtract writes it into
+-- meta.format (FORMAT there). Data in any other format is ignored.
+ClassicDB.FORMAT = 1
+
+local function formatOf(d)
+  return type(d.meta) == "table" and d.meta.format or nil
+end
 
 local function data()
   local d = ns.ClassicData
-  if type(d) == "table" and type(d.quests) == "table" then return d end
+  if type(d) == "table" and type(d.quests) == "table" and formatOf(d) == ClassicDB.FORMAT then return d end
   return nil
 end
 
@@ -56,6 +63,12 @@ function ClassicDB.Load()
       end
     else
       ClassicDB.loadError = "this client cannot load addons on demand"
+    end
+    local d = ns.ClassicData
+    if type(d) == "table" and formatOf(d) ~= ClassicDB.FORMAT then
+      ClassicDB.loadError = string.format("its data is format %s but this ForeverPath reads format %d; update both addons together",
+        tostring(formatOf(d) or "unknown"), ClassicDB.FORMAT)
+      Log.Debug("%s ignored: %s", ClassicDB.ADDON, ClassicDB.loadError)
     end
   end
   return data() ~= nil

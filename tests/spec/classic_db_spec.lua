@@ -10,7 +10,7 @@ local BOB, SALLY, WOLF = 500, 501, 600
 
 local function fixture()
   return {
-    meta = { source = "CMaNGOS classic-db", commit = "abcdef1234567890", quests = 6, npcs = 3, objects = 0 },
+    meta = { format = 1, source = "CMaNGOS classic-db", commit = "abcdef1234567890", quests = 6, npcs = 3, objects = 0 },
     zones = { [1429] = "Elwynn Forest", [1453] = "Stormwind City" },
     instances = { [36] = "Deadmines" },
     quests = {
@@ -150,6 +150,17 @@ describe("ClassicDB (generated data)", function()
     assert_nil(ns.QuestProvider.Get(1531))
     assert_nil(ns.QuestProvider.ClassicQuestline(914))
     assert_eq(#ns.ClassicDB.Search("air"), 0)
+  end)
+
+  it("ignores data written in another format and says why", function()
+    local ns = H.fresh()
+    local data = fixture()
+    data.meta.format = 99
+    Mock.addOnLoaders.ForeverPath_ClassicDB = function() ns.ClassicData = data end
+    H.login(ns)
+    assert_false(ns.ClassicDB.IsAvailable())
+    assert_match(ns.ClassicDB.Status(), "data is format 99 but this ForeverPath reads format 1")
+    assert_nil(ns.QuestProvider.Get(102))
   end)
 end)
 

@@ -6,7 +6,7 @@ local WOLF, BOB = 600, 500
 
 local function classic()
   return {
-    meta = { source = "CMaNGOS classic-db", commit = "abc" },
+    meta = { format = 1, source = "CMaNGOS classic-db", commit = "abc" },
     zones = { [1429] = "Elwynn Forest", [1436] = "Westfall" }, instances = {}, quests = {},
     npcs = {
       [WOLF] = { "Wolf", nil, 5, 6, 0, { 1429, 300, 300 }, 3 },

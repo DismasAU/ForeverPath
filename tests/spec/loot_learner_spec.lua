@@ -95,7 +95,7 @@ describe("LootLearner", function()
 
   it("puts what was looted on Forever ahead of classic data for the same creature", function()
     local data = {
-      meta = { source = "CMaNGOS classic-db", commit = "abc" }, zones = { [1411] = "Durotar" }, instances = {}, quests = {},
+      meta = { format = 1, source = "CMaNGOS classic-db", commit = "abc" }, zones = { [1411] = "Durotar" }, instances = {}, quests = {},
       npcs = { [525] = { "Mangy Wolf", nil, 1, 2, 0, { 1411, 500, 500 }, 3 }, [526] = { "Other Wolf", nil, 3, 4, 0, { 1411, 600, 600 }, 3 } },
       objects = {},
       drops = { [LINEN] = { 2, 525, 1500, 526, 1200 } },
