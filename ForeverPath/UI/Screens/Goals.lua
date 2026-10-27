@@ -470,7 +470,7 @@ local function Create(parent)
 
   function screen:Refresh()
     local MainFrame = ns.UI.MainFrame
-    local views = MainFrame.views
+    local views = ns.GoalService.Views()
     local openCount = ns.GoalService.Count({ open = true })
     local completedCount = ns.GoalService.Count({ status = "COMPLETED" })
     tabs:SetLabel("open", string.format("Open - %d", openCount))

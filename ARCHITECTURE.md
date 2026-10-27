@@ -84,7 +84,7 @@ tests/                       offline suite (see TESTING.md)
 
 Screens register themselves in `ns.UI.Screens[key] = { label, Create(parent, key) }`
 and expose `screen:Refresh()`. `MainFrame.Refresh` re-evaluates every open goal
-once (`Planner.EvaluateAll` into `MainFrame.views`) and then refreshes the
+once (`GoalService.EvaluateViews`: `Planner.EvaluateAll` into `GoalService.Views()`) and then refreshes the
 visible screen and the tracker, so a goal is never planned twice per refresh.
 
 Every file receives `(addonName, ns)` through `...`. Nothing is global except
@@ -119,7 +119,7 @@ GoalService.AddFromInput  --ItemProvider.ParseInput / SearchByName / Exists-->  
 FP_GOALS_CHANGED (or any other FP_* message)  ---->  MainFrame.RequestRefresh (debounced)
                              |
                              v
-                   MainFrame.Refresh -> MainFrame.EvaluateViews
+                   MainFrame.Refresh -> GoalService.EvaluateViews
                              |
                              v
                    Planner.EvaluateAll(open goals)  -> Planner.Evaluate(goal, deps) per goal
@@ -132,7 +132,7 @@ FP_GOALS_CHANGED (or any other FP_* message)  ---->  MainFrame.RequestRefresh (d
                       |- CraftingEngine.BuildPlan(recipe, qty, DirectCounts(tree))
                       v
                    view { status, message, item, recipe, plan, tree, inventoryNote, progress }
-                             |   stored in MainFrame.views[goal.id]
+                             |   kept by GoalService (Views(), View(goalID))
                              v
                    screen:Refresh() for the visible screen, and the tracker
 ```

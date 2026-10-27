@@ -784,6 +784,31 @@ function GoalService.SetInShopping(goalID, included)
   return true
 end
 
+---------------------------------------------------------------------------
+-- Evaluated views: what the Planner made of every open goal
+---------------------------------------------------------------------------
+GoalService.views = {}
+
+-- Re-evaluates every open goal once (one shared inventory ledger) and keeps
+-- the result. The window and the tracker call it when they refresh.
+function GoalService.EvaluateViews()
+  GoalService.views = ns.Planner.EvaluateAll(GoalService.List({ open = true }))
+  return GoalService.views
+end
+
+-- goalID -> view from the last evaluation.
+function GoalService.Views()
+  return GoalService.views
+end
+
+-- One goal's view, evaluated now when the last evaluation did not include it.
+function GoalService.View(goalID)
+  local view = GoalService.views[goalID]
+  if view then return view end
+  local goal = GoalService.Get(goalID)
+  return goal and ns.Planner.Evaluate(goal) or nil
+end
+
 -- Tracked, open goals in priority order (drives the tracker and header pill).
 function GoalService.TrackedGoals()
   return GoalService.List({ open = true, tracked = true })

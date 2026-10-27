@@ -555,7 +555,7 @@ local function createSide(view, tree)
 
     -- Also used by other goals.
     local trees = {}
-    for id, v in pairs(ns.UI.MainFrame.views or {}) do trees[id] = v.tree end
+    for id, v in pairs(ns.GoalService.Views()) do trees[id] = v.tree end
     local uses = R.UsesOf(trees, node.itemID, goalID)
     if #uses > 0 then
       local parts = {}

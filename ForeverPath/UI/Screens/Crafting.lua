@@ -685,7 +685,7 @@ local function Create(parent)
     end
     for _, widget in ipairs(chrome) do widget:Show() end
     self.empty:Hide()
-    local view = ns.UI.MainFrame.views[goal.id] or ns.Planner.Evaluate(goal)
+    local view = ns.GoalService.View(goal.id)
     self.view = view
     local item = view.item or {}
     local itemName = item.name or (goal.target.itemID and ("Item " .. goal.target.itemID)) or ns.GoalService.Name(goal)

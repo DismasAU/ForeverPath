@@ -353,7 +353,7 @@ local function Create(parent)
     local entries = {}
     local activeGoals = ns.GoalService.List({ status = "ACTIVE" })
     for index, goal in ipairs(activeGoals) do
-      local view = MainFrame.views[goal.id]
+      local view = ns.GoalService.Views()[goal.id]
       entries[#entries + 1] = { goal = goal, view = view }
       local row = goalsPanel.pool:Get(index)
       local item = view and view.item or {}
@@ -458,11 +458,11 @@ local function Create(parent)
   function screen:RefreshCraftWise(activeGoals)
     local MainFrame = ns.UI.MainFrame
     local goal = ns.GoalService.GetSelected()
-    local view = goal and MainFrame.views[goal.id]
+    local view = goal and ns.GoalService.Views()[goal.id]
     if not (goal and goal.status == "ACTIVE" and view and view.tree) then
       goal, view = nil, nil
       for _, g in ipairs(activeGoals or {}) do
-        local v = MainFrame.views[g.id]
+        local v = ns.GoalService.Views()[g.id]
         if v and v.tree then goal, view = g, v break end
       end
     end

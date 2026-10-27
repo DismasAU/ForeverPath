@@ -398,7 +398,7 @@ local function Create(parent)
       if g.key == sourceKey then source:SetLabel("Source: " .. g.label) end
     end
     local goals = ns.GoalService.List({ open = true })
-    local analysis = EP.Analyze({ source = sourceKey, goals = goals, views = ns.UI.MainFrame.views })
+    local analysis = EP.Analyze({ source = sourceKey, goals = goals, views = ns.GoalService.Views() })
     self.analysis = analysis
     cells[1].value:SetText(tostring(analysis.averageIlvl))
     cells[2].value:SetText(tostring(analysis.upgradesPlanned))

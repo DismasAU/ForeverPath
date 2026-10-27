@@ -276,7 +276,7 @@ local function Create(parent)
     local QP = ns.QuestProvider
     local MainFrame = ns.UI.MainFrame
     local goals = ns.GoalService.List({ open = true })
-    local feeds = QP.FeedsGoals(goals, MainFrame.views, ns.GoalService.Name)
+    local feeds = QP.FeedsGoals(goals, ns.GoalService.Views(), ns.GoalService.Name)
     local questGoals = {}
     for _, goal in ipairs(ns.GoalService.List()) do
       if goal.type == "COMPLETE_QUEST" and goal.target then questGoals[goal.target.questID] = goal end

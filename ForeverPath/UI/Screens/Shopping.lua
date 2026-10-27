@@ -255,7 +255,7 @@ local function Create(parent)
   function screen:Entries()
     local entries = {}
     for _, goal in ipairs(ns.GoalService.List({ open = true })) do
-      entries[#entries + 1] = { goal = goal, view = ns.UI.MainFrame.views[goal.id] }
+      entries[#entries + 1] = { goal = goal, view = ns.GoalService.Views()[goal.id] }
     end
     return entries
   end

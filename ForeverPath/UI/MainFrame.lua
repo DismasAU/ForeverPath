@@ -16,7 +16,6 @@ ns.UI.MainFrame = MainFrame
 
 MainFrame.frame = nil
 MainFrame.screens = {}
-MainFrame.views = {}
 MainFrame.MIN_WIDTH, MainFrame.MIN_HEIGHT = 820, 560
 MainFrame.MAX_WIDTH, MainFrame.MAX_HEIGHT = 1400, 960
 MainFrame.linkTargets = {}
@@ -51,13 +50,6 @@ function MainFrame.CharacterInfo()
   return info
 end
 
--- Re-evaluates every open goal. Screens and the tracker read MainFrame.views.
-function MainFrame.EvaluateViews()
-  local goals = ns.GoalService.List({ open = true })
-  MainFrame.views = ns.Planner.EvaluateAll(goals)
-  MainFrame.openGoals = goals
-  return MainFrame.views
-end
 
 function MainFrame.ActiveGoal()
   local selected = ns.GoalService.GetSelected()
@@ -526,7 +518,7 @@ local function refreshChrome(frame)
 
   local goal = MainFrame.ActiveGoal()
   if goal then
-    local view = MainFrame.views[goal.id]
+    local view = ns.GoalService.Views()[goal.id]
     local item = view and view.item or ns.ItemProvider.GetItem(goal.target.itemID)
     frame.pill.icon:SetItem(item.icon, item.quality)
     frame.pill.name:SetText(Theme.QualityText(ns.GoalService.Name(goal), item.quality))
@@ -579,7 +571,7 @@ function MainFrame.Refresh()
   if not frame or not frame:IsShown() then
     return
   end
-  MainFrame.EvaluateViews()
+  ns.GoalService.EvaluateViews()
   refreshChrome(frame)
   local screen = MainFrame.screens[MainFrame.currentScreen]
   if screen and screen.Refresh then
@@ -592,7 +584,7 @@ function MainFrame.RequestRefresh()
     if MainFrame.IsShown() then
       MainFrame.Refresh()
     elseif ns.UI.Tracker and ns.UI.Tracker.IsShown() then
-      MainFrame.EvaluateViews()
+      ns.GoalService.EvaluateViews()
     end
     if ns.UI.Tracker then
       ns.UI.Tracker.Refresh()
@@ -612,7 +604,7 @@ function MainFrame.OpenGoalSwitcher(anchor)
   local selected = ns.GoalService.GetSelected()
   local items = {}
   for _, goal in ipairs(goals) do
-    local view = MainFrame.views[goal.id]
+    local view = ns.GoalService.Views()[goal.id]
     local percent = ns.Overview.Percent(view)
     items[#items + 1] = {
       text = Theme.QualityText(ns.GoalService.Name(goal), view and view.item and view.item.quality),

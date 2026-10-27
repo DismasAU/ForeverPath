@@ -228,11 +228,9 @@ function Tracker.Refresh()
     return
   end
   local frame = Tracker.Create()
-  local MainFrame = ns.UI.MainFrame
-  local view = MainFrame.views[goal.id]
+  local view = ns.GoalService.Views()[goal.id]
   if not view then
-    MainFrame.EvaluateViews()
-    view = MainFrame.views[goal.id]
+    view = ns.GoalService.EvaluateViews()[goal.id]
   end
   local item = view and view.item or (goal.target.itemID and ns.ItemProvider.GetItem(goal.target.itemID)) or {}
   local percent = ns.Overview.Percent(view)
