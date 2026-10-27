@@ -106,7 +106,7 @@ function Codec.Deserialize(text)
     error("bad tag " .. tag)
   end
   local ok, value = pcall(read, 0)
-  if not ok then return nil, tostring(value):gsub("^.-:%d+: ", "") end
+  if not ok then return nil, (tostring(value):gsub("^.-:%d+: ", "")) end
   if pos <= len then return nil, "trailing data" end
   return value
 end
