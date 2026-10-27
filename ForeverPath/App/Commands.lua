@@ -100,7 +100,7 @@ function handlers.status()
     end
     Log.output("  Character professions: " .. Util.Join(names))
   end
-  Log.output(string.format("  Goals: %d open, %d completed", ns.GoalService.Count({ open = true }), ns.GoalService.Count({ status = "COMPLETED" })))
+  Log.output(string.format("  Goals: %d open, %d completed", ns.GoalService.Count({ open = true }), ns.GoalService.Count({ status = ns.GoalModel.Statuses.COMPLETED })))
   Log.output("  " .. ns.Data.Recipes.StatusLine())
   Log.output("  " .. ns.TrainerProvider.StatusLine())
   Log.output("  " .. ns.QuestProvider.StatusLine())
@@ -124,7 +124,7 @@ function handlers.goals()
   Log.Print("Goals:")
   for i, goal in ipairs(goals) do
     local marker = goal.id == selected and "*" or " "
-    local status = goal.status ~= "ACTIVE" and (" [" .. ns.GoalModel.StatusLabel[goal.status] .. "]") or ""
+    local status = goal.status ~= ns.GoalModel.Statuses.ACTIVE and (" [" .. ns.GoalModel.StatusLabel[goal.status] .. "]") or ""
     Log.output(string.format("  %s%d. %s%s", marker, i, ns.GoalService.Title(goal), status))
   end
 end
@@ -295,9 +295,9 @@ local function setStatusCommand(status, verb)
     Log.Print("%s %s", verb, ns.GoalService.Title(goal))
   end
 end
-handlers.complete = setStatusCommand("COMPLETED", "Completed")
-handlers.pause = setStatusCommand("PAUSED", "Paused")
-handlers.resume = setStatusCommand("ACTIVE", "Resumed")
+handlers.complete = setStatusCommand(ns.GoalModel.Statuses.COMPLETED, "Completed")
+handlers.pause = setStatusCommand(ns.GoalModel.Statuses.PAUSED, "Paused")
+handlers.resume = setStatusCommand(ns.GoalModel.Statuses.ACTIVE, "Resumed")
 
 function handlers.tree(rest)
   if not requireLoaded() then return end

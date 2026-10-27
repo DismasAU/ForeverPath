@@ -507,9 +507,9 @@ local function refreshChrome(frame)
   if info.realm ~= "" then line = line .. (line ~= "" and " - " or "") .. info.realm end
   frame.charMeta:SetText(line)
 
-  local active = ns.GoalService.Count({ status = "ACTIVE" })
+  local active = ns.GoalService.Count({ status = ns.GoalModel.Statuses.ACTIVE })
   local open = ns.GoalService.Count({ open = true })
-  local completed = ns.GoalService.Count({ status = "COMPLETED" })
+  local completed = ns.GoalService.Count({ status = ns.GoalModel.Statuses.COMPLETED })
   frame.footerActive:SetText(string.format("%d active goal%s", active, active == 1 and "" or "s"))
   frame.footerDone:SetText(string.format("%d completed", completed))
   if frame.navButtons.goals.count then

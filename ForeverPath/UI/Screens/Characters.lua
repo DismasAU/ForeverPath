@@ -47,7 +47,7 @@ end
 local function currentNeeds()
   local needs, order = {}, {}
   for _, view in pairs(ns.GoalService.Views()) do
-    if view.goal and view.goal.status == "ACTIVE" and view.tree then
+    if view.goal and view.goal.status == ns.GoalModel.Statuses.ACTIVE and view.tree then
       for _, node in pairs(view.tree.byKey) do
         -- What this character cannot cover from its own bags and bank, so
         -- the banner reads the same whether alts are counted or not.

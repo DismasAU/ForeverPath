@@ -194,7 +194,9 @@ local function createSettings(screen)
 
   local statusLabel = field("Status", priority)
   local status = Widgets.Segment(body, {
-    { key = "ACTIVE", label = "Active" }, { key = "QUEUED", label = "Queued" }, { key = "PAUSED", label = "Paused" },
+    { key = GoalModel.Statuses.ACTIVE, label = GoalModel.StatusLabel.ACTIVE },
+    { key = GoalModel.Statuses.QUEUED, label = GoalModel.StatusLabel.QUEUED },
+    { key = GoalModel.Statuses.PAUSED, label = GoalModel.StatusLabel.PAUSED },
   }, function(key)
     if panel.goalID then ns.GoalService.SetStatus(panel.goalID, key) end
   end)
@@ -267,10 +269,10 @@ local function createSettings(screen)
   local complete = Widgets.Button(body, "Mark complete", { onClick = function()
     if not panel.goalID or not panel.goal then return end
     if GoalModel.IsOpen(panel.goal) then
-      ns.GoalService.SetStatus(panel.goalID, "COMPLETED")
+      ns.GoalService.SetStatus(panel.goalID, GoalModel.Statuses.COMPLETED)
       ns.UI.MainFrame.SetStatus("Goal marked complete.", "ok")
     else
-      ns.GoalService.SetStatus(panel.goalID, "ACTIVE")
+      ns.GoalService.SetStatus(panel.goalID, GoalModel.Statuses.ACTIVE)
       ns.UI.MainFrame.SetStatus("Goal reopened.", "ok")
     end
   end })
@@ -472,7 +474,7 @@ local function Create(parent)
     local MainFrame = ns.UI.MainFrame
     local views = ns.GoalService.Views()
     local openCount = ns.GoalService.Count({ open = true })
-    local completedCount = ns.GoalService.Count({ status = "COMPLETED" })
+    local completedCount = ns.GoalService.Count({ status = GoalModel.Statuses.COMPLETED })
     tabs:SetLabel("open", string.format("Open - %d", openCount))
     tabs:SetLabel("completed", string.format("Completed - %d", completedCount))
     local sortKey = ns.chardb and ns.chardb.ui.goalSort or "priority"
@@ -483,10 +485,10 @@ local function Create(parent)
     local rowIndex, groupIndex = 0, 0
     local groups
     if self.tab == "completed" then
-      groups = { { key = "COMPLETED", label = "Completed", goals = sortedGoals(ns.GoalService.List({ status = "COMPLETED" }), views, sortKey) } }
+      groups = { { key = GoalModel.Statuses.COMPLETED, label = GoalModel.StatusLabel.COMPLETED, goals = sortedGoals(ns.GoalService.List({ status = GoalModel.Statuses.COMPLETED }), views, sortKey) } }
     else
       groups = {}
-      for _, status in ipairs({ "ACTIVE", "QUEUED", "PAUSED" }) do
+      for _, status in ipairs({ GoalModel.Statuses.ACTIVE, GoalModel.Statuses.QUEUED, GoalModel.Statuses.PAUSED }) do
         local goals = sortedGoals(ns.GoalService.List({ status = status }), views, sortKey)
         if #goals > 0 then
           groups[#groups + 1] = { key = status, label = GoalModel.StatusLabel[status], goals = goals }
@@ -541,19 +543,19 @@ local function Create(parent)
         elseif view and view.plan then
           row.sub:SetText(view.plan.isComplete and "Ready to craft" or string.format("%d of %d materials missing - %s", view.plan.totals.materialsMissing, #view.plan.materials, view.recipe and view.recipe.professionName or ""))
         else
-          row.sub:SetText(view and (ns.ReadinessLabel[view.readiness] or "") or (goal.status == "COMPLETED" and ("Completed " .. Util.FormatAgo(goal.completedAt)) or ""))
+          row.sub:SetText(view and (ns.ReadinessLabel[view.readiness] or "") or (goal.status == GoalModel.Statuses.COMPLETED and ("Completed " .. Util.FormatAgo(goal.completedAt)) or ""))
         end
         local percent = ns.Overview.Percent(view)
-        row.percent:SetText(percent and (percent .. "%") or (goal.status == "COMPLETED" and "100%" or "-"))
-        row.bar:SetKind((percent == 100 or goal.status == "COMPLETED") and "ok" or "gold")
-        row.bar:SetValue(goal.status == "COMPLETED" and 1 or (percent or 0) / 100)
+        row.percent:SetText(percent and (percent .. "%") or (goal.status == GoalModel.Statuses.COMPLETED and "100%" or "-"))
+        row.bar:SetKind((percent == 100 or goal.status == GoalModel.Statuses.COMPLETED) and "ok" or "gold")
+        row.bar:SetValue(goal.status == GoalModel.Statuses.COMPLETED and 1 or (percent or 0) / 100)
         row.tracked:SetChecked(goal.tracked)
         if selected and selected.id == goal.id then
           Widgets.SetBackdrop(row, C.raised, C.bronzeDim)
         elseif row.SetBackdrop then
           row:SetBackdrop(nil)
         end
-        row:SetAlpha(goal.status == "PAUSED" and 0.62 or 1)
+        row:SetAlpha(goal.status == GoalModel.Statuses.PAUSED and 0.62 or 1)
       end
     end
     self.rowPool:HideFrom(rowIndex + 1)

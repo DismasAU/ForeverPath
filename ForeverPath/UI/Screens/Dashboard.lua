@@ -335,14 +335,14 @@ local function Create(parent)
     end
     goldCell.sub:SetText("Bags only")
     local goalsCell = strip.cells[4]
-    local active = ns.GoalService.Count({ status = "ACTIVE" })
-    local completed = ns.GoalService.Count({ status = "COMPLETED" })
+    local active = ns.GoalService.Count({ status = ns.GoalModel.Statuses.ACTIVE })
+    local completed = ns.GoalService.Count({ status = ns.GoalModel.Statuses.COMPLETED })
     goalsCell.title:SetText("GOALS")
     -- "N active" as the big number; the completed count moves to the sub line
     -- because "N active - M done" at 20 px overhangs the cell in FRIZQT.
     goalsCell.value:SetText(string.format("%d active", active))
     local lastCompleted
-    for _, goal in ipairs(ns.GoalService.List({ status = "COMPLETED" })) do
+    for _, goal in ipairs(ns.GoalService.List({ status = ns.GoalModel.Statuses.COMPLETED })) do
       if goal.completedAt and (not lastCompleted or goal.completedAt > lastCompleted) then lastCompleted = goal.completedAt end
     end
     local doneLine = string.format("%d done", completed)
@@ -351,7 +351,7 @@ local function Create(parent)
 
     -- Active goals
     local entries = {}
-    local activeGoals = ns.GoalService.List({ status = "ACTIVE" })
+    local activeGoals = ns.GoalService.List({ status = ns.GoalModel.Statuses.ACTIVE })
     for index, goal in ipairs(activeGoals) do
       local view = ns.GoalService.Views()[goal.id]
       entries[#entries + 1] = { goal = goal, view = view }
@@ -459,7 +459,7 @@ local function Create(parent)
     local MainFrame = ns.UI.MainFrame
     local goal = ns.GoalService.GetSelected()
     local view = goal and ns.GoalService.Views()[goal.id]
-    if not (goal and goal.status == "ACTIVE" and view and view.tree) then
+    if not (goal and goal.status == ns.GoalModel.Statuses.ACTIVE and view and view.tree) then
       goal, view = nil, nil
       for _, g in ipairs(activeGoals or {}) do
         local v = ns.GoalService.Views()[g.id]

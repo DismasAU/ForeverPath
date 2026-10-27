@@ -129,7 +129,7 @@ local function createSide(screen)
   local addGoal = Widgets.Button(body, "+ Add goal", { primary = true, onClick = function()
     if not side.factionID then return end
     local existing = ns.GoalService.FindReputationGoal(side.factionID)
-    if existing and existing.target.standing == side.targetStanding and existing.status ~= "COMPLETED" then
+    if existing and existing.target.standing == side.targetStanding and ns.GoalModel.IsOpen(existing) then
       ns.UI.MainFrame.OpenGoal(existing.id)
       return
     end
@@ -233,7 +233,7 @@ local function Create(parent)
     s.barText:SetText(record.standing >= 8 and "Exalted" or string.format("%d / %d into %s", record.into or 0, record.span or 0, record.standingLabel))
     -- Target standing: the goal's, the last picked, or the next one up.
     local goal = ns.GoalService.FindReputationGoal(factionID)
-    local target = s.targetStanding or (goal and goal.status ~= "COMPLETED" and goal.target.standing) or RP.NextStanding(record)
+    local target = s.targetStanding or (goal and ns.GoalModel.IsOpen(goal) and goal.target.standing) or RP.NextStanding(record)
     target = math.max(5, math.min(8, target))
     s.targetStanding = target
     s.segment:Select(tostring(target))
@@ -284,9 +284,9 @@ local function Create(parent)
     else
       s.rewardsText:SetText(RP.HasAtlasLoot() and (RP.atlas.state == "ready" and "No known reward at this standing." or "Loading AtlasLoot's faction tables...") or "Faction rewards come from AtlasLoot's Factions module.")
     end
-    if goal and goal.status ~= "COMPLETED" and goal.target.standing == target then
+    if goal and ns.GoalModel.IsOpen(goal) and goal.target.standing == target then
       s.addGoal:SetLabel("Open goal")
-    elseif goal and goal.status ~= "COMPLETED" then
+    elseif goal and ns.GoalModel.IsOpen(goal) then
       s.addGoal:SetLabel("Retarget goal to " .. progress.targetLabel)
     else
       s.addGoal:SetLabel("+ Add goal: " .. progress.targetLabel)

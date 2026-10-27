@@ -479,8 +479,8 @@ local function Create(parent)
       s.feedsText:SetText(Theme.ColorText("text3", "No open goal needs its rewards"))
     end
     local goal = collected.questGoals[questID]
-    s.addGoal:SetLabel(goal and (goal.status == "COMPLETED" and "Goal completed" or "Open goal") or "+ Add goal")
-    s.addGoal:SetEnabledState(not (goal and goal.status == "COMPLETED"))
+    s.addGoal:SetLabel(goal and (goal.status == ns.GoalModel.Statuses.COMPLETED and "Goal completed" or "Open goal") or "+ Add goal")
+    s.addGoal:SetEnabledState(not (goal and goal.status == ns.GoalModel.Statuses.COMPLETED))
     s.link:SetEnabledState(state.inLog)
     s.watch:SetEnabledState(state.inLog)
   end

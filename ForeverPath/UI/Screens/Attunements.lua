@@ -253,7 +253,7 @@ local function Create(parent)
     local attune = progress.attune
     picker:SetLabel(attune.name)
     local existing = ns.GoalService.FindAttunementGoal(attuneID)
-    addGoal:SetLabel(existing and (existing.status == "COMPLETED" and "Goal completed" or "Goal added") or "+ Add goal")
+    addGoal:SetLabel(existing and (existing.status == ns.GoalModel.Statuses.COMPLETED and "Goal completed" or "Goal added") or "+ Add goal")
     addGoal:SetEnabledState(existing == nil)
 
     header.icon:SetItem(attune.icon, 1)
