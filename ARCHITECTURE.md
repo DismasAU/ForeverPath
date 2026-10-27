@@ -50,8 +50,8 @@ ForeverPath/
     Widgets.lua              component kit from the handoff sheet (panel, buttons, tabs, badges, bars, menu...)
     Screens/Dashboard.lua    screen 01: character strip, active goals, next steps, missing materials
     Screens/Goals.lua        screen 12: new-goal bar, grouped goal list, goal settings
-    Screens/CraftingTree.lua screen 03: dependency tree tab (tree panel + selected node)
-    Screens/CraftWiseView.lua  screen 04: strategy cards, breakdown table, "Use this plan"
+    Views/CraftingTree.lua   screen 03: dependency tree tab of Crafting (tree panel + selected node)
+    Views/CraftWiseView.lua  screen 04: CraftWise tab of Crafting: strategy cards, breakdown table, "Use this plan"
     Screens/Crafting.lua     screen 02: hero panel, tabs, requirements table
     Screens/Quests.lua       quests by zone / goal / completed, details, chain, rewards
     Screens/Equipment.lua    slots, GearQuest picks, stat comparison, targets as goals

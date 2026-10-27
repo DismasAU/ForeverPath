@@ -1,5 +1,5 @@
 -- Screen 03: recursive dependency tree (the "Dependency Tree" tab of the
--- Crafting screen). Renders Planner views (view.tree) and lets the player pick
+-- Crafting screen). A sub-view, not a registered screen: Crafting embeds it. Renders Planner views (view.tree) and lets the player pick
 -- a route per reagent. No calculations happen here.
 local _, ns = ...
 

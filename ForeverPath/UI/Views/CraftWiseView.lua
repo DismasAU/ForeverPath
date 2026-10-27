@@ -1,6 +1,7 @@
 -- Crafting > CraftWise tab: three strategy cards (buy the item, craft it,
 -- hybrid) and the per-component breakdown, from the goal's full dependency
--- tree and the price boundary (vendor records + Auctionator scans).
+-- tree and the price boundary (vendor records + Auctionator scans). A
+-- sub-view, not a registered screen: Crafting embeds it.
 local _, ns = ...
 
 local Widgets = ns.UI.Widgets

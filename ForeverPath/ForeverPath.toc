@@ -61,8 +61,8 @@ UI\Theme.lua
 UI\Widgets.lua
 UI\Screens\Dashboard.lua
 UI\Screens\Goals.lua
-UI\Screens\CraftingTree.lua
-UI\Screens\CraftWiseView.lua
+UI\Views\CraftingTree.lua
+UI\Views\CraftWiseView.lua
 UI\Screens\Crafting.lua
 UI\Screens\Characters.lua
 UI\Screens\Shopping.lua
