@@ -72,41 +72,39 @@ end
 local function itemDone(goal)
   if goal.target.baseline == nil and goal.type ~= "OBTAIN_ITEM" then
     GoalCompletion.Baseline(goal)
-    return nil
+    return false
   end
   local progress = GoalCompletion.Progress(goal)
-  return progress and progress.done and progress or nil
+  return progress ~= nil and progress.done
 end
 
--- Per goal type: returns the completion info when the goal is done, nil otherwise.
+-- Per goal type: whether the goal is done.
 local DONE_CHECKS = {
   CRAFT_ITEM = itemDone,
   OBTAIN_ITEM = itemDone,
   COMPLETE_ATTUNEMENT = function(goal)
     local AP = ns.AttuneProvider
-    local progress = AP and AP.IsAvailable() and AP.Progress(goal.target.attuneID) or nil
-    return progress and progress.complete and progress or nil
+    local progress = AP.IsAvailable() and AP.Progress(goal.target.attuneID) or nil
+    return progress ~= nil and progress.complete == true
   end,
   COMPLETE_QUEST = function(goal)
     local QP = ns.QuestProvider
-    return QP and QP.IsAvailable() and QP.State(goal.target.questID).completed and { quest = true } or nil
+    return QP.IsAvailable() and QP.State(goal.target.questID).completed == true
   end,
   REACH_REPUTATION = function(goal)
     local RP = ns.ReputationProvider
-    local progress = RP and RP.IsAvailable() and RP.Progress(goal.target.factionID, goal.target.standing, goal.target.startValue) or nil
-    return progress and progress.reached and { reputation = true } or nil
+    local progress = RP.IsAvailable() and RP.Progress(goal.target.factionID, goal.target.standing, goal.target.startValue) or nil
+    return progress ~= nil and progress.reached == true
   end,
   LEARN_RECIPE = function(goal)
-    local PP = ns.ProfessionProvider
-    return PP and PP.IsLearned(goal.target.spellID) and { learned = true } or nil
+    return ns.ProfessionProvider.IsLearned(goal.target.spellID) == true
   end,
   REACH_SKILL = function(goal)
     local level = GoalCompletion.SkillLevel(goal.target)
-    return level and level >= (goal.target.rank or 0) and { skillLevel = level } or nil
+    return level ~= nil and level >= (goal.target.rank or 0)
   end,
   APPLY_ENCHANT = function(goal)
-    local casts = tonumber(goal.target.casts) or 0
-    return casts >= (goal.target.quantity or 1) and { casts = casts } or nil
+    return (tonumber(goal.target.casts) or 0) >= (goal.target.quantity or 1)
   end,
 }
 
@@ -117,11 +115,10 @@ function GoalCompletion.Check(reason)
   if not setting("autoComplete", true) then return completed end
   for _, goal in ipairs(ns.GoalService.List({ open = true })) do
     local check = DONE_CHECKS[goal.type]
-    local info = check and goal.target and check(goal)
-    if info and ns.GoalService.SetStatus(goal.id, GoalModel.Statuses.COMPLETED) then
+    if check and goal.target and check(goal) and ns.GoalService.SetStatus(goal.id, GoalModel.Statuses.COMPLETED) then
       goal.target.completedBy = "auto"
       completed[#completed + 1] = goal
-      GoalCompletion.Celebrate(goal, info)
+      GoalCompletion.Celebrate(goal)
     end
   end
   if #completed > 0 then
@@ -163,8 +160,8 @@ local ANNOUNCEMENTS = {
 }
 
 -- Chat line + sound, and FP_GOAL_COMPLETED(goal, toast) for the UI's toast
--- (when settings.toasts is on). info = Progress() result (optional).
-function GoalCompletion.Celebrate(goal, info)
+-- (when settings.toasts is on).
+function GoalCompletion.Celebrate(goal)
   local name = ns.GoalService.Name(goal)
   local quantity = goal.target and goal.target.quantity or 1
   local doneCount = ns.GoalService.Count({ status = GoalModel.Statuses.COMPLETED })
