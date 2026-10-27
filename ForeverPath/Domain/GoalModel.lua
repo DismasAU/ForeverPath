@@ -63,6 +63,14 @@ GoalModel.Types = {
 
 GoalModel.MAX_SKILL = 1000
 
+-- The routes a goal can pin on an item (goal.routes[itemID]); every other
+-- source the resolver knows (vendor, drop, quest...) is shown, not chosen.
+GoalModel.ROUTE_OVERRIDES = { craft = true, buy = true }
+
+function GoalModel.IsRouteOverride(route)
+  return GoalModel.ROUTE_OVERRIDES[route] == true
+end
+
 GoalModel.Statuses = { ACTIVE = "ACTIVE", QUEUED = "QUEUED", PAUSED = "PAUSED", COMPLETED = "COMPLETED" }
 GoalModel.StatusOrder = { ACTIVE = 1, QUEUED = 2, PAUSED = 3, COMPLETED = 4 }
 GoalModel.StatusLabel = { ACTIVE = "Active", QUEUED = "Queued", PAUSED = "Paused", COMPLETED = "Completed" }
@@ -261,7 +269,7 @@ function GoalModel.Validate(goal)
       return false, "routes not a table"
     end
     for itemID, route in pairs(goal.routes) do
-      if type(itemID) ~= "number" or (route ~= "craft" and route ~= "buy") then
+      if type(itemID) ~= "number" or not GoalModel.IsRouteOverride(route) then
         return false, "invalid route"
       end
     end

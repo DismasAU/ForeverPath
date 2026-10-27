@@ -15,7 +15,6 @@ local DependencyResolver = {}
 ns.DependencyResolver = DependencyResolver
 
 DependencyResolver.MAX_DEPTH = 6
-DependencyResolver.Routes = { CRAFT = "craft", BUY = "buy" }
 DependencyResolver.RouteLabels = { craft = "Craft", buy = "Buy", vendor = "Vendor", gather = "Gather", drop = "Drop", quest = "Quest", alt = "Alt", altcraft = "Alt crafts", learn = "Learn recipe", combine = "Combine", train = "Train" }
 -- Preferred default route when no learned recipe exists: certain and cheap
 -- first. "combine" is an item-use recipe anyone can do; "learn" is a catalogue

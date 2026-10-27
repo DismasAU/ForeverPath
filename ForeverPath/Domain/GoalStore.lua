@@ -289,7 +289,7 @@ function GoalStore:SetRoute(id, itemID, route)
   if type(itemID) ~= "number" then
     return false, "itemID must be a number"
   end
-  if route ~= nil and route ~= "craft" and route ~= "buy" then
+  if route ~= nil and not GoalModel.IsRouteOverride(route) then
     return false, "route must be craft, buy or nil"
   end
   goal.routes = goal.routes or {}

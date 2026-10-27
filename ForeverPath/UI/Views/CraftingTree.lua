@@ -544,7 +544,7 @@ local function createSide(view, tree)
           Widgets.SetBackdrop(card, Theme.RGB("#1C1B18"), isCurrent and C.bronzeDim or C.line)
           card.best:Hide()
         end
-        if not isCurrent and not self.alternative and (option.kind == "craft" or option.kind == "buy") and not option.cycle then
+        if not isCurrent and not self.alternative and ns.GoalModel.IsRouteOverride(option.kind) and not option.cycle then
           self.alternative = option
         end
         card:Show()
@@ -696,7 +696,7 @@ function CraftingTree.Create(screen)
 
   function view:ApplyRoute(node, option)
     if not self.goal or not node or isCraftOnly(node) or node.step then return end
-    if option.kind ~= "craft" and option.kind ~= "buy" then
+    if not ns.GoalModel.IsRouteOverride(option.kind) then
       ns.UI.MainFrame.SetStatus("That source is informational; routes can only be craft or buy.", "info")
       return
     end
