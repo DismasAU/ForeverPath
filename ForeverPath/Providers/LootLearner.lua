@@ -267,5 +267,7 @@ function LootLearner.Init()
   Events.RegisterWoW("LOOT_READY", function() LootLearner.ReadLoot() end)
   Events.RegisterWoW("LOOT_OPENED", function() LootLearner.ReadLoot() end)
   Events.RegisterWoW("LOOT_CLOSED", function() LootLearner.CloseLoot() end)
+  -- Imported loot counts are summed into the index.
+  Events.On("FP_SHARED_DATA_CHANGED", function() LootLearner.index = nil end)
   Log.Debug("%s", LootLearner.Status())
 end

@@ -256,6 +256,8 @@ end
 function TrainerProvider.Init()
   if ns.Data and ns.Data.Recipes then
     ns.Data.Recipes.trainerLookup = TrainerProvider.Requirement
+    -- Shared trainers change the requirements decoded recipes carry.
+    Events.On("FP_SHARED_DATA_CHANGED", ns.Data.Recipes.Invalidate)
   end
   Events.RegisterWoW("TRAINER_SHOW", function()
     TrainerProvider.open = true

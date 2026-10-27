@@ -167,9 +167,9 @@ function Share.EachImported(kind, fn)
   end
 end
 
+-- Modules holding derived data (the loot index, decoded recipes) drop it on
+-- FP_SHARED_DATA_CHANGED.
 function Share.Changed()
-  if ns.LootLearner then ns.LootLearner.index = nil end
-  if ns.Data and ns.Data.Recipes and ns.Data.Recipes.Invalidate then ns.Data.Recipes.Invalidate() end
   Events.Fire("FP_SHARED_DATA_CHANGED")
   if ns.UI and ns.UI.MainFrame and ns.UI.MainFrame.RequestRefresh then ns.UI.MainFrame.RequestRefresh() end
 end

@@ -207,7 +207,6 @@ end
 function QuestProvider.Invalidate()
   QuestProvider.index = nil
   QuestProvider.logCache = nil
-  if ns.ReputationProvider then ns.ReputationProvider.questRewards = nil end
 end
 
 -- The curated entry (journal, Attune), else Questie's, else the classic one.
