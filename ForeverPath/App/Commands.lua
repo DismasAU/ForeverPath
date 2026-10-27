@@ -151,7 +151,7 @@ function handlers.add(rest)
 end
 
 function handlers.obtain(rest)
-  addGoal(rest, "OBTAIN_ITEM")
+  addGoal(rest, ns.GoalModel.TypeIDs.OBTAIN_ITEM)
 end
 
 local function addTypedGoal(goal, message)
@@ -252,7 +252,7 @@ function handlers.quests()
     Log.output("  No known quest rewards an item or reputation your goals need.")
   end
   for _, goal in ipairs(goals) do
-    if goal.type == "COMPLETE_QUEST" then
+    if goal.type == ns.GoalModel.TypeIDs.COMPLETE_QUEST then
       local view = views[goal.id]
       Log.output(string.format("  Goal: %s - %s", ns.GoalService.Name(goal), view and view.message or ""))
     end

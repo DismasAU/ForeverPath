@@ -50,6 +50,11 @@ describe("GoalModel", function()
     end
   end)
 
+  it("names every goal type in TypeIDs and refuses a misspelt one", function()
+    for id in pairs(GoalModel.Types) do assert_eq(GoalModel.TypeIDs[id], id) end
+    assert_error(function() return GoalModel.TypeIDs.CRAFT_ITEMS end, "unknown goal type CRAFT_ITEMS")
+  end)
+
   it("knows what each goal type counts", function()
     local craft = GoalModel.New("CRAFT_ITEM", { itemID = 2996, quantity = 3 })
     local amount, value = GoalModel.Amount(craft)

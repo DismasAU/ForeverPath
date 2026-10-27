@@ -279,7 +279,7 @@ local function Create(parent)
     local feeds = QP.FeedsGoals(goals, ns.GoalService.Views(), ns.GoalService.Name)
     local questGoals = {}
     for _, goal in ipairs(ns.GoalService.List()) do
-      if goal.type == "COMPLETE_QUEST" and goal.target then questGoals[goal.target.questID] = goal end
+      if goal.type == ns.GoalModel.TypeIDs.COMPLETE_QUEST and goal.target then questGoals[goal.target.questID] = goal end
     end
     local feedOnly = self.feedOnly:GetChecked()
     local playerLevel = ns.Compat.PlayerLevel()
@@ -510,7 +510,7 @@ local function Create(parent)
 
     -- A newly selected quest goal takes over the selection.
     local goal = ns.GoalService.GetSelected()
-    local goalQuest = goal and goal.type == "COMPLETE_QUEST" and goal.target.questID or nil
+    local goalQuest = goal and goal.type == ns.GoalModel.TypeIDs.COMPLETE_QUEST and goal.target.questID or nil
     local questID = self.questID
     if goalQuest and (goal.id ~= self.lastGoalID or not questID) then questID = goalQuest end
     self.lastGoalID = goal and goal.id or nil

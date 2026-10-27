@@ -61,6 +61,14 @@ GoalModel.Types = {
     reopen = function(t) t.casts = 0 end },
 }
 
+-- GoalModel.TypeIDs.CRAFT_ITEM == "CRAFT_ITEM", one per registered type.
+-- Reading a name that is not a type raises, so a misspelt type fails where
+-- it is written instead of comparing false.
+GoalModel.TypeIDs = setmetatable({}, {
+  __index = function(_, name) error("unknown goal type " .. tostring(name), 2) end,
+})
+for id in pairs(GoalModel.Types) do rawset(GoalModel.TypeIDs, id, id) end
+
 GoalModel.MAX_SKILL = 1000
 
 -- The routes a goal can pin on an item (goal.routes[itemID]); every other
@@ -185,7 +193,7 @@ GoalModel.StandingLabels = { "Hated", "Hostile", "Unfriendly", "Neutral", "Frien
 
 -- Target standing of a REACH_REPUTATION goal.
 function GoalModel.SetStanding(goal, standing, now)
-  if goal.type ~= "REACH_REPUTATION" then
+  if goal.type ~= GoalModel.TypeIDs.REACH_REPUTATION then
     return false, "not a reputation goal"
   end
   if not Util.IsPositiveInt(standing) or standing > 8 then
@@ -291,7 +299,7 @@ end
 
 -- Target skill of a REACH_SKILL goal.
 function GoalModel.SetRank(goal, rank, now)
-  if goal.type ~= "REACH_SKILL" then
+  if goal.type ~= GoalModel.TypeIDs.REACH_SKILL then
     return false, "not a skill goal"
   end
   if not Util.IsPositiveInt(rank) or rank > GoalModel.MAX_SKILL then
@@ -304,7 +312,7 @@ end
 
 -- How many casts of an enchant goal's spell have been seen.
 function GoalModel.SetCasts(goal, casts, now)
-  if goal.type ~= "APPLY_ENCHANT" then
+  if goal.type ~= GoalModel.TypeIDs.APPLY_ENCHANT then
     return false, "not an enchant goal"
   end
   if type(casts) ~= "number" or casts < 0 or casts ~= math.floor(casts) then

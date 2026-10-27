@@ -84,17 +84,17 @@ end
 -- either way, so goals stay crafting goals and the planner asks for a scan.
 function GoalService.TypeForItem(itemID)
   local candidates = ns.Log.Try(ns.ProfessionProvider.FindRecipesForItem, itemID)
-  if type(candidates) == "table" and #candidates > 0 then return "CRAFT_ITEM" end
+  if type(candidates) == "table" and #candidates > 0 then return GoalModel.TypeIDs.CRAFT_ITEM end
   local catalogue = ns.Data.Recipes
   if catalogue and catalogue.Lookup then
     local hints = catalogue.Lookup(itemID)
-    if type(hints) == "table" and #hints > 0 then return "CRAFT_ITEM" end
+    if type(hints) == "table" and #hints > 0 then return GoalModel.TypeIDs.CRAFT_ITEM end
   end
   local haveCatalogue = catalogue and catalogue.IsAvailable and catalogue.IsAvailable()
   if not haveCatalogue and ns.ProfessionProvider and ns.ProfessionProvider.HasScanData and not ns.ProfessionProvider.HasScanData() then
-    return "CRAFT_ITEM"
+    return GoalModel.TypeIDs.CRAFT_ITEM
   end
-  return "OBTAIN_ITEM"
+  return GoalModel.TypeIDs.OBTAIN_ITEM
 end
 
 -- Creates or updates an item goal. goalType defaults to TypeForItem; an
@@ -118,12 +118,12 @@ function GoalService.AddItemGoal(itemID, quantity, goalType)
 end
 
 function GoalService.AddCraftGoal(itemID, quantity)
-  return GoalService.AddItemGoal(itemID, quantity, "CRAFT_ITEM")
+  return GoalService.AddItemGoal(itemID, quantity, GoalModel.TypeIDs.CRAFT_ITEM)
 end
 
 -- Attune ids arrive as numbers or strings; compare them as strings.
 function GoalService.FindAttunementGoal(attuneID)
-  return findGoal("COMPLETE_ATTUNEMENT", "attuneID", attuneID, tostring)
+  return findGoal(GoalModel.TypeIDs.COMPLETE_ATTUNEMENT, "attuneID", attuneID, tostring)
 end
 
 -- Creates (or selects) an attunement goal from an Attune id. Returns goal, message, isNew.
@@ -136,7 +136,7 @@ function GoalService.AddAttunementGoal(attuneID)
   end
   local existing = GoalService.FindAttunementGoal(attune.id)
   if existing then return reuseGoal(store, existing) end
-  return createGoal(store, "COMPLETE_ATTUNEMENT", { attuneID = attune.id, name = attune.name, icon = attune.icon })
+  return createGoal(store, GoalModel.TypeIDs.COMPLETE_ATTUNEMENT, { attuneID = attune.id, name = attune.name, icon = attune.icon })
 end
 
 -- Attunement goal from free text (name, for the player's faction).
@@ -159,7 +159,7 @@ end
 -- Learn-recipe goals
 ---------------------------------------------------------------------------
 function GoalService.FindRecipeGoal(spellID)
-  return findGoal("LEARN_RECIPE", "spellID", spellID)
+  return findGoal(GoalModel.TypeIDs.LEARN_RECIPE, "spellID", spellID)
 end
 
 local function recipeByID(spellID)
@@ -184,7 +184,7 @@ function GoalService.AddRecipeGoal(spellID)
   local existing = GoalService.FindRecipeGoal(spellID)
   if existing then return reuseGoal(store, existing) end
   if recipe.teachItemID then ItemProvider.Prefetch(recipe.teachItemID) end
-  return createGoal(store, "LEARN_RECIPE", {
+  return createGoal(store, GoalModel.TypeIDs.LEARN_RECIPE, {
     spellID = spellID, name = recipe.name, professionName = recipe.professionName, professionID = recipe.professionID, icon = recipe.icon,
   })
 end
@@ -231,7 +231,7 @@ end
 -- Enchant goals
 ---------------------------------------------------------------------------
 function GoalService.FindEnchantGoal(spellID)
-  return findGoal("APPLY_ENCHANT", "spellID", spellID)
+  return findGoal(GoalModel.TypeIDs.APPLY_ENCHANT, "spellID", spellID)
 end
 
 -- Creates (or updates) an enchant goal: cast the enchant `quantity` times.
@@ -252,7 +252,7 @@ function GoalService.AddEnchantGoal(spellID, quantity)
     return reuseGoal(store, existing, function(goal) store:SetQuantity(goal.id, quantity) end)
   end
   if recipe.teachItemID then ItemProvider.Prefetch(recipe.teachItemID) end
-  return createGoal(store, "APPLY_ENCHANT", {
+  return createGoal(store, GoalModel.TypeIDs.APPLY_ENCHANT, {
     spellID = spellID, name = recipe.name, professionName = recipe.professionName, professionID = recipe.professionID, icon = recipe.icon,
     quantity = quantity, casts = 0,
   })
@@ -291,7 +291,7 @@ end
 -- Reach-skill goals
 ---------------------------------------------------------------------------
 function GoalService.FindSkillGoal(professionName)
-  return findGoal("REACH_SKILL", "professionName", professionName)
+  return findGoal(GoalModel.TypeIDs.REACH_SKILL, "professionName", professionName)
 end
 
 -- This character's standing in a profession (live list first, then recorded windows).
@@ -337,7 +337,7 @@ function GoalService.AddSkillGoal(professionName, rank)
       if reopening then goal.target.startRank = standing and standing.skillLevel or goal.target.startRank end
     end)
   end
-  local goal, message, isNew = createGoal(store, "REACH_SKILL", {
+  local goal, message, isNew = createGoal(store, GoalModel.TypeIDs.REACH_SKILL, {
     professionID = professionID, professionName = canonical, rank = rank,
     startRank = standing and standing.skillLevel or nil, icon = standing and standing.icon or nil,
   })
@@ -375,7 +375,7 @@ end
 -- Quest goals
 ---------------------------------------------------------------------------
 function GoalService.FindQuestGoal(questID)
-  return findGoal("COMPLETE_QUEST", "questID", questID)
+  return findGoal(GoalModel.TypeIDs.COMPLETE_QUEST, "questID", questID)
 end
 
 -- Creates (or selects) a quest goal. Returns goal, message, isNew.
@@ -390,7 +390,7 @@ function GoalService.AddQuestGoal(questID)
   if existing then return reuseGoal(store, existing) end
   local entry = QP.Get(questID)
   for _, reward in ipairs(entry and entry.rewards or {}) do ItemProvider.Prefetch(reward.itemID) end
-  return createGoal(store, "COMPLETE_QUEST", {
+  return createGoal(store, GoalModel.TypeIDs.COMPLETE_QUEST, {
     questID = questID, name = QP.Name(questID), level = entry and entry.level or nil, instance = entry and entry.instance or nil, icon = QP.ICON,
   })
 end
@@ -431,7 +431,7 @@ end
 -- Reputation goals
 ---------------------------------------------------------------------------
 function GoalService.FindReputationGoal(factionID)
-  return findGoal("REACH_REPUTATION", "factionID", factionID)
+  return findGoal(GoalModel.TypeIDs.REACH_REPUTATION, "factionID", factionID)
 end
 
 -- Creates (or retargets) a reputation goal. standing defaults to the next one up.
@@ -458,7 +458,7 @@ function GoalService.AddReputationGoal(factionID, standing)
       if reopening then goal.target.startValue = record.value end
     end)
   end
-  local goal, message, isNew = createGoal(store, "REACH_REPUTATION", {
+  local goal, message, isNew = createGoal(store, GoalModel.TypeIDs.REACH_REPUTATION, {
     factionID = record.factionID, name = record.name, standing = standing, startValue = record.value, icon = RP.ICON,
   })
   if goal and (record.standing or 0) >= standing then message = message .. " (already there)" end
@@ -507,7 +507,7 @@ function GoalService.SetStanding(id, standing)
 end
 
 function GoalService.AddObtainGoal(itemID, quantity)
-  return GoalService.AddItemGoal(itemID, quantity, "OBTAIN_ITEM")
+  return GoalService.AddItemGoal(itemID, quantity, GoalModel.TypeIDs.OBTAIN_ITEM)
 end
 
 -- Resolves free text (item ID, link or name) and adds an item goal (type
@@ -757,7 +757,7 @@ end
 
 -- The goal for an item, whether it is a craft or an obtain goal.
 function GoalService.FindItemGoal(itemID)
-  return findGoal("CRAFT_ITEM", "itemID", itemID) or findGoal("OBTAIN_ITEM", "itemID", itemID)
+  return findGoal(GoalModel.TypeIDs.CRAFT_ITEM, "itemID", itemID) or findGoal(GoalModel.TypeIDs.OBTAIN_ITEM, "itemID", itemID)
 end
 
 ---------------------------------------------------------------------------

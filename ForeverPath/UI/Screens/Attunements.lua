@@ -230,7 +230,7 @@ local function Create(parent)
     addGoal:Show()
     -- Which attunement: the selected goal's, the last picked, or the first listed.
     local goal = ns.GoalService.GetSelected()
-    local goalAttune = goal and goal.type == "COMPLETE_ATTUNEMENT" and goal.target.attuneID or nil
+    local goalAttune = goal and goal.type == ns.GoalModel.TypeIDs.COMPLETE_ATTUNEMENT and goal.target.attuneID or nil
     local attuneID = self.attuneID
     -- A newly selected attunement goal takes over; an explicit picker choice otherwise stays.
     if goalAttune and (goal.id ~= self.lastGoalID or not attuneID) then attuneID = goalAttune end

@@ -477,7 +477,7 @@ function QuestProvider.FeedsGoals(goals, views, nameOf)
   for _, goal in ipairs(goals or {}) do
     local view = views and views[goal.id]
     local name = nameOf and nameOf(goal) or goal.id
-    if goal.type == "REACH_REPUTATION" and goal.target then
+    if goal.type == ns.GoalModel.TypeIDs.REACH_REPUTATION and goal.target then
       local quests = view and view.reputation and view.reputation.quests
       if not quests then
         quests = Log.Try(ns.ReputationProvider.QuestsFor, goal.target.name, goal.target.factionID)

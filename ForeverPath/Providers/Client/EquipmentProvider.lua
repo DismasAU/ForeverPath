@@ -348,7 +348,7 @@ function EquipmentProvider.Analyze(opts)
   local goalSlots = {}
   local tracked = 0
   for _, goal in ipairs(goals) do
-    if goal.target and goal.target.itemID and (goal.type == "CRAFT_ITEM" or goal.type == "OBTAIN_ITEM") then
+    if goal.target and goal.target.itemID and (goal.type == ns.GoalModel.TypeIDs.CRAFT_ITEM or goal.type == ns.GoalModel.TypeIDs.OBTAIN_ITEM) then
       local keys = EquipmentProvider.SlotKeysFor(goal.target.itemID)
       if #keys > 0 then
         tracked = tracked + 1

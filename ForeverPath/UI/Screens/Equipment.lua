@@ -301,13 +301,13 @@ local function Create(parent)
         metaParts[#metaParts + 1] = candidate.sourceLabel
         if candidate.zone then metaParts[#metaParts + 1] = candidate.zone end
       elseif goal then
-        metaParts[#metaParts + 1] = goal.type == "CRAFT_ITEM" and "Crafting goal" or "Obtain goal"
+        metaParts[#metaParts + 1] = goal.type == ns.GoalModel.TypeIDs.CRAFT_ITEM and "Crafting goal" or "Obtain goal"
       end
       t.meta:SetText(table.concat(metaParts, " - "))
       if goal then
         local percent = ns.Overview.Percent(entry.goalView)
         t.state:SetText(string.format("goal%s", percent and (" - " .. percent .. "%") or ""))
-        t.label:SetText(Theme.Upper("Target - " .. (goal.type == "CRAFT_ITEM" and "crafting" or "obtain")))
+        t.label:SetText(Theme.Upper("Target - " .. (goal.type == ns.GoalModel.TypeIDs.CRAFT_ITEM and "crafting" or "obtain")))
       else
         t.state:SetText(candidate and candidate.rank == 1 and "best pick" or "pick")
         t.label:SetText(Theme.Upper("Target"))

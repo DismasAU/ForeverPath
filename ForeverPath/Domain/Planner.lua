@@ -175,7 +175,7 @@ local function evaluate(goal, deps)
   local candidates = Planner.Candidates(itemID, deps)
   view.candidates = candidates
   local learned, unlearned = chooseCandidate(candidates)
-  local obtain = goal.type == "OBTAIN_ITEM"
+  local obtain = goal.type == GoalModel.TypeIDs.OBTAIN_ITEM
   local catalogue = deps.catalogue and deps.catalogue.IsAvailable and deps.catalogue.IsAvailable() or false
 
   if #candidates == 0 and not obtain and not catalogue and not deps.profession.HasScanData() then
@@ -485,7 +485,7 @@ function Planner.EvaluateObtain(view, goal, deps, sources)
   else
     view.message = string.format("%d of %d on hand. No source recorded yet: try the Auction House, or /fp sources once a vendor or loot table has been seen.", root.owned, quantity)
   end
-  if goal.type == "CRAFT_ITEM" and not view.recipe then
+  if goal.type == GoalModel.TypeIDs.CRAFT_ITEM and not view.recipe then
     view.message = "No recipe recorded; planned as an item to obtain. " .. view.message
   elseif view.recipeStatus == "unlearned" and not root.craft and root.missing > 0 then
     local option = root.craftOption

@@ -338,7 +338,7 @@ local function obtainChips(goal, view, chips)
     local line = view.questline.line
     chips[#chips + 1] = { string.format("%s - %d of %d steps", line.attune.name, line.done, line.total), line.complete and "ok" or "info" }
   end
-  if goal.type == "CRAFT_ITEM" then
+  if goal.type == ns.GoalModel.TypeIDs.CRAFT_ITEM then
     chips[#chips + 1] = { "No known recipe", "missing" }
   end
 end

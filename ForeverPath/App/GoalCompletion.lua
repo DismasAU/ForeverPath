@@ -45,7 +45,7 @@ function GoalCompletion.Progress(goal)
   if not itemGoal(goal) then return nil end
   local count = ns.InventoryProvider.OwnedCount(goal.target.itemID)
   local quantity = goal.target.quantity or 1
-  if goal.type == "OBTAIN_ITEM" then
+  if goal.type == GoalModel.TypeIDs.OBTAIN_ITEM then
     return { count = count, needed = quantity, done = count >= quantity }
   end
   local baseline = goal.target.baseline
@@ -69,7 +69,7 @@ end
 -- Item goals: a craft goal without a baseline takes one now and is checked
 -- on the next pass; otherwise done once enough items have turned up.
 local function itemDone(goal)
-  if goal.target.baseline == nil and goal.type ~= "OBTAIN_ITEM" then
+  if goal.target.baseline == nil and goal.type ~= GoalModel.TypeIDs.OBTAIN_ITEM then
     GoalCompletion.Baseline(goal)
     return false
   end
@@ -133,7 +133,7 @@ function GoalCompletion.RecordCast(spellID)
   if not spellID then return 0 end
   local touched = 0
   for _, goal in ipairs(ns.GoalService.List({ open = true })) do
-    if goal.type == "APPLY_ENCHANT" and goal.target and goal.target.spellID == spellID
+    if goal.type == GoalModel.TypeIDs.APPLY_ENCHANT and goal.target and goal.target.spellID == spellID
       and ns.GoalService.SetCasts(goal.id, (tonumber(goal.target.casts) or 0) + 1) then
       touched = touched + 1
     end

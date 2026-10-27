@@ -308,7 +308,7 @@ local function Create(parent)
     status:SetText(Theme.ColorText("text3", RP.StatusLine():gsub("^Reputations: ", "")))
     local ui = ns.chardb and ns.chardb.ui or {}
     local goal = ns.GoalService.GetSelected()
-    local goalFaction = goal and goal.type == "REACH_REPUTATION" and goal.target.factionID or nil
+    local goalFaction = goal and goal.type == ns.GoalModel.TypeIDs.REACH_REPUTATION and goal.target.factionID or nil
     local factionID = self.factionID
     if goalFaction and (goal.id ~= self.lastGoalID or not factionID) then
       factionID = goalFaction
@@ -319,7 +319,7 @@ local function Create(parent)
 
     local goals = {}
     for _, g in ipairs(ns.GoalService.List({ open = true })) do
-      if g.type == "REACH_REPUTATION" then goals[g.target.factionID] = g end
+      if g.type == ns.GoalModel.TypeIDs.REACH_REPUTATION then goals[g.target.factionID] = g end
     end
     local groups, byHeader = {}, {}
     for _, record in ipairs(RP.List()) do
