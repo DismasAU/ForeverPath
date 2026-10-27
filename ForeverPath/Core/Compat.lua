@@ -98,26 +98,6 @@ function Compat.Detect()
     Compat.GetMerchantItem = nil
   end
 
-  -- Merchant window: C_MerchantFrame.GetItemInfo (table) or legacy GetMerchantItemInfo (multiple returns).
-  Compat.GetMerchantNumItems = pick(_G.GetMerchantNumItems)
-  Compat.GetMerchantItemLink = pick(_G.GetMerchantItemLink)
-  local cMerchant = type(C_MerchantFrame) == "table" and C_MerchantFrame or {}
-  if type(cMerchant.GetItemInfo) == "function" then
-    Compat.GetMerchantItem = function(index)
-      local info = cMerchant.GetItemInfo(index)
-      if type(info) ~= "table" then return nil end
-      return { name = info.name, price = info.price, stack = info.stackCount, numAvailable = info.numAvailable,
-        hasExtendedCost = info.hasExtendedCost, isPurchasable = info.isPurchasable }
-    end
-  elseif type(_G.GetMerchantItemInfo) == "function" then
-    Compat.GetMerchantItem = function(index)
-      local name, _, price, stack, numAvailable, isPurchasable, _, extendedCost = _G.GetMerchantItemInfo(index)
-      if name == nil and price == nil then return nil end
-      return { name = name, price = price, stack = stack, numAvailable = numAvailable, hasExtendedCost = extendedCost and true or false, isPurchasable = isPurchasable }
-    end
-  else
-    Compat.GetMerchantItem = nil
-  end
   Compat.InCombatLockdown = pick(_G.InCombatLockdown) or function() return false end
   Compat.After = (type(C_Timer) == "table" and type(C_Timer.After) == "function") and C_Timer.After or nil
   -- Quest state (attunement steps): C_QuestLog on this engine, legacy globals as fallback.
