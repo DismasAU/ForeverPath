@@ -106,6 +106,14 @@ describe("GoalStore", function()
     assert_nil(store:FindByItem("OBTAIN_ITEM", 77))
   end)
 
+  it("finds goals by any target field, optionally normalized", function()
+    local store = newStore()
+    local goal = store:Create("COMPLETE_ATTUNEMENT", { attuneID = 12, name = "Molten Core" })
+    assert_eq(store:FindByTarget("COMPLETE_ATTUNEMENT", "attuneID", 12).id, goal.id)
+    assert_nil(store:FindByTarget("COMPLETE_ATTUNEMENT", "attuneID", "12"))
+    assert_eq(store:FindByTarget("COMPLETE_ATTUNEMENT", "attuneID", "12", tostring).id, goal.id)
+  end)
+
   it("drops malformed saved goals and clears a dangling selection", function()
     local good = ns.GoalModel.New("CRAFT_ITEM", { itemID = 1, quantity = 1 })
     local storage = {

@@ -128,6 +128,17 @@ local function chooseCandidate(candidates)
   return learned, unlearned
 end
 
+-- The Planner function that evaluates each non-item goal type. Item goals
+-- (CRAFT_ITEM, OBTAIN_ITEM) are planned by Evaluate itself.
+local EVALUATORS = {
+  COMPLETE_ATTUNEMENT = "EvaluateAttunement",
+  LEARN_RECIPE = "EvaluateLearn",
+  REACH_SKILL = "EvaluateSkill",
+  COMPLETE_QUEST = "EvaluateQuest",
+  REACH_REPUTATION = "EvaluateReputation",
+  APPLY_ENCHANT = "EvaluateEnchant",
+}
+
 -- Returns a view:
 --   { goal, status, message, item, recipe, plan, tree, candidates, recipeIsLive, inventoryNote, progress }
 function Planner.Evaluate(goal, deps)
@@ -136,26 +147,12 @@ function Planner.Evaluate(goal, deps)
 
   if not goal or not GoalModel.IsSupported(goal.type) then
     view.status = Status.UNSUPPORTED_GOAL
-    view.message = string.format("%s goals are planned for a later release.", goal and GoalModel.Types[goal.type] and GoalModel.Types[goal.type].label or "These")
+    view.message = "These goals are not supported by this version of ForeverPath."
     return view
   end
-  if goal.type == "COMPLETE_ATTUNEMENT" then
-    return Planner.EvaluateAttunement(view, goal, deps)
-  end
-  if goal.type == "LEARN_RECIPE" then
-    return Planner.EvaluateLearn(view, goal, deps)
-  end
-  if goal.type == "REACH_SKILL" then
-    return Planner.EvaluateSkill(view, goal, deps)
-  end
-  if goal.type == "COMPLETE_QUEST" then
-    return Planner.EvaluateQuest(view, goal, deps)
-  end
-  if goal.type == "REACH_REPUTATION" then
-    return Planner.EvaluateReputation(view, goal, deps)
-  end
-  if goal.type == "APPLY_ENCHANT" then
-    return Planner.EvaluateEnchant(view, goal, deps)
+  local evaluator = EVALUATORS[goal.type]
+  if evaluator then
+    return Planner[evaluator](view, goal, deps)
   end
 
   local itemID = goal.target.itemID

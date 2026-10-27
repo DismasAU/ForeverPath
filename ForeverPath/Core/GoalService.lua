@@ -33,6 +33,12 @@ function GoalService.Store()
   return ns.goals
 end
 
+-- The existing goal of `goalType` aimed at target[field] == value, if any.
+local function findGoal(goalType, field, value, normalize)
+  local store = GoalService.Store()
+  return store and store:FindByTarget(goalType, field, value, normalize) or nil
+end
+
 function GoalService.Title(goal)
   return GoalModel.Title(goal, ItemProvider.GetCachedName)
 end
@@ -98,16 +104,9 @@ function GoalService.AddCraftGoal(itemID, quantity)
   return GoalService.AddItemGoal(itemID, quantity, "CRAFT_ITEM")
 end
 
+-- Attune ids arrive as numbers or strings; compare them as strings.
 function GoalService.FindAttunementGoal(attuneID)
-  local store = GoalService.Store()
-  if not store then return nil end
-  attuneID = tostring(attuneID)
-  for _, goal in ipairs(store:List()) do
-    if goal.type == "COMPLETE_ATTUNEMENT" and goal.target and tostring(goal.target.attuneID) == attuneID then
-      return goal
-    end
-  end
-  return nil
+  return findGoal("COMPLETE_ATTUNEMENT", "attuneID", attuneID, tostring)
 end
 
 -- Creates (or selects) an attunement goal from an Attune id. Returns goal, message, isNew.
@@ -156,14 +155,7 @@ end
 -- Learn-recipe goals
 ---------------------------------------------------------------------------
 function GoalService.FindRecipeGoal(spellID)
-  local store = GoalService.Store()
-  if not store then return nil end
-  for _, goal in ipairs(store:List()) do
-    if goal.type == "LEARN_RECIPE" and goal.target and goal.target.spellID == spellID then
-      return goal
-    end
-  end
-  return nil
+  return findGoal("LEARN_RECIPE", "spellID", spellID)
 end
 
 local function recipeByID(spellID)
@@ -248,14 +240,7 @@ end
 -- Enchant goals
 ---------------------------------------------------------------------------
 function GoalService.FindEnchantGoal(spellID)
-  local store = GoalService.Store()
-  if not store then return nil end
-  for _, goal in ipairs(store:List()) do
-    if goal.type == "APPLY_ENCHANT" and goal.target and goal.target.spellID == spellID then
-      return goal
-    end
-  end
-  return nil
+  return findGoal("APPLY_ENCHANT", "spellID", spellID)
 end
 
 -- Creates (or updates) an enchant goal: cast the enchant `quantity` times.
@@ -327,14 +312,7 @@ end
 -- Reach-skill goals
 ---------------------------------------------------------------------------
 function GoalService.FindSkillGoal(professionName)
-  local store = GoalService.Store()
-  if not store then return nil end
-  for _, goal in ipairs(store:List()) do
-    if goal.type == "REACH_SKILL" and goal.target and goal.target.professionName == professionName then
-      return goal
-    end
-  end
-  return nil
+  return findGoal("REACH_SKILL", "professionName", professionName)
 end
 
 -- This character's standing in a profession (live list first, then recorded windows).
@@ -428,14 +406,7 @@ end
 -- Quest goals
 ---------------------------------------------------------------------------
 function GoalService.FindQuestGoal(questID)
-  local store = GoalService.Store()
-  if not store then return nil end
-  for _, goal in ipairs(store:List()) do
-    if goal.type == "COMPLETE_QUEST" and goal.target and goal.target.questID == questID then
-      return goal
-    end
-  end
-  return nil
+  return findGoal("COMPLETE_QUEST", "questID", questID)
 end
 
 -- Creates (or selects) a quest goal. Returns goal, message, isNew.
@@ -504,14 +475,7 @@ end
 -- Reputation goals
 ---------------------------------------------------------------------------
 function GoalService.FindReputationGoal(factionID)
-  local store = GoalService.Store()
-  if not store then return nil end
-  for _, goal in ipairs(store:List()) do
-    if goal.type == "REACH_REPUTATION" and goal.target and goal.target.factionID == factionID then
-      return goal
-    end
-  end
-  return nil
+  return findGoal("REACH_REPUTATION", "factionID", factionID)
 end
 
 -- Creates (or retargets) a reputation goal. standing defaults to the next one up.

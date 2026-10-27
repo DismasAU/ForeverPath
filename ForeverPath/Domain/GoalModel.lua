@@ -23,14 +23,14 @@ ns.GoalModel = GoalModel
 local Util = ns.Util
 
 GoalModel.Types = {
-  CRAFT_ITEM = { label = "Craft item", badge = "Crafting", supported = true, targetKind = "item" },
-  OBTAIN_ITEM = { label = "Obtain item", badge = "Item", supported = true, targetKind = "item" },
-  COMPLETE_QUEST = { label = "Complete quest", badge = "Quest", supported = true, targetKind = "quest" },
-  REACH_REPUTATION = { label = "Reach reputation", badge = "Reputation", supported = true, targetKind = "faction" },
-  LEARN_RECIPE = { label = "Learn recipe", badge = "Recipe", supported = true, targetKind = "recipe" },
-  COMPLETE_ATTUNEMENT = { label = "Complete attunement", badge = "Attunement", supported = true, targetKind = "attunement" },
-  REACH_SKILL = { label = "Reach profession skill", badge = "Skill", supported = true, targetKind = "skill" },
-  APPLY_ENCHANT = { label = "Apply enchant", badge = "Enchant", supported = true, targetKind = "enchant" },
+  CRAFT_ITEM = { label = "Craft item", badge = "Crafting", targetKind = "item" },
+  OBTAIN_ITEM = { label = "Obtain item", badge = "Item", targetKind = "item" },
+  COMPLETE_QUEST = { label = "Complete quest", badge = "Quest", targetKind = "quest" },
+  REACH_REPUTATION = { label = "Reach reputation", badge = "Reputation", targetKind = "faction" },
+  LEARN_RECIPE = { label = "Learn recipe", badge = "Recipe", targetKind = "recipe" },
+  COMPLETE_ATTUNEMENT = { label = "Complete attunement", badge = "Attunement", targetKind = "attunement" },
+  REACH_SKILL = { label = "Reach profession skill", badge = "Skill", targetKind = "skill" },
+  APPLY_ENCHANT = { label = "Apply enchant", badge = "Enchant", targetKind = "enchant" },
 }
 
 GoalModel.MAX_SKILL = 1000
@@ -160,9 +160,9 @@ function GoalModel.SetStanding(goal, standing, now)
   return true
 end
 
+-- False for types this version does not know (e.g. a goal saved by a newer one).
 function GoalModel.IsSupported(goalType)
-  local def = GoalModel.Types[goalType]
-  return def ~= nil and def.supported == true
+  return GoalModel.Types[goalType] ~= nil
 end
 
 function GoalModel.ValidateTarget(goalType, target)

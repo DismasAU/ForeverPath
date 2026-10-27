@@ -4,7 +4,7 @@ local _, ns = ...
 
 local Status = {
   OK = "OK",
-  UNSUPPORTED_GOAL = "UNSUPPORTED_GOAL",         -- goal type not implemented yet
+  UNSUPPORTED_GOAL = "UNSUPPORTED_GOAL",         -- goal type this version does not know
   ITEM_INVALID = "ITEM_INVALID",                 -- item ID does not exist on this client
   ITEM_UNAVAILABLE = "ITEM_UNAVAILABLE",         -- server returned no data for the item
   PROVIDER_UNAVAILABLE = "PROVIDER_UNAVAILABLE", -- required API missing on this client

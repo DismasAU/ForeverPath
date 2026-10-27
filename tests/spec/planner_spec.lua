@@ -37,7 +37,7 @@ describe("Planner", function()
   it("flags unsupported goal types", function()
     local view = Planner.Evaluate({ id = "q", type = "NOPE", target = {} }, deps())
     assert_eq(view.status, Status.UNSUPPORTED_GOAL)
-    assert_match(view.message, "These goals")
+    assert_match(view.message, "not supported")
   end)
 
   it("flags invalid items", function()

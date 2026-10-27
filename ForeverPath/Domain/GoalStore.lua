@@ -297,12 +297,21 @@ function GoalStore:SetPriority(id, position)
   return true
 end
 
--- Finds an existing goal with the same type and item target.
-function GoalStore:FindByItem(goalType, itemID)
-  for _, goal in pairs(self.storage.goals) do
-    if goal.type == goalType and goal.target and goal.target.itemID == itemID then
-      return goal
+-- Finds the first goal (in List order) of `goalType` whose target[field]
+-- equals `value`. `normalize`, when given, is applied to both sides first.
+function GoalStore:FindByTarget(goalType, field, value, normalize)
+  if normalize then value = normalize(value) end
+  for _, goal in ipairs(self:List()) do
+    if goal.type == goalType and goal.target then
+      local current = goal.target[field]
+      if normalize then current = normalize(current) end
+      if current == value then return goal end
     end
   end
   return nil
+end
+
+-- Finds an existing goal with the same type and item target.
+function GoalStore:FindByItem(goalType, itemID)
+  return self:FindByTarget(goalType, "itemID", itemID)
 end
