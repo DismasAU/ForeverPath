@@ -567,10 +567,10 @@ function handlers.shopping()
   local views = ns.Planner.EvaluateAll(goals)
   local entries = {}
   for _, goal in ipairs(goals) do entries[#entries + 1] = { goal = goal, view = views[goal.id] } end
-  local s = ns.chardb.shopping or {}
+  local s = ns.chardb.shopping
   local list = ns.ShoppingList.Build(entries, {
     included = function(goal)
-      if s.included and s.included[goal.id] ~= nil then return s.included[goal.id] end
+      if s.included[goal.id] ~= nil then return s.included[goal.id] end
       return ns.ShoppingList.DefaultIncluded(goal)
     end,
     bought = s.bought, nameOf = ns.ItemProvider.GetName, sort = s.sort,

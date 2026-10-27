@@ -20,13 +20,9 @@ local function sortLabel(key)
   return SORTS[1].label
 end
 
+-- Shopping state; Database.DEFAULTS.char.shopping gives it its shape at load.
 local function settings()
-  if not ns.chardb then return { bought = {}, included = {}, sort = "missing", filter = "all" } end
-  ns.chardb.shopping = ns.chardb.shopping or { bought = {}, included = {}, sort = "missing", filter = "all" }
-  local s = ns.chardb.shopping
-  s.bought = s.bought or {}
-  s.included = s.included or {}
-  return s
+  return ns.chardb.shopping
 end
 
 -- Included goals: explicit override, else active/queued.

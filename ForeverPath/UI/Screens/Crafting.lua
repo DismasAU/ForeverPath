@@ -283,8 +283,6 @@ local function Create(parent)
   buyValue:SetPoint("LEFT", buyLabel, "RIGHT", 6, 0)
   local shopping = Widgets.Button(footer, "Add to shopping list", { onClick = function()
     if screen.goal and ns.chardb then
-      ns.chardb.shopping = ns.chardb.shopping or { bought = {}, included = {} }
-      ns.chardb.shopping.included = ns.chardb.shopping.included or {}
       ns.chardb.shopping.included[screen.goal.id] = true
       ns.UI.MainFrame.ShowScreen("shopping")
     end
