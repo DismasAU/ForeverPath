@@ -277,8 +277,7 @@ local function Create(parent)
   local buyValue = Widgets.Text(footer, "secondary", "no price data", { color = C.text3 })
   buyValue:SetPoint("LEFT", buyLabel, "RIGHT", 6, 0)
   local shopping = Widgets.Button(footer, "Add to shopping list", { onClick = function()
-    if screen.goal and ns.chardb then
-      ns.chardb.shopping.included[screen.goal.id] = true
+    if screen.goal and ns.GoalService.SetInShopping(screen.goal.id, true) then
       ns.UI.MainFrame.ShowScreen("shopping")
     end
   end })

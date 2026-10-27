@@ -566,12 +566,9 @@ function handlers.shopping()
   local views = ns.Planner.EvaluateAll(goals)
   local entries = {}
   for _, goal in ipairs(goals) do entries[#entries + 1] = { goal = goal, view = views[goal.id] } end
-  local s = ns.chardb.shopping
+  local s = ns.GoalService.ShoppingState()
   local list = ns.ShoppingList.Build(entries, {
-    included = function(goal)
-      if s.included[goal.id] ~= nil then return s.included[goal.id] end
-      return ns.ShoppingList.DefaultIncluded(goal)
-    end,
+    included = ns.GoalService.InShopping,
     bought = s.bought, nameOf = ns.ItemProvider.GetName, sort = s.sort,
   })
   for _, line in ipairs(ns.ShoppingList.Lines(list, ns.ItemProvider.GetName)) do

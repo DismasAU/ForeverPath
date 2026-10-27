@@ -799,6 +799,30 @@ function GoalService.FindItemGoal(itemID)
   return findGoal("CRAFT_ITEM", "itemID", itemID) or findGoal("OBTAIN_ITEM", "itemID", itemID)
 end
 
+---------------------------------------------------------------------------
+-- Shopping list state: ns.chardb.shopping, shaped by Database.DEFAULTS
+---------------------------------------------------------------------------
+-- { bought, included, sort, filter } for this character, or nil before load.
+function GoalService.ShoppingState()
+  return ns.chardb and ns.chardb.shopping
+end
+
+-- Whether a goal's materials are on the shopping list: the player's choice
+-- for it, else ShoppingList.DefaultIncluded (active and queued goals).
+function GoalService.InShopping(goal)
+  local state = GoalService.ShoppingState()
+  local choice = state and state.included[goal.id]
+  if choice ~= nil then return choice end
+  return ns.ShoppingList.DefaultIncluded(goal)
+end
+
+function GoalService.SetInShopping(goalID, included)
+  local state = GoalService.ShoppingState()
+  if not state then return false, "not loaded" end
+  state.included[goalID] = included
+  return true
+end
+
 -- Tracked, open goals in priority order (drives the tracker and header pill).
 function GoalService.TrackedGoals()
   return GoalService.List({ open = true, tracked = true })

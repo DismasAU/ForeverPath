@@ -15,16 +15,8 @@ local TABS = { { key = "all", label = "All" }, { key = "buy", label = "Auction H
 local STEP_ICON = "Interface\\Icons\\INV_Misc_Book_09"
 local MAX_CHIPS = 4
 
--- Shopping state; Database.DEFAULTS.char.shopping gives it its shape at load.
 local function settings()
-  return ns.chardb.shopping
-end
-
--- Included goals: explicit override, else active/queued.
-local function isIncluded(goal)
-  local override = settings().included[goal.id]
-  if override ~= nil then return override end
-  return ShoppingList.DefaultIncluded(goal)
+  return ns.GoalService.ShoppingState()
 end
 
 local function createRow(content, index, screen)
@@ -120,7 +112,7 @@ local function Create(parent)
     local chip
     chip = Widgets.Checkbox(header, "", function(checked)
       if chip.goalID then
-        settings().included[chip.goalID] = checked
+        ns.GoalService.SetInShopping(chip.goalID, checked)
         screen:Refresh()
       end
     end)
@@ -270,7 +262,7 @@ local function Create(parent)
 
   function screen:Build()
     local s = settings()
-    return ShoppingList.Build(self:Entries(), { included = isIncluded, bought = s.bought, nameOf = ns.ItemProvider.GetName, sort = s.sort,
+    return ShoppingList.Build(self:Entries(), { included = ns.GoalService.InShopping, bought = s.bought, nameOf = ns.ItemProvider.GetName, sort = s.sort,
       priceOf = function(itemID)
         local info = ns.PriceProvider.GetPrice(itemID)
         return info and info.copper or nil
