@@ -100,12 +100,22 @@ compartment click handler the TOC requires.
 3. Providers convert API results into normalized tables **once**
    (`RecipeModel.FromSchematic`, `ItemProvider.GetItem`,
    `InventoryProvider.GetCounts`). Raw API tables do not travel further.
-4. `Core/Compat.lua` resolves every API function the addon uses, modern
-   namespace first, legacy global second, `nil` if neither exists. Everything
-   else checks the resolved capability instead of probing globals.
+4. `Core/Compat.lua` resolves the API functions several modules share,
+   modern namespace first, legacy global second, `nil` if neither exists, and
+   those modules use the resolved capability instead of probing globals. A
+   provider that wraps one API family alone (reputation, trade skills) keeps
+   that choice inside it.
 5. Event handlers run through `Log.Call` (xpcall). Errors are recorded in
-   `Log.errors` and shown once, never swallowed.
-6. Refreshes are event driven and debounced; nothing runs OnUpdate.
+   `Log.errors` and shown once, never swallowed. Calls into ForeverPath's own
+   modules that may fail without breaking the caller go through `Log.Try`
+   (logged); `Util.SafeCall` and `pcall` are for client and third-party APIs.
+6. Refreshes are event driven and debounced; nothing runs OnUpdate. Lower
+   layers announce changes with `FP_*` messages and never call into the UI.
+7. Names: accessors are bare nouns (`QuestProvider.Giver`, `GoalService.Views`),
+   not `Get*`; the older `Get*` accessors (`ItemProvider.GetItem`, the
+   Planner's provider interface) are renamed when their module is next
+   reworked, not in one sweep. `Describe` returns lines, `Status` a one-line
+   string, `StatusInfo` a table, `ItemHints(itemID)` resolver hints.
 
 ## Data flow
 
