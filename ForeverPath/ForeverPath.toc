@@ -11,7 +11,7 @@
 ## X-License: GPL-3.0
 ## OptionalDeps: Auctionator, AtlasLootClassic, AtlasLootClassic_DungeonsAndRaids, ForeverDungeonJournal, Attune, GearQuestForever, Questie
 
-# Load order matters: Core -> Data -> Domain -> Providers -> services -> UI -> command and bootstrap wiring.
+# Load order matters: Core -> Data -> Domain -> Providers -> App services -> UI -> App commands and bootstrap wiring.
 Core\Namespace.lua
 Core\Util.lua
 Core\Log.lua
@@ -19,7 +19,6 @@ Core\Compat.lua
 Core\Events.lua
 Core\Database.lua
 Core\Codec.lua
-Core\Share.lua
 Data\RecipeCatalogue.lua
 Data\ItemIndex.lua
 Data\Recipes.lua
@@ -57,8 +56,9 @@ Providers\EquipmentProvider.lua
 Providers\ReputationProvider.lua
 Providers\PriceProvider.lua
 Providers\AuctionPriceProvider.lua
-Core\GoalService.lua
-Core\GoalCompletion.lua
+App\Share.lua
+App\GoalService.lua
+App\GoalCompletion.lua
 UI\Theme.lua
 UI\Widgets.lua
 UI\Screens\Dashboard.lua
@@ -77,5 +77,5 @@ UI\MainFrame.lua
 UI\Tracker.lua
 UI\MinimapButton.lua
 UI\Toast.lua
-Core\Commands.lua
-Core\Bootstrap.lua
+App\Commands.lua
+App\Bootstrap.lua

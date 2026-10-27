@@ -202,7 +202,7 @@ function TrainerProvider.Requirement(spellID)
   local store = TrainerProvider.Store()
   local recorded = store and store[spellID] or nil
   if recorded then return recorded end
-  -- A trainer another player recorded and shared (Core/Share.lua).
+  -- A trainer another player recorded and shared (App/Share.lua).
   local shared
   if ns.Share then
     ns.Share.EachImported("trainers", function(_, trainers)

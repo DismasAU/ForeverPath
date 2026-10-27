@@ -148,7 +148,7 @@ function LootLearner.CloseLoot()
   LootLearner.session = (LootLearner.session or 0) + 1
 end
 
--- Own observations plus every imported copy (Core/Share.lua), summed per
+-- Own observations plus every imported copy (App/Share.lua), summed per
 -- source: key -> entry in the stored shape, with `shared` = imports used.
 function LootLearner.Combined()
   local combined = {}

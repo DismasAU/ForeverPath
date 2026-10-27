@@ -40,7 +40,7 @@ Database.DEFAULTS = {
     questFacts = {},   -- questID -> { giver, turnin, items } learned at quest windows (see Providers/QuestFactsProvider.lua)
     lootSeen = {},     -- "c:<npcID>" / "o:<objectID>" / "f:<zone>" -> what was looted there (see Providers/LootLearner.lua)
     minimap = { hide = false, minimapPos = 225 }, -- minimap button (see UI/MinimapButton.lua)
-    imported = {},     -- author token -> { label, at, importedAt, lootSeen, questFacts, vendors, trainers, trainerNPCs } (see Core/Share.lua)
+    imported = {},     -- author token -> { label, at, importedAt, lootSeen, questFacts, vendors, trainers, trainerNPCs } (see App/Share.lua)
   },
   char = {
     schemaVersion = ns.SCHEMA_VERSION,

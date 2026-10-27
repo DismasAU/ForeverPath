@@ -58,7 +58,7 @@ end
 
 -- Shipped and learned facts merged: a learned position wins (it was seen on
 -- this build), item lists prefer whichever has every item id resolved.
--- The first imported copy (Core/Share.lua) of a quest's facts, or nil.
+-- The first imported copy (App/Share.lua) of a quest's facts, or nil.
 function QuestFactsProvider.Imported(questID)
   local found
   if ns.Share then

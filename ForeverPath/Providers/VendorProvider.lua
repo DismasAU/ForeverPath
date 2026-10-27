@@ -112,7 +112,7 @@ function VendorProvider.VendorsFor(itemID)
     end
   end
   add(store and store[itemID], false)
-  -- Merchants other players recorded and shared (Core/Share.lua) fill in the ones not visited here.
+  -- Merchants other players recorded and shared (App/Share.lua) fill in the ones not visited here.
   if ns.Share then
     ns.Share.EachImported("vendors", function(_, vendors) add(vendors[itemID], true) end)
   end
