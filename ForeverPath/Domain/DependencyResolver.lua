@@ -280,99 +280,118 @@ local function resolveSkillCraft(node, opts, path, tree)
   return node
 end
 
--- Fills in inventory, options, route and (when crafting) children for a node.
--- opts is read-only configuration; per-call state (the allocation ledger,
--- the goal's own root recipe, the node index) lives on `tree`.
-function DependencyResolver.ResolveNode(node, opts, path, tree)
-  tree.byKey[node.key] = node
-  if node.forSkill then
-    return resolveSkillCraft(node, opts, path, tree)
-  end
-  if node.enchant then
-    return resolveEnchantRoot(node, opts, path, tree)
-  end
-  -- A step (train a recipe) is not an item: nothing to count, buy or expand.
-  -- A skill plan root is a step too, with one craft child per recipe.
-  if node.step then
-    node.claims = false
-    node.owned, node.ownedBags, node.reserved, node.available = 0, 0, 0, 0
-    node.missing = node.quantity
-    node.status = "missing"
-    node.options = {}
-    -- A quest root: the quest itself is never owned or bought; the items it
-    -- asks for hang below it like reagents.
-    if node.step.kind == "quest" then
-      node.route, node.routeSource = "quest", "quest"
-      for index, spec in ipairs(node.step.items or {}) do
-        local child = {
-          key = node.key .. ">" .. tostring(spec.itemID), itemID = spec.itemID, depth = node.depth + 1, parentKey = node.key, index = index,
-          perCraft = 0, quantity = spec.quantity or spec.count or 1, children = {}, questItem = true, questName = spec.questName,
-        }
-        DependencyResolver.ResolveNode(child, opts, path, tree)
-        node.children[#node.children + 1] = child
-      end
-      return node
-    end
-    if node.step.kind == "skill" then
-      node.route, node.routeSource = "craft", "skill"
-      for index, spec in ipairs(node.step.crafts or {}) do
-        local recipe = spec.recipe
-        local child = {
-          key = node.key .. ">" .. tostring(recipe.recipeID),
-          itemID = recipe.outputItemID,
-          depth = node.depth + 1,
-          parentKey = node.key,
-          index = index,
-          perCraft = 0,
-          quantity = (spec.crafts or 1) * (recipe.quantityMin or 1),
-          forSkill = { recipe = recipe, crafts = spec.crafts or 1, learned = spec.learned, from = spec.from, to = spec.to },
-          -- Named here because an enchant has no item to take a name from.
-          name = recipe.name,
-          icon = recipe.icon,
-          children = {},
-        }
-        DependencyResolver.ResolveNode(child, opts, path, tree)
-        node.children[#node.children + 1] = child
-      end
-      return node
-    end
-    node.route, node.routeSource = "train", "default"
-    return node
-  end
-  -- Every node below the root claims inventory. So does the root of an
-  -- "obtain item" tree: there is no recipe to craft it with, the item itself
-  -- is what the player needs to get.
-  node.claims = node.depth > 0 or node.obtain == true
-  if node.claims then
-    local raw = opts.counts and opts.counts(node.itemID) or 0
-    local taken = tree.ledger:Take(node.itemID, raw, node.quantity, opts.includeBank, opts.includeAlts)
-    node.owned = taken.total
-    node.ownedBags = taken.bags
-    node.ownedBank = taken.bank
-    node.ownedAlts = taken.alts
-    node.altSources = taken.altSources
-    node.bankSource = taken.bankSource
-    node.bankScannedAt = taken.bankScannedAt
-    node.reserved = taken.reserved
-    -- What was free for this node before it claimed (shown as "Have").
-    node.available = taken.availableTotal
-    node.availableBags = taken.availableBags
-    node.availableBank = taken.availableBank
-    node.availableAlts = taken.availableAlts
-    node.missing = math.max(0, node.quantity - node.owned)
-  else
-    node.owned, node.ownedBags, node.reserved, node.available = 0, 0, 0, 0
-    node.missing = node.quantity
-  end
-  node.status = statusFor(node)
+-- A child node hung below `parent` at `index`; `fields` are copied over.
+local function childOf(parent, index, key, fields)
+  local child = { key = parent.key .. ">" .. key, depth = parent.depth + 1, parentKey = parent.key, index = index, perCraft = 0, children = {} }
+  for k, v in pairs(fields) do child[k] = v end
+  return child
+end
 
-  node.options, node.soulbound = buildOptions(node.itemID, opts, path)
-  local craftOption = bestCraft(node.options)
-  local override = opts.routes and opts.routes[node.itemID] or nil
-  -- A gathering material with a "refine a lower tier" recipe (Medium Leather
-  -- from Light Leather) is gathered or bought by default; crafting it from
-  -- the tier below is only a route when the player asks for it.
-  node.raw = (node.depth > 0 or node.obtain) and opts.isRaw and opts.isRaw(node.itemID) and true or nil
+-- A step (train a recipe) is not an item: nothing to count, buy or expand.
+-- A quest root hangs the items the quest asks for below it like reagents;
+-- a skill plan root hangs one craft per recipe, done for the points.
+local function resolveStepNode(node, opts, path, tree)
+  node.claims = false
+  node.owned, node.ownedBags, node.reserved, node.available = 0, 0, 0, 0
+  node.missing = node.quantity
+  node.status = "missing"
+  node.options = {}
+  local children = {}
+  if node.step.kind == "quest" then
+    node.route, node.routeSource = "quest", "quest"
+    for index, spec in ipairs(node.step.items or {}) do
+      children[#children + 1] = childOf(node, index, tostring(spec.itemID), {
+        itemID = spec.itemID, quantity = spec.quantity or spec.count or 1, questItem = true, questName = spec.questName,
+      })
+    end
+  elseif node.step.kind == "skill" then
+    node.route, node.routeSource = "craft", "skill"
+    for index, spec in ipairs(node.step.crafts or {}) do
+      local recipe = spec.recipe
+      children[#children + 1] = childOf(node, index, tostring(recipe.recipeID), {
+        itemID = recipe.outputItemID,
+        quantity = (spec.crafts or 1) * (recipe.quantityMin or 1),
+        forSkill = { recipe = recipe, crafts = spec.crafts or 1, learned = spec.learned, from = spec.from, to = spec.to },
+        -- Named here because an enchant has no item to take a name from.
+        name = recipe.name,
+        icon = recipe.icon,
+      })
+    end
+  else
+    node.route, node.routeSource = "train", "default"
+  end
+  for _, child in ipairs(children) do
+    DependencyResolver.ResolveNode(child, opts, path, tree)
+    node.children[#node.children + 1] = child
+  end
+  return node
+end
+
+-- Every node below the root claims inventory from the ledger. So does the
+-- root of an "obtain item" tree: there is no recipe to craft it with, the
+-- item itself is what the player needs to get.
+local function claimInventory(node, opts, tree)
+  node.claims = node.depth > 0 or node.obtain == true
+  if not node.claims then
+    node.owned, node.ownedBags, node.reserved, node.available = 0, 0, 0, 0
+    node.missing = node.quantity
+    return
+  end
+  local raw = opts.counts and opts.counts(node.itemID) or 0
+  local taken = tree.ledger:Take(node.itemID, raw, node.quantity, opts.includeBank, opts.includeAlts)
+  node.owned = taken.total
+  node.ownedBags = taken.bags
+  node.ownedBank = taken.bank
+  node.ownedAlts = taken.alts
+  node.altSources = taken.altSources
+  node.bankSource = taken.bankSource
+  node.bankScannedAt = taken.bankScannedAt
+  node.reserved = taken.reserved
+  -- What was free for this node before it claimed (shown as "Have").
+  node.available = taken.availableTotal
+  node.availableBags = taken.availableBags
+  node.availableBank = taken.availableBank
+  node.availableAlts = taken.availableAlts
+  node.missing = math.max(0, node.quantity - node.owned)
+end
+
+-- When nothing forces a route: the best ranked source that is not a craft,
+-- unless a recipe nobody has learned (or a combine) ranks above it.
+local function rankRoutes(node, craftOption)
+  node.route, node.routeSource = "buy", "default"
+  local bestRank = DependencyResolver.RouteRank.buy
+  local buyOption
+  for _, option in ipairs(node.options) do
+    if option.kind == "buy" then buyOption = option end
+    local rank = DependencyResolver.RouteRank[option.kind]
+    if option.kind ~= "craft" and not option.unavailable and rank and rank < bestRank then
+      bestRank = rank
+      node.route = option.kind
+      node.hint = option
+    end
+  end
+  if node.route == "buy" and buyOption and buyOption.unavailable then
+    -- Soulbound and nothing else known: no real route yet.
+    bestRank = DependencyResolver.UNAVAILABLE_RANK + 1
+    node.noRoute = true
+  end
+  -- A catalogue recipe nobody has learned: a combine anyone can do ranks
+  -- with alt crafting, a learnable recipe just above the Auction House, and
+  -- one nobody can do is only shown when there is no other way at all.
+  if craftOption and not craftOption.cycle and not node.raw then
+    local rank = craftOption.combine and DependencyResolver.RouteRank.combine
+      or (craftOption.unavailable and DependencyResolver.UNAVAILABLE_RANK or DependencyResolver.RouteRank.learn)
+    if rank < bestRank then
+      node.route, node.routeSource = "craft", craftOption.combine and "combine" or "learn"
+      node.hint, node.noRoute = nil, nil
+    end
+  end
+end
+
+-- Sets node.route / routeSource (and hint, noRoute): the goal's own recipe
+-- at the root, then the player's override, then a learned recipe, then the
+-- ranked sources.
+local function chooseRoute(node, craftOption, override, tree)
   if node.depth == 0 and tree.rootRecipe then
     node.route, node.routeSource = "craft", "root"
   elseif override == "craft" and craftOption then
@@ -382,35 +401,59 @@ function DependencyResolver.ResolveNode(node, opts, path, tree)
   elseif craftOption and craftOption.learned and not node.raw then
     node.route, node.routeSource = "craft", "default"
   else
-    node.route, node.routeSource = "buy", "default"
-    local bestRank = DependencyResolver.RouteRank.buy
-    local buyOption
-    for _, option in ipairs(node.options) do
-      if option.kind == "buy" then buyOption = option end
-      local rank = DependencyResolver.RouteRank[option.kind]
-      if option.kind ~= "craft" and not option.unavailable and rank and rank < bestRank then
-        bestRank = rank
-        node.route = option.kind
-        node.hint = option
-      end
-    end
-    if node.route == "buy" and buyOption and buyOption.unavailable then
-      -- Soulbound and nothing else known: no real route yet.
-      bestRank = DependencyResolver.UNAVAILABLE_RANK + 1
-      node.noRoute = true
-    end
-    -- A catalogue recipe nobody has learned: a combine anyone can do ranks
-    -- with alt crafting, a learnable recipe just above the Auction House, and
-    -- one nobody can do is only shown when there is no other way at all.
-    if craftOption and not craftOption.cycle and not node.raw then
-      local rank = craftOption.combine and DependencyResolver.RouteRank.combine
-        or (craftOption.unavailable and DependencyResolver.UNAVAILABLE_RANK or DependencyResolver.RouteRank.learn)
-      if rank < bestRank then
-        node.route, node.routeSource = "craft", craftOption.combine and "combine" or "learn"
-        node.hint, node.noRoute = nil, nil
-      end
-    end
+    rankRoutes(node, craftOption)
   end
+end
+
+-- node.craft for crafting the shortfall with `option`, then its children
+-- (unless the tree is already too deep).
+local function buildCraft(node, option, opts, path, tree)
+  local crafts = CraftingEngine.CraftsNeeded(node.missing, option.yield)
+  node.craft = {
+    recipe = option.recipe,
+    recipeID = option.recipe.recipeID,
+    professionName = option.professionName,
+    learned = option.learned,
+    static = option.static,
+    combine = option.combine,
+    crafter = option.crafter,
+    crafters = option.crafters,
+    unavailable = option.unavailable and (option.reason or "no crafter") or nil,
+    skill = option.skill,
+    -- The plans are a requirement only while nobody has learned the recipe.
+    teachItemID = (not option.learned and not option.combine) and option.teachItemID or nil,
+    tools = option.tools,
+    crafts = crafts,
+    yield = option.yield,
+    expectedOutput = crafts * (option.yield or 1),
+  }
+  node.craft.surplus = node.craft.expectedOutput - node.missing
+  if node.depth >= (opts.maxDepth or DependencyResolver.MAX_DEPTH) then
+    node.blocked = "depth"
+  else
+    expand(node, opts, path, tree)
+  end
+end
+
+-- Fills in inventory, options, route and (when crafting) children for a node.
+-- opts is read-only configuration; per-call state (the allocation ledger,
+-- the goal's own root recipe, the node index) lives on `tree`.
+function DependencyResolver.ResolveNode(node, opts, path, tree)
+  tree.byKey[node.key] = node
+  if node.forSkill then return resolveSkillCraft(node, opts, path, tree) end
+  if node.enchant then return resolveEnchantRoot(node, opts, path, tree) end
+  if node.step then return resolveStepNode(node, opts, path, tree) end
+
+  claimInventory(node, opts, tree)
+  node.status = statusFor(node)
+  node.options, node.soulbound = buildOptions(node.itemID, opts, path)
+  local craftOption = bestCraft(node.options)
+  local override = opts.routes and opts.routes[node.itemID] or nil
+  -- A gathering material with a "refine a lower tier" recipe (Medium Leather
+  -- from Light Leather) is gathered or bought by default; crafting it from
+  -- the tier below is only a route when the player asks for it.
+  node.raw = (node.depth > 0 or node.obtain) and opts.isRaw and opts.isRaw(node.itemID) and true or nil
+  chooseRoute(node, craftOption, override, tree)
   node.craftOption = craftOption
 
   if node.route == "craft" and node.missing > 0 then
@@ -419,31 +462,7 @@ function DependencyResolver.ResolveNode(node, opts, path, tree)
       -- The root always crafts with the goal's own recipe.
       option = { kind = "craft", recipe = tree.rootRecipe, learned = true, professionName = tree.rootRecipe.professionName, yield = tree.rootRecipe.quantityMin or 1 }
     end
-    local crafts = CraftingEngine.CraftsNeeded(node.missing, option.yield)
-    node.craft = {
-      recipe = option.recipe,
-      recipeID = option.recipe.recipeID,
-      professionName = option.professionName,
-      learned = option.learned,
-      static = option.static,
-      combine = option.combine,
-      crafter = option.crafter,
-      crafters = option.crafters,
-      unavailable = option.unavailable and (option.reason or "no crafter") or nil,
-      skill = option.skill,
-      -- The plans are a requirement only while nobody has learned the recipe.
-      teachItemID = (not option.learned and not option.combine) and option.teachItemID or nil,
-      tools = option.tools,
-      crafts = crafts,
-      yield = option.yield,
-      expectedOutput = crafts * (option.yield or 1),
-    }
-    node.craft.surplus = node.craft.expectedOutput - node.missing
-    if node.depth >= (opts.maxDepth or DependencyResolver.MAX_DEPTH) then
-      node.blocked = "depth"
-    else
-      expand(node, opts, path, tree)
-    end
+    buildCraft(node, option, opts, path, tree)
   elseif craftOption == nil and override == "craft" then
     node.blocked = "no-recipe"
   end
