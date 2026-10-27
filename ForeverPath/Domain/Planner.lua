@@ -145,10 +145,7 @@ local EVALUATORS = {
   APPLY_ENCHANT = "EvaluateEnchant",
 }
 
--- Returns a view:
---   { goal, status, message, item, recipe, plan, tree, candidates, recipeIsLive, inventoryNote, progress }
-function Planner.Evaluate(goal, deps)
-  deps = deps or Planner.DefaultDeps()
+local function evaluate(goal, deps)
   local view = { goal = goal, status = Status.OK, message = "", candidates = {} }
 
   if not goal or not GoalModel.IsSupported(goal.type) then
@@ -281,6 +278,19 @@ function buildCraftPlan(view, goal, deps, root, crafts)
   end
   view.inventoryNote = Planner.DescribeInventory(ctx.bankNote, ctx.includeBank, ctx.includeAlts)
   return plan
+end
+
+-- Returns a view:
+--   { goal, status, message, item, recipe, plan, tree, fullTree, candidates, recipeIsLive, inventoryNote, progress,
+--     craftwise }
+-- craftwise is CraftWise.Compare over the full tree with deps.price, so every
+-- screen reads the same comparison instead of computing its own.
+function Planner.Evaluate(goal, deps)
+  deps = deps or Planner.DefaultDeps()
+  local view = evaluate(goal, deps)
+  local tree = view.fullTree or view.tree
+  view.craftwise = tree and ns.CraftWise.Compare(tree, { prices = deps.price }) or nil
+  return view
 end
 
 -- CraftWise compares buying with crafting at every level, so it needs a tree

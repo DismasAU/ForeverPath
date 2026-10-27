@@ -269,7 +269,7 @@ function CraftWiseView.Create(screen)
       self.result = nil
       return
     end
-    local result = ns.CraftWise.Compare(tree, { prices = ns.PriceProvider })
+    local result = planView.craftwise
     self.result = result
     local status = ns.PriceProvider.StatusInfo()
     if not result.available and not result.buy.cost then

@@ -781,7 +781,7 @@ describe("UI shell and screens (mock widgets)", function()
     assert_true(cw.usePlan:IsShown())
     -- Make bolts worth buying, then apply the plan: the tree follows it.
     _G.Auctionator.API.v1.GetAuctionPriceByItemID = function(_, id) return ({ [2589] = 10, [2320] = 20, [2996] = 3, [4238] = 1000 })[id] end
-    crafting:Refresh()
+    MainFrame.Refresh() -- views (and their CraftWise comparison) are re-evaluated on a window refresh
     result = cw.result
     assert_eq(result.plan[2996], "buy")
     assert_eq(result.hybrid.cost, 9 + 60, "three bolts bought at 3c beat 10c of cloth")

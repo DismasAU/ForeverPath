@@ -310,8 +310,7 @@ local function createSettings(screen)
     if isOpen then status:Select(goal.status) end
     tracker:SetChecked(goal.tracked)
     complete:SetLabel(isOpen and "Mark complete" or "Reopen goal")
-    local tree = view and (view.fullTree or view.tree)
-    self.craftwise = tree and ns.CraftWise.Compare(tree, { prices = ns.PriceProvider }) or nil
+    self.craftwise = view and view.craftwise or nil
     local mode = ns.CraftWise.Mode(self.craftwise, goal.routes)
     local result = self.craftwise
     if mode == "hybrid" then

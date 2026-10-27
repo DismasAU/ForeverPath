@@ -476,7 +476,7 @@ end
 -- The footer: CraftWise's route and the cost of buying what is missing.
 local function renderFooter(screen, view, buyTotal, pricedRows, unpricedRows)
   local routeText, buyValue = screen.routeText, screen.buyValue
-  local compare = ns.CraftWise.Compare(view.fullTree or view.tree, { prices = ns.PriceProvider })
+  local compare = view.craftwise
   if compare and compare.hybrid.cost then
     routeText:SetText("CraftWise route: " .. Widgets.Money(compare.hybrid.cost, true) .. (compare.hybrid.unknown > 0 and Theme.ColorText("text3", string.format(" (+%d unpriced)", compare.hybrid.unknown)) or ""))
     Widgets.SetTextColor(routeText, C.text)
