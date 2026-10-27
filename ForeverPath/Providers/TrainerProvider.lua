@@ -18,7 +18,7 @@ ns.TrainerProvider = TrainerProvider
 TrainerProvider.FILTERS = { "available", "unavailable", "used" }
 
 function TrainerProvider.IsAvailable()
-  return type(_G.GetNumTrainerServices) == "function" and type(_G.GetTrainerServiceInfo) == "function"
+  return Compat.HasTrainerWindow()
 end
 
 -- spellID -> { skill, rank, cost, trainer, zone, subzone, seenAt }

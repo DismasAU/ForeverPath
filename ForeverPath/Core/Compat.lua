@@ -1,5 +1,9 @@
--- Client compatibility layer. All direct WoW API discovery happens here so the
--- rest of the addon never has to ask "which client is this?".
+-- Client compatibility layer: which client this is, and the modern-or-legacy
+-- choice for the APIs several modules share (items, containers, addons,
+-- merchants, quest flags, maps, player context, trainer window, item stats),
+-- so those modules never ask "which client is this?". A provider that wraps
+-- one API family on its own (ReputationProvider's faction API,
+-- ProfessionProvider's C_TradeSkillUI) keeps that choice inside it.
 --
 -- World of Warcraft: Forever (interface 16001) is a Retail 12.x based engine:
 -- the C_* namespaces exist and most legacy globals (GetItemInfo, GetItemCount,
@@ -110,7 +114,6 @@ function Compat.Detect()
     and type(C_TradeSkillUI.GetRecipeInfo) == "function"
   Compat.hasLegacyTradeSkill = type(_G.GetTradeSkillInfo) == "function"
   Compat.hasProfessionList = type(_G.GetProfessions) == "function" and type(_G.GetProfessionInfo) == "function"
-  Compat.hasTrainerWindow = type(_G.GetNumTrainerServices) == "function" and type(_G.GetTrainerServiceInfo) == "function"
   Compat.hasBankTabs = type(C_Bank) == "table"
     and type(C_Bank.FetchPurchasedBankTabIDs) == "function"
     and type(Enum) == "table" and type(Enum.BankType) == "table"
@@ -192,8 +195,27 @@ function Compat.Describe()
     { "Profession API (C_TradeSkillUI)", Compat.hasTradeSkillUI and "available" or "missing" },
     { "Legacy tradeskill API", Compat.hasLegacyTradeSkill and "available (unused)" or "missing" },
     { "Profession list (GetProfessions)", Compat.hasProfessionList and "available" or "missing" },
-    { "Trainer window API", Compat.hasTrainerWindow and "available" or "missing" },
+    { "Trainer window API", Compat.HasTrainerWindow() and "available" or "missing" },
   }
+end
+
+-- The trainer window API. Checked at call time: its functions only exist
+-- once the trainer UI has loaded.
+function Compat.HasTrainerWindow()
+  return type(_G.GetNumTrainerServices) == "function" and type(_G.GetTrainerServiceInfo) == "function"
+end
+
+-- An item's stats as { [ITEM_MOD_* token] = value }: C_Item.GetItemStats, else
+-- the legacy GetItemStats(link, outTable); nil when neither answers.
+function Compat.GetItemStats(linkOrID)
+  local cItem = type(C_Item) == "table" and C_Item or {}
+  local stats = ns.Util.SafeCall(cItem.GetItemStats, linkOrID)
+  if type(stats) == "table" then return stats end
+  if type(_G.GetItemStats) ~= "function" then return nil end
+  local legacy = {}
+  local result = ns.Util.SafeCall(_G.GetItemStats, linkOrID, legacy)
+  if type(result) == "table" then return result end
+  return next(legacy) and legacy or nil
 end
 
 -- The logged-in character, read at call time. Each returns nil (0 for the

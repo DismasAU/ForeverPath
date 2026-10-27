@@ -9,7 +9,7 @@ ForeverPath/
     Namespace.lua            shared `ns` table, version, the single global `ForeverPath`
     Util.lua                 pure helpers (parsing, defaults, copies, time/money formatting, SafeCall, MatchRank)
     Log.lua                  chat output, debug flag, error capture, protected calls (Call, Try)
-    Compat.lua               WoW API discovery and player context; the only file that asks "which client is this?"
+    Compat.lua               which client this is, shared modern/legacy API choices, player context
     Events.lua               game event registration + internal FP_* message bus, debounce, combat deferral
     Database.lua             SavedVariables defaults, migrations, loading
     Codec.lua                plain-data serialisation for sharing (nothing executed)

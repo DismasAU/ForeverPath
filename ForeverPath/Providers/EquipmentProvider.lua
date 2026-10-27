@@ -138,13 +138,7 @@ end
 function EquipmentProvider.Stats(linkOrID)
   local out = {}
   if not linkOrID then return out end
-  local cItem = type(C_Item) == "table" and C_Item or {}
-  local raw = call(cItem.GetItemStats, linkOrID)
-  if type(raw) ~= "table" and type(_G.GetItemStats) == "function" then
-    local legacy = {}
-    local ok, result = pcall(_G.GetItemStats, linkOrID, legacy)
-    if ok and (type(result) == "table" or next(legacy)) then raw = type(result) == "table" and result or legacy end
-  end
+  local raw = Compat.GetItemStats(linkOrID)
   if type(raw) == "table" then
     for mod, value in pairs(raw) do
       local key = MOD_TO_KEY[mod]
