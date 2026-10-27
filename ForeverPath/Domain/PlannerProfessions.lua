@@ -22,23 +22,68 @@ end
 local function recipeStanding(deps, recipe, spellID)
   local profession = Planner.CurrentSkill(recipe.professionName, recipe.professionID, deps)
   local need = recipe.skill and recipe.skill.min or 0
-  return {
+  local standing = {
     recipe = recipe, spellID = spellID, learned = isLearned(deps, spellID), knownBy = whoKnows(deps, spellID),
     profession = profession, hasProfession = profession ~= nil, need = need,
     have = profession and profession.skillLevel or nil,
     skillOK = profession ~= nil and (profession.skillLevel or 0) >= need,
     teachItemID = recipe.teachItemID, trainer = recipe.trainer,
   }
+  if not profession then
+    standing.blocked = "profession"
+  elseif not standing.skillOK then
+    standing.blocked = "skill"
+  end
+  return standing
 end
-
----------------------------------------------------------------------------
--- Learn-recipe and reach-skill goals
----------------------------------------------------------------------------
 
 -- "a Tailoring trainer", "an Enchanting trainer".
 local function article(word)
   return (type(word) == "string" and word:match("^[AEIOUaeiou]")) and "an" or "a"
 end
+
+-- The sentence for what blocks a recipe (no profession, skill too low), and
+-- the next step that clears it; nil, nil when nothing does.
+local function blockedStep(standing, recipe)
+  if standing.blocked == "profession" then
+    return string.format("You do not have %s on this character.", recipe.professionName or "the profession"),
+      "Learn " .. (recipe.professionName or "the profession")
+  elseif standing.blocked == "skill" then
+    return string.format("Needs %s %d; you have %d.", recipe.professionName or "skill", standing.need, standing.profession.skillLevel or 0),
+      string.format("Reach %s %d", recipe.professionName or "skill", standing.need)
+  end
+  return nil, nil
+end
+
+-- Training a recipe: the sentence and the next step, with the trainer when
+-- one has been recorded.
+local function trainerStep(recipe)
+  local trainer = recipe.trainer
+  if trainer and trainer.name then
+    return string.format("Train at %s%s%s.", trainer.name, trainer.zone and (", " .. trainer.zone) or "",
+      trainer.cost and trainer.cost > 0 and (" for " .. Util.FormatMoney(trainer.cost)) or ""), "Train at " .. trainer.name
+  end
+  return string.format("Train at any %s trainer (the requirement is recorded on your next trainer visit).", recipe.professionName or "profession"),
+    "Visit " .. article(recipe.professionName) .. " " .. (recipe.professionName or "profession") .. " trainer"
+end
+
+-- The plans (or formula) that teach a recipe: read them when they are in the
+-- bags, else get them. node is the plans' tree node.
+local function plansStep(node, plansName, recipeName, sourceText)
+  if node.missing <= 0 then
+    return string.format("%s is in your bags: read it to learn %s.", plansName, recipeName), "Read " .. plansName
+  end
+  return string.format("Get %s%s.", plansName, sourceText and (" - " .. sourceText) or (node.noRoute and " (soulbound, no source recorded yet)" or "")),
+    "Get " .. plansName
+end
+
+local function knownByText(knownBy)
+  return string.format("%s already know%s it.", Util.Join(knownBy), #knownBy == 1 and "s" or "")
+end
+
+---------------------------------------------------------------------------
+-- Learn-recipe and reach-skill goals
+---------------------------------------------------------------------------
 
 -- What each of this character's professions can train: recipes taught by a
 -- trainer (recorded, or classic data) that it has not learned, at or below
@@ -102,7 +147,7 @@ function Planner.EvaluateLearn(view, goal, deps)
   end
   local learn = recipeStanding(deps, recipe, target.spellID)
   learn.kind = recipe.combine and "combine" or (recipe.teachItemID and "plans" or "trainer")
-  local learned, profession, need, knownBy = learn.learned, learn.profession, learn.need, learn.knownBy
+  local learned, need, knownBy = learn.learned, learn.need, learn.knownBy
   view.learn = learn
   local name = recipe.name or "the recipe"
   if learned or learn.kind == "combine" then
@@ -140,39 +185,18 @@ function Planner.EvaluateLearn(view, goal, deps)
     local info = deps.item and deps.item.GetItem and deps.item.GetItem(recipe.teachItemID) or nil
     plansName = (type(info) == "table" and info.name) or ("item " .. recipe.teachItemID)
   end
-  if not profession then
-    parts[#parts + 1] = string.format("You do not have %s on this character.", recipe.professionName or "the profession")
-    learn.blocked = "profession"
-  elseif not learn.skillOK then
-    parts[#parts + 1] = string.format("Needs %s %d; you have %d.", recipe.professionName or "skill", need, profession.skillLevel or 0)
-    learn.blocked = "skill"
-  end
+  local blockedText, blockedNext = blockedStep(learn, recipe)
+  parts[#parts + 1] = blockedText
+  local stepText
   if recipe.teachItemID then
-    if tree.root.missing <= 0 then
-      parts[#parts + 1] = string.format("%s is in your bags: read it to learn %s.", plansName, name)
-      view.nextStep = "Read " .. plansName
-    else
-      parts[#parts + 1] = string.format("Get %s%s.", plansName, view.sourceText and (" - " .. view.sourceText) or (tree.root.noRoute and " (soulbound, no source recorded yet)" or ""))
-      view.nextStep = "Get " .. plansName
-    end
+    stepText, view.nextStep = plansStep(tree.root, plansName, name, view.sourceText)
   else
-    local trainer = recipe.trainer
-    if trainer and trainer.name then
-      parts[#parts + 1] = string.format("Train at %s%s%s.", trainer.name, trainer.zone and (", " .. trainer.zone) or "",
-        trainer.cost and trainer.cost > 0 and (" for " .. Util.FormatMoney(trainer.cost)) or "")
-      view.nextStep = "Train at " .. trainer.name
-    else
-      parts[#parts + 1] = string.format("Train at any %s trainer (the requirement is recorded on your next trainer visit).", recipe.professionName or "profession")
-      view.nextStep = "Visit " .. article(recipe.professionName) .. " " .. (recipe.professionName or "profession") .. " trainer"
-    end
+    stepText, view.nextStep = trainerStep(recipe)
   end
-  if learn.blocked == "skill" then
-    view.nextStep = string.format("Reach %s %d", recipe.professionName or "skill", need)
-  elseif learn.blocked == "profession" then
-    view.nextStep = "Learn " .. (recipe.professionName or "the profession")
-  end
+  parts[#parts + 1] = stepText
+  view.nextStep = blockedNext or view.nextStep
   if #knownBy > 0 then
-    parts[#parts + 1] = string.format("%s already know%s it.", Util.Join(knownBy), #knownBy == 1 and "s" or "")
+    parts[#parts + 1] = knownByText(knownBy)
   end
   view.message = table.concat(parts, " ")
   return view
@@ -200,16 +224,11 @@ function Planner.EvaluateEnchant(view, goal, deps)
     return view
   end
   local enchant = recipeStanding(deps, recipe, target.spellID)
-  local learned, profession, need, knownBy = enchant.learned, enchant.profession, enchant.need, enchant.knownBy
+  local learned, knownBy = enchant.learned, enchant.knownBy
   local quantity = target.quantity or 1
   local casts = math.min(tonumber(target.casts) or 0, quantity)
   enchant.kind = recipe.teachItemID and "plans" or "trainer"
   enchant.casts, enchant.quantity, enchant.remaining = casts, quantity, quantity - casts
-  if not profession then
-    enchant.blocked = "profession"
-  elseif not enchant.skillOK then
-    enchant.blocked = "skill"
-  end
   view.enchant = enchant
   view.recipe = recipe
   local name = recipe.name or "the enchant"
@@ -245,34 +264,18 @@ function Planner.EvaluateEnchant(view, goal, deps)
   if casts > 0 then
     parts[#parts + 1] = string.format("%d of %d cast%s done.", casts, quantity, quantity == 1 and "" or "s")
   end
-  if enchant.blocked == "profession" then
-    parts[#parts + 1] = string.format("You do not have %s on this character.", recipe.professionName or "the profession")
-  elseif enchant.blocked == "skill" then
-    parts[#parts + 1] = string.format("Needs %s %d; you have %d.", recipe.professionName or "skill", need, profession.skillLevel or 0)
-  end
+  local blockedText, blockedNext = blockedStep(enchant, recipe)
+  parts[#parts + 1] = blockedText
   if not learned then
+    local stepText
     if formulaNode then
       local info = deps.item and deps.item.GetItem and deps.item.GetItem(recipe.teachItemID) or nil
       local plansName = (type(info) == "table" and info.name) or ("item " .. recipe.teachItemID)
-      if formulaNode.missing <= 0 then
-        parts[#parts + 1] = string.format("%s is in your bags: read it to learn %s.", plansName, name)
-        view.nextStep = "Read " .. plansName
-      else
-        local sourceText = Planner.SourceText(formulaNode.hint)
-        parts[#parts + 1] = string.format("Get %s%s.", plansName, sourceText and (" - " .. sourceText) or (formulaNode.noRoute and " (soulbound, no source recorded yet)" or ""))
-        view.nextStep = "Get " .. plansName
-      end
+      stepText, view.nextStep = plansStep(formulaNode, plansName, name, Planner.SourceText(formulaNode.hint))
     else
-      local trainer = recipe.trainer
-      if trainer and trainer.name then
-        parts[#parts + 1] = string.format("Train at %s%s%s.", trainer.name, trainer.zone and (", " .. trainer.zone) or "",
-          trainer.cost and trainer.cost > 0 and (" for " .. Util.FormatMoney(trainer.cost)) or "")
-        view.nextStep = "Train at " .. trainer.name
-      else
-        parts[#parts + 1] = string.format("Train at any %s trainer (the requirement is recorded on your next trainer visit).", recipe.professionName or "profession")
-        view.nextStep = "Visit " .. article(recipe.professionName) .. " " .. (recipe.professionName or "profession") .. " trainer"
-      end
+      stepText, view.nextStep = trainerStep(recipe)
     end
+    parts[#parts + 1] = stepText
   end
   if plan.totals.missing == 0 then
     parts[#parts + 1] = string.format("All materials for %d cast%s are on hand.", enchant.remaining, enchant.remaining == 1 and "" or "s")
@@ -292,13 +295,9 @@ function Planner.EvaluateEnchant(view, goal, deps)
       view.nextStep = string.format("Obtain %d x %s", top.missing, (type(info) == "table" and info.name) or ("item " .. top.itemID))
     end
   end
-  if enchant.blocked == "skill" then
-    view.nextStep = string.format("Reach %s %d", recipe.professionName or "skill", need)
-  elseif enchant.blocked == "profession" then
-    view.nextStep = "Learn " .. (recipe.professionName or "the profession")
-  end
+  view.nextStep = blockedNext or view.nextStep
   if not learned and #knownBy > 0 then
-    parts[#parts + 1] = string.format("%s already know%s it.", Util.Join(knownBy), #knownBy == 1 and "s" or "")
+    parts[#parts + 1] = knownByText(knownBy)
   end
   view.message = table.concat(parts, " ")
   return view
