@@ -336,10 +336,9 @@ function Tracker.Refresh()
   frame:Show()
 end
 
+-- Data changes reach the tracker through MainFrame.RequestRefresh, which
+-- MainFrame.Init subscribes to every FP_* data message.
 function Tracker.Init()
-  for _, message in ipairs({ "FP_GOALS_CHANGED", "FP_RECIPES_UPDATED", "FP_INVENTORY_UPDATED", "FP_ITEM_LOADED", "FP_READY" }) do
-    Events.On(message, function() ns.UI.MainFrame.RequestRefresh() end)
-  end
   Events.RegisterWoW("PLAYER_ENTERING_WORLD", function()
     Events.Debounce("tracker-initial", 1, Tracker.Refresh)
   end)
