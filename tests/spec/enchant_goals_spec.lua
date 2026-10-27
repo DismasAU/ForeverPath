@@ -115,6 +115,12 @@ describe("Enchant goals", function()
     local nope, why = GS.AddFromInput("|Hspell:1|h[Nothing]|h", 1)
     assert_nil(nope)
     assert_match(why, "No recipe with spell id 1")
+    -- A recipe that makes no item becomes a goal to learn it.
+    ns.db.recipes[990001] = { recipeID = 990001, name = "Smelt Nothing", professionName = "Mining", professionID = 186, reagents = {} }
+    local learnIt = GS.AddFromInput("|Hspell:990001|h[Smelt Nothing]|h", 1)
+    assert_eq(learnIt.type, "LEARN_RECIPE")
+    assert_eq(learnIt.target.spellID, 990001)
+    GS.Remove(learnIt.id)
     local again, message3 = GS.AddEnchantFromInput("crusader", 1)
     assert_not_nil(again, message3)
     assert_eq(again.id, goal.id)

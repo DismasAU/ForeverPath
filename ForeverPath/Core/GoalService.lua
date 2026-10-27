@@ -522,15 +522,13 @@ function GoalService.AddFromInput(text, quantity, goalType)
       return nil, string.format("No recipe with spell id %d is in the catalogue or your recorded professions.", spellID)
     end
     if recipe.enchant then
-      local goal, message, isNew = GoalService.AddEnchantGoal(spellID, quantity)
-      if not goal then
-        return nil, message
-      end
-      return goal, message, isNew
+      return GoalService.AddEnchantGoal(spellID, quantity)
     end
     if recipe.outputItemID then
       return GoalService.AddFromInput(tostring(recipe.outputItemID), quantity, goalType)
     end
+    -- A recipe link that makes no item: the goal is to learn it.
+    return GoalService.AddRecipeGoal(spellID)
   end
   local parsed = ItemProvider.ParseInput(text)
   if not parsed then
