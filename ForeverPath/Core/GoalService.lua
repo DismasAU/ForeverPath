@@ -756,6 +756,15 @@ function GoalService.SetTracked(id, tracked)
   return store:SetTracked(id, tracked)
 end
 
+-- Sets whatever the goal counts (quantity, casts or target skill).
+function GoalService.SetAmount(id, value)
+  local goal = GoalService.Get(id)
+  local amount = goal and ns.GoalModel.Amount(goal)
+  if not amount then return false, "nothing to count" end
+  if amount.field == "rank" then return GoalService.SetRank(id, value) end
+  return GoalService.SetQuantity(id, value)
+end
+
 function GoalService.SetType(id, goalType)
   local store = GoalService.Store()
   if not store then return false, "not loaded" end

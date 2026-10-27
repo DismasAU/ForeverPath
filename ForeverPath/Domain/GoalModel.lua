@@ -22,15 +22,40 @@ ns.GoalModel = GoalModel
 
 local Util = ns.Util
 
+local function itemName(target, nameLookup)
+  return (nameLookup and nameLookup(target.itemID)) or ("Item " .. tostring(target.itemID))
+end
+
+local function standingLabel(target)
+  return GoalModel.StandingLabels[target.standing or 0] or "?"
+end
+
+-- Per goal type: label and badge; targetKind; amount, the target field the
+-- goal's stepper edits and what it is called (nil: nothing to count);
+-- title(target, nameLookup) and name(target, nameLookup) when the generic
+-- "<label>: <target.name>" / target.name does not fit.
 GoalModel.Types = {
-  CRAFT_ITEM = { label = "Craft item", badge = "Crafting", targetKind = "item" },
-  OBTAIN_ITEM = { label = "Obtain item", badge = "Item", targetKind = "item" },
+  CRAFT_ITEM = { label = "Craft item", badge = "Crafting", targetKind = "item",
+    amount = { field = "quantity", label = "Quantity" },
+    title = function(t, lookup) return string.format("Craft %dx %s", t.quantity or 1, itemName(t, lookup)) end,
+    name = itemName },
+  OBTAIN_ITEM = { label = "Obtain item", badge = "Item", targetKind = "item",
+    amount = { field = "quantity", label = "Quantity" },
+    title = function(t, lookup) return string.format("Obtain %dx %s", t.quantity or 1, itemName(t, lookup)) end,
+    name = itemName },
   COMPLETE_QUEST = { label = "Complete quest", badge = "Quest", targetKind = "quest" },
-  REACH_REPUTATION = { label = "Reach reputation", badge = "Reputation", targetKind = "faction" },
+  REACH_REPUTATION = { label = "Reach reputation", badge = "Reputation", targetKind = "faction",
+    title = function(t) return string.format("Reach %s with %s", standingLabel(t), t.name or ("faction " .. tostring(t.factionID))) end,
+    name = function(t) return string.format("%s - %s", t.name or ("Faction " .. tostring(t.factionID)), standingLabel(t)) end },
   LEARN_RECIPE = { label = "Learn recipe", badge = "Recipe", targetKind = "recipe" },
   COMPLETE_ATTUNEMENT = { label = "Complete attunement", badge = "Attunement", targetKind = "attunement" },
-  REACH_SKILL = { label = "Reach profession skill", badge = "Skill", targetKind = "skill" },
-  APPLY_ENCHANT = { label = "Apply enchant", badge = "Enchant", targetKind = "enchant" },
+  REACH_SKILL = { label = "Reach profession skill", badge = "Skill", targetKind = "skill",
+    amount = { field = "rank", label = "Target skill" },
+    title = function(t) return string.format("Reach %s %d", t.professionName or "skill", t.rank or 0) end,
+    name = function(t) return string.format("%s %d", t.professionName or "Skill", t.rank or 0) end },
+  APPLY_ENCHANT = { label = "Apply enchant", badge = "Enchant", targetKind = "enchant",
+    amount = { field = "quantity", label = "Casts" },
+    title = function(t) return string.format("Cast %dx %s", t.quantity or 1, t.name or ("Enchant " .. tostring(t.spellID))) end },
 }
 
 GoalModel.MAX_SKILL = 1000
@@ -288,20 +313,8 @@ end
 function GoalModel.Title(goal, nameLookup)
   local def = GoalModel.Types[goal.type]
   local label = def and def.label or goal.type
-  if def and def.targetKind == "item" and goal.target then
-    local name = nameLookup and nameLookup(goal.target.itemID) or nil
-    name = name or ("Item " .. tostring(goal.target.itemID))
-    local verb = goal.type == "CRAFT_ITEM" and "Craft" or "Obtain"
-    return string.format("%s %dx %s", verb, goal.target.quantity or 1, name)
-  end
-  if goal.type == "REACH_SKILL" and goal.target then
-    return string.format("Reach %s %d", goal.target.professionName or "skill", goal.target.rank or 0)
-  end
-  if goal.type == "REACH_REPUTATION" and goal.target then
-    return string.format("Reach %s with %s", GoalModel.StandingLabels[goal.target.standing or 0] or "?", goal.target.name or ("faction " .. tostring(goal.target.factionID)))
-  end
-  if goal.type == "APPLY_ENCHANT" and goal.target then
-    return string.format("Cast %dx %s", goal.target.quantity or 1, goal.target.name or ("Enchant " .. tostring(goal.target.spellID)))
+  if def and def.title and goal.target then
+    return def.title(goal.target, nameLookup)
   end
   if goal.target and type(goal.target.name) == "string" then
     return string.format("%s: %s", label, goal.target.name)
@@ -311,18 +324,27 @@ end
 
 -- Name only (for the design's name-first rows); falls back to "Item 1234".
 function GoalModel.Name(goal, nameLookup)
-  if goal.target and goal.target.itemID then
-    return (nameLookup and nameLookup(goal.target.itemID)) or ("Item " .. tostring(goal.target.itemID))
-  end
-  if goal.type == "REACH_SKILL" and goal.target then
-    return string.format("%s %d", goal.target.professionName or "Skill", goal.target.rank or 0)
-  end
-  if goal.type == "REACH_REPUTATION" and goal.target then
-    return string.format("%s - %s", goal.target.name or ("Faction " .. tostring(goal.target.factionID)), GoalModel.StandingLabels[goal.target.standing or 0] or "?")
+  local def = GoalModel.Types[goal.type]
+  if def and def.name and goal.target then
+    return def.name(goal.target, nameLookup)
   end
   if goal.target and type(goal.target.name) == "string" then
     return goal.target.name
   end
-  local def = GoalModel.Types[goal.type]
   return def and def.label or goal.type
+end
+
+-- What the goal counts: amount (the type's { field, label }) and its current
+-- value, or nil for goals with nothing to count.
+function GoalModel.Amount(goal)
+  local def = GoalModel.Types[goal.type]
+  local amount = def and def.amount
+  if not amount or not goal.target then return nil end
+  return amount, goal.target[amount.field] or 1
+end
+
+-- The "x3" multiplier shown beside a goal's name: its quantity, else 1.
+function GoalModel.ShownQuantity(goal)
+  local amount, value = GoalModel.Amount(goal)
+  return amount and amount.field == "quantity" and value or 1
 end

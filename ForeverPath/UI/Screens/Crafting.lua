@@ -135,11 +135,7 @@ local function createHero(screen)
   quantityLabel:SetPoint("TOP", divider, "TOP", -70, 0)
   local stepper = Widgets.Stepper(body, function(value)
     if not screen.goal then return end
-    if screen.goal.type == "REACH_SKILL" then
-      ns.GoalService.SetRank(screen.goal.id, value)
-    elseif screen.goal.target.itemID or screen.goal.type == "APPLY_ENCHANT" then
-      ns.GoalService.SetQuantity(screen.goal.id, value)
-    end
+    ns.GoalService.SetAmount(screen.goal.id, value)
   end)
   stepper:SetPoint("TOP", quantityLabel, "BOTTOM", 0, -8)
   -- Keep the name block clear of the quantity stepper at small window sizes.
@@ -397,9 +393,8 @@ end
 local function renderHero(screen, goal, view, itemName)
   local hero = screen.hero
   local item = view.item or {}
-  local skill, enchant = view.skill, view.enchant
   hero.icon:SetItem(item.icon, item.quality)
-  local quantity = (goal.target.itemID or enchant) and goal.target.quantity or 1
+  local quantity = ns.GoalModel.ShownQuantity(goal)
   hero.name:SetText(Theme.QualityText(itemName, item.quality) .. (quantity > 1 and (Theme.Hex.text2 .. "  x" .. quantity .. "|r") or ""))
   hero.meta:SetText(heroMeta(goal, view))
   local chips = heroChips(goal, view)
@@ -412,10 +407,11 @@ local function renderHero(screen, goal, view, itemName)
     end
   end
   if view.waypoint then hero.waypoint:Show() else hero.waypoint:Hide() end
+  local amount, value = ns.GoalModel.Amount(goal)
   if not hero.stepper.box:HasFocus() then
-    hero.stepper:SetValue(skill and goal.target.rank or goal.target.quantity or 1)
+    hero.stepper:SetValue(value or 1)
   end
-  hero.stepper:SetEnabledState(skill ~= nil or enchant ~= nil or goal.target.itemID ~= nil)
+  hero.stepper:SetEnabledState(amount ~= nil)
   local percent = ns.Overview.Percent(view)
   hero.percent:SetText(percent and (percent .. "%") or "-")
   hero.bar:SetKind(percent == 100 and "ok" or "gold")

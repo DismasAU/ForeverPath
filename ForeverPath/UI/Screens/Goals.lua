@@ -174,11 +174,7 @@ local function createSettings(screen)
   local quantityLabel = field("Quantity", icon, -18)
   local stepper = Widgets.Stepper(body, function(value)
     if not panel.goalID then return end
-    if panel.goal and panel.goal.type == "REACH_SKILL" then
-      ns.GoalService.SetRank(panel.goalID, value)
-    elseif panel.goal and GoalModel.Types[panel.goal.type] and (GoalModel.Types[panel.goal.type].targetKind == "item" or panel.goal.type == "APPLY_ENCHANT") then
-      ns.GoalService.SetQuantity(panel.goalID, value)
-    end
+    ns.GoalService.SetAmount(panel.goalID, value)
   end)
   stepper:SetPoint("TOPLEFT", quantityLabel, "BOTTOMLEFT", 0, -6)
 
@@ -304,16 +300,10 @@ local function createSettings(screen)
     name:SetText(Theme.QualityText(ns.GoalService.Name(goal), item.quality))
     local added = type(date) == "function" and goal.createdAt and date("%d %b", goal.createdAt) or ""
     meta:SetText(string.format("%s - added %s", GoalModel.Types[goal.type].badge, added))
-    local kind = GoalModel.Types[goal.type].targetKind
-    if goal.type == "REACH_SKILL" then
-      quantityLabel:SetText(Theme.Upper("Target skill"))
-      stepper:SetValue(goal.target.rank or 1)
-      stepper:SetEnabledState(true)
-    else
-      quantityLabel:SetText(Theme.Upper(goal.type == "APPLY_ENCHANT" and "Casts" or "Quantity"))
-      stepper:SetValue(goal.target.quantity or 1)
-      stepper:SetEnabledState(kind == "item" or goal.type == "APPLY_ENCHANT")
-    end
+    local amount, value = GoalModel.Amount(goal)
+    quantityLabel:SetText(Theme.Upper(amount and amount.label or "Quantity"))
+    stepper:SetValue(value or 1)
+    stepper:SetEnabledState(amount ~= nil)
     priority:SetLabel(string.format("%d%s", goal.priority or 1, (goal.priority or 1) == 1 and " - Highest" or ""))
     local isOpen = GoalModel.IsOpen(goal)
     priority:SetEnabledState(isOpen)
@@ -528,7 +518,7 @@ local function Create(parent)
         row.itemID = goal.target.itemID
         row.number:SetText(goal.priority and tostring(goal.priority) or "")
         row.icon:SetItem(item.icon, item.quality)
-        local quantity = (goal.target.itemID or goal.type == "APPLY_ENCHANT") and goal.target.quantity or 1
+        local quantity = GoalModel.ShownQuantity(goal)
         row.name:SetText(Theme.QualityText(ns.GoalService.Name(goal), item.quality) .. (quantity > 1 and (Theme.Hex.text2 .. " x" .. quantity .. "|r") or ""))
         row.badge:SetBadge(view and view.obtain and "Item" or GoalModel.Types[goal.type].badge, "text")
         if view and view.attunement then
