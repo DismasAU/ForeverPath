@@ -198,7 +198,7 @@ function Planner.EvaluateQuest(view, goal, deps)
     step = { kind = "quest", questID = questID, name = name, icon = view.item.icon, items = items } }, ctx.resolverOpts(goal.routes))
   view.tree = tree
   view.plan = Planner.StepItemsPlan(tree, state.completed)
-  view.inventoryNote = Planner.DescribeInventory(ctx.bankNote, ctx.includeBank, ctx.includeAlts)
+  view.inventoryNote = Planner.DescribeInventory(ctx.bankCounts, ctx.includeBank, ctx.includeAlts)
   quest.items = items
 
   local function where(step)

@@ -73,8 +73,9 @@ local function inventoryContext(deps)
   local ctx = { includeBank = includeBank, includeAlts = includeAlts }
   ctx.lookup = function(reagentID)
     local counts = deps.inventory and deps.inventory.GetCounts and deps.inventory.GetCounts(reagentID) or 0
-    if type(counts) == "table" and counts.bankSource and counts.bankSource ~= "none" and not ctx.bankNote then
-      ctx.bankNote = counts
+    -- The first counts that report a bank: DescribeInventory says where bank numbers come from.
+    if type(counts) == "table" and counts.bankSource and counts.bankSource ~= "none" and not ctx.bankCounts then
+      ctx.bankCounts = counts
     end
     return counts
   end
@@ -276,7 +277,7 @@ function buildCraftPlan(view, goal, deps, root, crafts)
     view.message = tostring(err)
     return nil
   end
-  view.inventoryNote = Planner.DescribeInventory(ctx.bankNote, ctx.includeBank, ctx.includeAlts)
+  view.inventoryNote = Planner.DescribeInventory(ctx.bankCounts, ctx.includeBank, ctx.includeAlts)
   return plan
 end
 
@@ -475,7 +476,7 @@ function Planner.EvaluateObtain(view, goal, deps, sources)
     end
   end
   view.progress = Planner.Progress(plan)
-  view.inventoryNote = Planner.DescribeInventory(ctx.bankNote, ctx.includeBank, ctx.includeAlts)
+  view.inventoryNote = Planner.DescribeInventory(ctx.bankCounts, ctx.includeBank, ctx.includeAlts)
 
   local name = view.item and view.item.name or ("Item " .. itemID)
   if root.missing <= 0 then

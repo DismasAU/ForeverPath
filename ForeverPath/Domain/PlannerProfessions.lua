@@ -177,7 +177,7 @@ function Planner.EvaluateLearn(view, goal, deps)
   end
   view.tree = tree
   view.progress = Planner.Progress(view.plan)
-  view.inventoryNote = Planner.DescribeInventory(ctx.bankNote, ctx.includeBank, ctx.includeAlts)
+  view.inventoryNote = Planner.DescribeInventory(ctx.bankCounts, ctx.includeBank, ctx.includeAlts)
 
   local parts = {}
   local plansName
@@ -447,7 +447,7 @@ function Planner.EvaluateSkill(view, goal, deps)
   view.plan = Planner.SkillMaterials(tree, plan)
   view.progress.materialsHave = #view.plan.materials - view.plan.totals.materialsMissing
   view.progress.materialsTotal = #view.plan.materials
-  view.inventoryNote = Planner.DescribeInventory(ctx.bankNote, ctx.includeBank, ctx.includeAlts)
+  view.inventoryNote = Planner.DescribeInventory(ctx.bankCounts, ctx.includeBank, ctx.includeAlts)
 
   local parts = {}
   if skill.capBlocked then
