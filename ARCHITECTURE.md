@@ -296,7 +296,7 @@ journal entries' reward texts ("<Faction> +N") through QuestProvider;
 `QuestsFor(name)` adds live states. `Rewards(factionID)` reads
 AtlasLootClassic_Factions (`EnsureAtlas` loads the module once through
 AtlasLoot's loader, `IndexAtlas` maps each tier to a standing by its label
-or its position) and `SoldBy(itemID)` / `Hints(itemID)` turn them into
+or its position) and `SoldBy(itemID)` / `ItemHints(itemID)` turn them into
 vendor options for the resolver, `unavailable` with the reason below the
 standing. `Planner.EvaluateReputation` carries `reputation = { record,
 progress, quests, rewards, targetLabel }`, `nextStep` (the first open quest
@@ -311,7 +311,7 @@ normalised to short keys, GearQuest's `scoredStats` as a fallback),
 `SlotKeysFor(itemID)` (from the equip location), `Candidates(slotKey, {
 source })` (GearQuest's `Data.entries` after `EnsureClassLoaded`, filtered
 by class, `Spec:GetDisplaySpec`, faction and the level band, best rank per
-item, with the facts from the `<class>ItemFacts` tables), `Hints(itemID)`
+item, with the facts from the `<class>ItemFacts` tables), `ItemHints(itemID)`
 (resolver source hints from those facts, merged into
 `SourceProvider.Sources` after the journal and AtlasLoot) and `Analyze({
 source, goals, views })` (per slot: equipped, candidates, best, status

@@ -398,9 +398,7 @@ end
 -- is recorded for the item, because then crafting is the real source).
 function SourceProvider.Sources(itemID)
   local out = {}
-  if ns.VendorProvider then
-    for _, hint in ipairs(ns.VendorProvider.Sources(itemID)) do out[#out + 1] = hint end
-  end
+  for _, hint in ipairs(Log.Try(ns.VendorProvider.ItemHints, itemID) or {}) do out[#out + 1] = hint end
   -- What actually dropped on Forever comes before every database.
   for _, hint in ipairs(Log.Try(ns.LootLearner.ItemHints, itemID) or {}) do
     if hint.kind == "gather" then hint = SourceProvider.QualifyGatherHint(hint) end
@@ -423,7 +421,7 @@ function SourceProvider.Sources(itemID)
   for _, hint in ipairs(Log.Try(ns.QuestFactsProvider.ItemHints, itemID) or {}) do out[#out + 1] = hint end
   -- GearQuest Forever knows where leveling gear comes from (vendor and npc,
   -- quest and zone, boss or world drop); it fills in what nothing above did.
-  for _, hint in ipairs(Log.Try(ns.EquipmentProvider.Hints, itemID) or {}) do
+  for _, hint in ipairs(Log.Try(ns.EquipmentProvider.ItemHints, itemID) or {}) do
     local duplicate = false
     for _, existing in ipairs(out) do
       if existing.kind == hint.kind and (existing.kind == "vendor" and existing.name == hint.name or existing.kind == "quest" and existing.quest == hint.quest) then duplicate = true end
@@ -432,7 +430,7 @@ function SourceProvider.Sources(itemID)
   end
   -- Reputation vendors (AtlasLoot's faction tables): a vendor option that
   -- is unavailable until the standing is reached.
-  for _, hint in ipairs(Log.Try(ns.ReputationProvider.Hints, itemID) or {}) do out[#out + 1] = hint end
+  for _, hint in ipairs(Log.Try(ns.ReputationProvider.ItemHints, itemID) or {}) do out[#out + 1] = hint end
   -- Classic-era sources behind the Forever ones.
   local classicSkills = {}
   local CDB = ns.ClassicDB

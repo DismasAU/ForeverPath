@@ -126,7 +126,7 @@ function VendorProvider.VendorsFor(itemID)
 end
 
 -- Resolver hints.
-function VendorProvider.Sources(itemID)
+function VendorProvider.ItemHints(itemID)
   local options = {}
   for _, vendor in ipairs(VendorProvider.VendorsFor(itemID)) do
     local where = vendor.zone or "?"

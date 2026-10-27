@@ -337,7 +337,7 @@ end
 
 -- Source hints for the resolver from GearQuest's facts: where a piece of
 -- gear comes from (vendor and npc, quest and zone, boss or world drop).
-function EquipmentProvider.Hints(itemID)
+function EquipmentProvider.ItemHints(itemID)
   local facts = EquipmentProvider.Facts(itemID)
   if not facts then return {} end
   local kind

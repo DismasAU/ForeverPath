@@ -433,7 +433,7 @@ end
 
 -- Resolver hints for an item sold by a reputation vendor: a vendor option
 -- that is unavailable until the standing is reached.
-function ReputationProvider.Hints(itemID)
+function ReputationProvider.ItemHints(itemID)
   local out = {}
   for _, sale in ipairs(ReputationProvider.SoldBy(itemID)) do
     local record = ReputationProvider.Get(sale.factionID)
