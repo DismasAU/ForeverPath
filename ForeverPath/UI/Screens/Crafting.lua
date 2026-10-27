@@ -174,6 +174,375 @@ local function describeItem(itemID)
   return table.concat(parts, " - ")
 end
 
+-- Requirements table columns after Material, laid out right to left from
+-- the header's right edge: { label, width, justify }.
+local HEADER_COLUMNS = {
+  { "Source", COLUMNS.source },
+  { "Subtotal", COLUMNS.subtotal, "RIGHT" },
+  { "Unit price", COLUMNS.price, "RIGHT" },
+  { "Missing", COLUMNS.missing, "RIGHT" },
+  { "Have", COLUMNS.have, "RIGHT" },
+  { "Need", COLUMNS.need, "RIGHT" },
+}
+
+-- Goal types planned on another screen: { empty-state title, screen name }.
+local ELSEWHERE = {
+  COMPLETE_ATTUNEMENT = { "Attunement goal", "Attunements" },
+  COMPLETE_QUEST = { "Quest goal", "Quests" },
+  REACH_REPUTATION = { "Reputation goal", "Reputations" },
+}
+
+local TAB_TEXT = {
+  notes = { "Notes", "Per-goal notes arrive in a later version." },
+}
+
+local function sortMaterials(materials, key)
+  local copy = {}
+  for i, m in ipairs(materials) do copy[i] = m end
+  if key == "name" then
+    table.sort(copy, function(a, b) return ns.ItemProvider.GetName(a.itemID) < ns.ItemProvider.GetName(b.itemID) end)
+  elseif key == "need" then
+    table.sort(copy, function(a, b) return a.required > b.required end)
+  else
+    table.sort(copy, function(a, b)
+      if a.missing ~= b.missing then return a.missing > b.missing end
+      return a.required > b.required
+    end)
+  end
+  return copy
+end
+
+local function createTableHeader(body)
+  local header = Widgets.Frame(body, nil, { bg = C.sidebar })
+  header:SetHeight(26)
+  header:SetPoint("TOPLEFT", body, "TOPLEFT", 0, 0)
+  header:SetPoint("TOPRIGHT", body, "TOPRIGHT", 0, 0)
+  local headerLine = Widgets.HLine(header, C.black, 1)
+  headerLine:SetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", 0, 0)
+  headerLine:SetPoint("BOTTOMRIGHT", header, "BOTTOMRIGHT", 0, 0)
+  local anchor, point, offset = header, "RIGHT", -10
+  for _, column in ipairs(HEADER_COLUMNS) do
+    local label = Widgets.Text(header, "tableHeader", column[1], { caps = true, justify = column[3], width = column[2] })
+    label:SetPoint("RIGHT", anchor, point, offset, 0)
+    anchor, point = label, "LEFT"
+  end
+  local material = Widgets.Text(header, "tableHeader", "Material", { caps = true })
+  material:SetPoint("LEFT", header, "LEFT", 48, 0)
+  return header
+end
+
+-- "Tailoring recipe - needs 75 - taught by a trainer" and the like.
+local function heroMeta(goal, view)
+  local learn, skill, enchant = view.learn, view.skill, view.enchant
+  if enchant then
+    return string.format("%s enchant%s - %s", enchant.recipe.professionName or "Profession",
+      enchant.need > 1 and (" - needs " .. enchant.need) or "",
+      enchant.kind == "plans" and "taught by " .. ns.ItemProvider.GetName(enchant.teachItemID) or "taught by a trainer")
+  elseif learn then
+    return string.format("%s recipe%s - %s", learn.recipe.professionName or "Profession",
+      learn.need > 1 and (" - needs " .. learn.need) or "",
+      learn.kind == "plans" and "taught by " .. ns.ItemProvider.GetName(learn.teachItemID) or (learn.kind == "combine" and "item-use combine" or "taught by a trainer"))
+  elseif skill then
+    return string.format("Profession skill - you are at %d%s", skill.current, skill.max > 0 and (", cap " .. skill.max) or "")
+  end
+  return describeItem(goal.target.itemID)
+end
+
+local function knownByChip(knownBy)
+  return { Util.Join(knownBy) .. " know" .. (#knownBy == 1 and "s" or "") .. " it", "info" }
+end
+
+local function enchantChips(view, chips)
+  local enchant = view.enchant
+  if enchant.learned then
+    chips[#chips + 1] = { "Known", "ok" }
+  elseif enchant.blocked == "profession" then
+    chips[#chips + 1] = { "No " .. (enchant.recipe.professionName or "profession"), "missing" }
+  elseif enchant.blocked == "skill" then
+    chips[#chips + 1] = { string.format("Needs %s %d - you have %d", enchant.recipe.professionName or "skill", enchant.need, enchant.have or 0), "partial" }
+  else
+    chips[#chips + 1] = { "Not learned", "partial" }
+  end
+  if not enchant.learned then
+    if enchant.kind == "plans" then
+      chips[#chips + 1] = { view.plan and view.plan.stepsMissing == 0 and "Formula in bags" or "Needs the formula", "info" }
+    else
+      chips[#chips + 1] = { enchant.trainer and enchant.trainer.name and ("Trainer: " .. enchant.trainer.name) or "Trainer (not recorded yet)", "info" }
+    end
+  end
+  chips[#chips + 1] = { string.format("%d of %d cast%s", enchant.casts, enchant.quantity, enchant.quantity == 1 and "" or "s"), enchant.remaining <= 0 and "ok" or "info" }
+  if not enchant.learned and #enchant.knownBy > 0 then chips[#chips + 1] = knownByChip(enchant.knownBy) end
+end
+
+local function learnChips(view, chips)
+  local learn = view.learn
+  if learn.learned then
+    chips[#chips + 1] = { "Learned", "ok" }
+  elseif learn.blocked == "profession" then
+    chips[#chips + 1] = { "No " .. (learn.recipe.professionName or "profession"), "missing" }
+  elseif learn.blocked == "skill" then
+    chips[#chips + 1] = { string.format("Needs %s %d - you have %d", learn.recipe.professionName or "skill", learn.need, learn.have or 0), "partial" }
+  else
+    chips[#chips + 1] = { string.format("%s %d", learn.recipe.professionName or "Profession", learn.have or 0), "ok" }
+  end
+  if learn.kind == "plans" then
+    chips[#chips + 1] = { view.plan and view.plan.isComplete and "Plans in bags" or "Needs the plans", "info" }
+  elseif learn.kind == "trainer" then
+    chips[#chips + 1] = { learn.trainer and learn.trainer.name and ("Trainer: " .. learn.trainer.name) or "Trainer (not recorded yet)", "info" }
+  end
+  if #learn.knownBy > 0 then chips[#chips + 1] = knownByChip(learn.knownBy) end
+end
+
+local function skillChips(view, chips)
+  local skill = view.skill
+  chips[#chips + 1] = { string.format("%s %d / %d", skill.professionName, skill.current, skill.target), skill.reached and "ok" or "info" }
+  if skill.reached then
+    chips[#chips + 1] = { "Reached", "ok" }
+  elseif view.skillPlan then
+    local plan = view.skillPlan
+    chips[#chips + 1] = { string.format("%d craft%s over %d recipe%s", plan.total, plan.total == 1 and "" or "s", #plan.list, #plan.list == 1 and "" or "s"), plan.covered and "ok" or "partial" }
+    if not plan.covered then chips[#chips + 1] = { string.format("No recipe for %d-%d", plan.gaps[1].from, plan.gaps[1].to), "missing" } end
+  end
+  if skill.capBlocked then chips[#chips + 1] = { "Cap " .. skill.max .. " - train the next rank", "partial" } end
+end
+
+local function recipeChips(view, chips)
+  local recipe = view.recipe
+  local standing
+  for _, p in ipairs(ns.ProfessionProvider.GetCharacterProfessions()) do
+    if p.name == recipe.professionName then standing = p end
+  end
+  if standing then
+    chips[#chips + 1] = { string.format("%s - you have %d", standing.name, standing.skillLevel or 0), "ok" }
+  elseif recipe.professionName then
+    chips[#chips + 1] = { recipe.professionName, "info" }
+  end
+  if view.status == Status.RECIPE_NOT_LEARNED or view.recipeStatus == "unlearned" then
+    local craft = view.tree and view.tree.root and view.tree.root.craft
+    if craft and craft.combine then
+      chips[#chips + 1] = { "Combine - anyone can", "ok" }
+    elseif craft and craft.unavailable then
+      chips[#chips + 1] = { "Recipe not learned - " .. craft.unavailable, "missing" }
+    elseif craft and craft.crafter and not craft.crafter.isCurrent then
+      chips[#chips + 1] = { craft.crafter.name .. " can learn it", "partial" }
+    else
+      chips[#chips + 1] = { "Recipe not learned", "partial" }
+    end
+    if recipe.skill and recipe.skill.min > 1 then
+      chips[#chips + 1] = { string.format("Needs %s %d", recipe.professionName or "skill", recipe.skill.min), "info" }
+    end
+  else
+    chips[#chips + 1] = { "Recipe known", "ok" }
+  end
+  if (recipe.quantityMax or 1) > 1 or (recipe.quantityMin or 1) > 1 then
+    local yield = recipe.quantityMin == recipe.quantityMax and tostring(recipe.quantityMin) or (recipe.quantityMin .. "-" .. recipe.quantityMax)
+    chips[#chips + 1] = { "Makes " .. yield .. " per craft", "info" }
+  end
+end
+
+local function obtainChips(goal, view, chips)
+  chips[#chips + 1] = { "Obtain", "info" }
+  if view.hint and view.hint.label then
+    chips[#chips + 1] = { view.hint.label, "info" }
+  end
+  if view.questline and view.questline.line then
+    local line = view.questline.line
+    chips[#chips + 1] = { string.format("%s - %d of %d steps", line.attune.name, line.done, line.total), line.complete and "ok" or "info" }
+  end
+  if goal.type == "CRAFT_ITEM" then
+    chips[#chips + 1] = { "No known recipe", "missing" }
+  end
+end
+
+-- The hero's status chips: { { text, kind } }.
+local function heroChips(goal, view)
+  local chips = {}
+  if view.enchant then
+    enchantChips(view, chips)
+  elseif view.learn then
+    learnChips(view, chips)
+  elseif view.skill then
+    skillChips(view, chips)
+  elseif view.recipe then
+    recipeChips(view, chips)
+  elseif view.obtain then
+    obtainChips(goal, view, chips)
+  else
+    chips[#chips + 1] = { ns.StatusLabel[view.status] or "Unknown", "missing" }
+  end
+  return chips
+end
+
+-- The line under the progress bar: what is in the bags and what is left.
+local function heroProgressText(view)
+  local learn, skill, enchant = view.learn, view.skill, view.enchant
+  if skill then
+    if skill.reached and view.message then return view.message end
+    return string.format("%d of %d skill points - %d craft%s planned", math.max(0, skill.current - skill.start), math.max(0, skill.target - skill.start),
+      view.plan and view.plan.craftsNeeded or 0, view.plan and view.plan.craftsNeeded == 1 and "" or "s")
+  elseif enchant and (enchant.remaining <= 0 or not view.progress) then
+    return view.message or ""
+  elseif enchant then
+    return string.format("%d of %d reagents in your bags - %d cast%s to do", view.progress.ownedUnits, view.progress.requiredUnits, enchant.remaining, enchant.remaining == 1 and "" or "s")
+  elseif learn and view.plan and view.plan.step then
+    return view.nextStep or view.message or ""
+  elseif view.progress and view.plan.obtain then
+    return string.format("%d of %d in your bags%s", view.progress.ownedUnits, view.progress.requiredUnits, view.sourceText and (" - " .. view.sourceText) or "")
+  elseif view.progress then
+    return string.format("%d of %d reagents in your bags - %d craft%s needed", view.progress.ownedUnits, view.progress.requiredUnits, view.plan.craftsNeeded, view.plan.craftsNeeded == 1 and "" or "s")
+  end
+  return view.message or ""
+end
+
+local function renderHero(screen, goal, view, itemName)
+  local hero = screen.hero
+  local item = view.item or {}
+  local skill, enchant = view.skill, view.enchant
+  hero.icon:SetItem(item.icon, item.quality)
+  local quantity = (goal.target.itemID or enchant) and goal.target.quantity or 1
+  hero.name:SetText(Theme.QualityText(itemName, item.quality) .. (quantity > 1 and (Theme.Hex.text2 .. "  x" .. quantity .. "|r") or ""))
+  hero.meta:SetText(heroMeta(goal, view))
+  local chips = heroChips(goal, view)
+  for i, chip in ipairs(hero.chips) do
+    if chips[i] then
+      chip:SetChip(chips[i][1], chips[i][2])
+      chip:Show()
+    else
+      chip:Hide()
+    end
+  end
+  if view.waypoint then hero.waypoint:Show() else hero.waypoint:Hide() end
+  if not hero.stepper.box:HasFocus() then
+    hero.stepper:SetValue(skill and goal.target.rank or goal.target.quantity or 1)
+  end
+  hero.stepper:SetEnabledState(skill ~= nil or enchant ~= nil or goal.target.itemID ~= nil)
+  local percent = ns.Overview.Percent(view)
+  hero.percent:SetText(percent and (percent .. "%") or "-")
+  hero.bar:SetKind(percent == 100 and "ok" or "gold")
+  hero.bar:SetValue((percent or 0) / 100)
+  hero.reagents:SetText(heroProgressText(view))
+end
+
+-- Fills the material rows. Returns buyTotal, pricedRows, unpricedRows.
+local function renderMaterials(screen, materials)
+  local buyTotal, pricedRows, unpricedRows = 0, 0, 0
+  for index, material in ipairs(materials) do
+    local row = screen.pool:Get(index)
+    local info = ns.ItemProvider.GetItem(material.itemID)
+    row.itemID = material.itemID
+    row.material = material
+    row.icon:SetItem(info.icon, info.quality)
+    local label = info.name or ("Item " .. material.itemID)
+    if not info.loaded and not info.name then label = label .. " (loading...)" end
+    row.name:SetText(Theme.QualityText(label, info.quality))
+    local noteParts = {}
+    local sub = describeItem(material.itemID)
+    if sub ~= "" then noteParts[#noteParts + 1] = (sub:match("^(.-)%s+%-%s") or sub) end
+    if #ns.ProfessionProvider.FindRecipesForItem(material.itemID) > 0 then noteParts[#noteParts + 1] = "craftable" end
+    row.note:SetText(table.concat(noteParts, " - "))
+    row.need:SetText(tostring(material.required))
+    row.have:SetText(tostring(material.owned))
+    Widgets.SetTextColor(row.have, Widgets.CountColor(material.owned, material.required))
+    if material.missing > 0 then
+      row.missing:SetText(tostring(material.missing))
+      Widgets.SetTextColor(row.missing, C.missing)
+      row.missing:Show()
+      row.check:Hide()
+    else
+      row.missing:SetText("")
+      row.check:Show()
+    end
+    local price = ns.PriceProvider.GetPrice(material.itemID)
+    if price then
+      row.price:SetText(Widgets.Money(price.copper, true))
+      row.subtotal:SetText(material.missing > 0 and Widgets.Money(price.copper * material.missing, true) or Theme.ColorText("text3", "-"))
+      if material.missing > 0 then buyTotal = buyTotal + price.copper * material.missing end
+      pricedRows = pricedRows + 1
+    else
+      row.price:SetText(Theme.ColorText("text3", "?"))
+      row.subtotal:SetText(Theme.ColorText("text3", material.missing > 0 and "?" or "-"))
+      if material.missing > 0 then unpricedRows = unpricedRows + 1 end
+    end
+    row:SetTags(ns.SourceProvider.MaterialTags(material))
+    if material.missing > 0 and material.owned > 0 then
+      Widgets.SetColor(row.tint, C.partial, 0.045)
+    elseif material.missing > 0 then
+      Widgets.SetColor(row.tint, C.missing, 0.07)
+    else
+      Widgets.SetColor(row.tint, C.black, 0)
+    end
+  end
+  screen.pool:HideFrom(#materials + 1)
+  screen.scroll:SetContentHeight(#materials * ROW)
+  return buyTotal, pricedRows, unpricedRows
+end
+
+-- The footer: CraftWise's route and the cost of buying what is missing.
+local function renderFooter(screen, view, buyTotal, pricedRows, unpricedRows)
+  local routeText, buyValue = screen.routeText, screen.buyValue
+  local compare = ns.CraftWise.Compare(view.fullTree or view.tree, { prices = ns.PriceProvider })
+  if compare and compare.hybrid.cost then
+    routeText:SetText("CraftWise route: " .. Widgets.Money(compare.hybrid.cost, true) .. (compare.hybrid.unknown > 0 and Theme.ColorText("text3", string.format(" (+%d unpriced)", compare.hybrid.unknown)) or ""))
+    Widgets.SetTextColor(routeText, C.text)
+  elseif compare and compare.recommended == "buy" then
+    routeText:SetText("CraftWise: buy the item - " .. Widgets.Money(compare.buy.cost, true))
+    Widgets.SetTextColor(routeText, C.text)
+  else
+    routeText:SetText("CraftWise: no price data")
+    Widgets.SetTextColor(routeText, C.text3)
+  end
+  screen.compare = compare
+  if pricedRows == 0 then
+    buyValue:SetText("no price data")
+    Widgets.SetTextColor(buyValue, C.text3)
+    return
+  end
+  local gold = ns.CharacterProvider.AccountGold()
+  local afford = ns.ShoppingList.Affordable(buyTotal, gold)
+  local affordText = ""
+  if afford == "now" then
+    affordText = Theme.ColorText("ok", "  - affordable")
+  elseif afford == "account" then
+    affordText = Theme.ColorText("partial", string.format("  - short %s here, alts cover it", Widgets.Money(buyTotal - (gold.current or 0), true)))
+  elseif afford == "no" then
+    affordText = Theme.ColorText("missing", string.format("  - short %s", Widgets.Money(buyTotal - (gold.account or gold.current or 0), true)))
+  end
+  buyValue:SetText(Widgets.Money(buyTotal, true) .. affordText .. (unpricedRows > 0 and Theme.ColorText("text3", string.format("  (+%d unpriced)", unpricedRows)) or ""))
+  Widgets.SetTextColor(buyValue, C.text)
+end
+
+-- An empty requirements table with a message in its place.
+local function showTableMessage(screen, title, text)
+  screen.pool:HideFrom(1)
+  screen.scroll:SetContentHeight(1)
+  screen.tableMessage:Set(title, text)
+  screen.tableMessage:Show()
+end
+
+-- The Requirements tab (and the Notes placeholder).
+local function renderRequirements(screen, view, sortKey)
+  if screen.tab ~= "requirements" then
+    local text = TAB_TEXT[screen.tab] or TAB_TEXT.notes
+    showTableMessage(screen, text[1], text[2])
+    return
+  end
+  if not view.plan then
+    showTableMessage(screen, ns.StatusLabel[view.status] or "Unavailable", view.message or "")
+    return
+  end
+  if #view.plan.materials == 0 and (view.learn or view.skill or view.enchant) then
+    -- Nothing to gather: a trainer visit, a recipe already known, a skill reached.
+    showTableMessage(screen, view.nextStep or "Nothing to gather", view.message or "")
+    screen.buyValue:SetText("-")
+    Widgets.SetTextColor(screen.buyValue, C.text3)
+    screen.routeText:SetText("")
+    return
+  end
+  screen.tableMessage:Hide()
+  local buyTotal, pricedRows, unpricedRows = renderMaterials(screen, sortMaterials(view.plan.materials, sortKey))
+  renderFooter(screen, view, buyTotal, pricedRows, unpricedRows)
+end
+
 local function Create(parent)
   local screen = CreateFrame("Frame", nil, parent)
 
@@ -243,27 +612,7 @@ local function Create(parent)
   table_:SetPoint("TOPLEFT", tabs, "BOTTOMLEFT", 0, -1)
   table_:SetPoint("BOTTOMRIGHT", screen, "BOTTOMRIGHT", 0, 0)
   local body = table_.body
-  local header = Widgets.Frame(body, nil, { bg = C.sidebar })
-  header:SetHeight(26)
-  header:SetPoint("TOPLEFT", body, "TOPLEFT", 0, 0)
-  header:SetPoint("TOPRIGHT", body, "TOPRIGHT", 0, 0)
-  local headerLine = Widgets.HLine(header, C.black, 1)
-  headerLine:SetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", 0, 0)
-  headerLine:SetPoint("BOTTOMRIGHT", header, "BOTTOMRIGHT", 0, 0)
-  local hSource = Widgets.Text(header, "tableHeader", "Source", { caps = true, width = COLUMNS.source })
-  hSource:SetPoint("RIGHT", header, "RIGHT", -10, 0)
-  local hSubtotal = Widgets.Text(header, "tableHeader", "Subtotal", { caps = true, justify = "RIGHT", width = COLUMNS.subtotal })
-  hSubtotal:SetPoint("RIGHT", hSource, "LEFT", -10, 0)
-  local hPrice = Widgets.Text(header, "tableHeader", "Unit price", { caps = true, justify = "RIGHT", width = COLUMNS.price })
-  hPrice:SetPoint("RIGHT", hSubtotal, "LEFT", -10, 0)
-  local hMissing = Widgets.Text(header, "tableHeader", "Missing", { caps = true, justify = "RIGHT", width = COLUMNS.missing })
-  hMissing:SetPoint("RIGHT", hPrice, "LEFT", -10, 0)
-  local hHave = Widgets.Text(header, "tableHeader", "Have", { caps = true, justify = "RIGHT", width = COLUMNS.have })
-  hHave:SetPoint("RIGHT", hMissing, "LEFT", -10, 0)
-  local hNeed = Widgets.Text(header, "tableHeader", "Need", { caps = true, justify = "RIGHT", width = COLUMNS.need })
-  hNeed:SetPoint("RIGHT", hHave, "LEFT", -10, 0)
-  local hMaterial = Widgets.Text(header, "tableHeader", "Material", { caps = true })
-  hMaterial:SetPoint("LEFT", header, "LEFT", 48, 0)
+  local header = createTableHeader(body)
 
   local footer = Widgets.Frame(body, nil, { bg = C.sidebar })
   footer:SetHeight(40)
@@ -321,371 +670,50 @@ local function Create(parent)
   screen.empty:SetPoint("TOPRIGHT", screen, "TOPRIGHT", 0, -120)
   screen.empty:SetHeight(100)
 
-  local TAB_TEXT = {
-    notes = { "Notes", "Per-goal notes arrive in a later version." },
-  }
+  local chrome = { crumbs, hero, tabs, sort, alts, table_ }
 
-  local function sortMaterials(materials, key)
-    local copy = {}
-    for i, m in ipairs(materials) do copy[i] = m end
-    if key == "name" then
-      table.sort(copy, function(a, b) return ns.ItemProvider.GetName(a.itemID) < ns.ItemProvider.GetName(b.itemID) end)
-    elseif key == "need" then
-      table.sort(copy, function(a, b) return a.required > b.required end)
-    else
-      table.sort(copy, function(a, b)
-        if a.missing ~= b.missing then return a.missing > b.missing end
-        return a.required > b.required
-      end)
-    end
-    return copy
-  end
-
-  local function sourceTags(material)
-    local tags = {}
-    if material.missing == 0 then
-      tags[#tags + 1] = "In bags"
-    end
-    if material.ownedBank and material.ownedBank > 0 then
-      tags[#tags + 1] = "Bank"
-    end
-    for _, candidate in ipairs(ns.ProfessionProvider.FindRecipesForItem(material.itemID)) do
-      tags[#tags + 1] = candidate.learned and ("Craft - " .. (candidate.recipe.professionName or "?")) or "Recipe not learned"
-      break
-    end
-    local alts = material.altSources or {}
-    if alts[1] then
-      tags[#tags + 1] = string.format("Alt: %s (%d)", alts[1].name, alts[1].count)
-    end
-    for _, hint in ipairs(ns.SourceProvider.Sources(material.itemID)) do
-      if hint.kind == "vendor" then
-        tags[#tags + 1] = "Vendor: " .. (hint.name or "?")
-        break
-      end
-    end
-    for _, hint in ipairs(ns.SourceProvider.Sources(material.itemID)) do
-      if (hint.kind == "gather" or hint.kind == "drop" or hint.kind == "quest") and not hint.unavailable then
-        tags[#tags + 1] = hint.gatherer and (hint.label .. " - " .. hint.gatherer) or (hint.short or hint.label)
-        break
-      end
-    end
-    for _, crafter in ipairs(ns.CharacterProvider.CanCraft(material.itemID)) do
-      tags[#tags + 1] = "Craft - Alt: " .. crafter.name
-      break
-    end
-    if #tags == 0 then
-      tags[1] = "Unknown source"
-    end
-    return tags
-  end
-
-  local function showChrome(visible)
-    for _, widget in ipairs({ crumbs, hero, tabs, sort, alts, table_ }) do
-      if visible then widget:Show() else widget:Hide() end
-    end
-    if visible then screen.empty:Hide() else screen.empty:Show() end
+  -- Hides everything but the empty state, which says why.
+  function screen:ShowEmpty(title, text)
+    for _, widget in ipairs(chrome) do widget:Hide() end
+    treeView:Hide()
+    craftwiseView:Hide()
+    self.empty:Set(title, text)
+    self.empty:Show()
   end
 
   function screen:Refresh()
     local goal = ns.GoalService.GetSelected()
     self.goal = goal
     if not goal then
-      showChrome(false)
-      treeView:Hide()
-      craftwiseView:Hide()
-      self.empty:Set("No goal selected", "Add a crafting goal from My Goals or the search box, then pick it here.")
+      self:ShowEmpty("No goal selected", "Add a crafting goal from My Goals or the search box, then pick it here.")
       return
     end
-    local ELSEWHERE = { COMPLETE_ATTUNEMENT = { "Attunement goal", "Attunements" }, COMPLETE_QUEST = { "Quest goal", "Quests" }, REACH_REPUTATION = { "Reputation goal", "Reputations" } }
-    if ELSEWHERE[goal.type] then
-      showChrome(false)
-      treeView:Hide()
-      craftwiseView:Hide()
-      self.empty:Set(ELSEWHERE[goal.type][1], string.format("%s is planned on the %s screen.", ns.GoalService.Name(goal), ELSEWHERE[goal.type][2]))
+    local elsewhere = ELSEWHERE[goal.type]
+    if elsewhere then
+      self:ShowEmpty(elsewhere[1], string.format("%s is planned on the %s screen.", ns.GoalService.Name(goal), elsewhere[2]))
       return
     end
-    showChrome(true)
+    for _, widget in ipairs(chrome) do widget:Show() end
+    self.empty:Hide()
     local view = ns.UI.MainFrame.views[goal.id] or ns.Planner.Evaluate(goal)
     self.view = view
     local item = view.item or {}
     local itemName = item.name or (goal.target.itemID and ("Item " .. goal.target.itemID)) or ns.GoalService.Name(goal)
-    local learn, skill, enchant = view.learn, view.skill, view.enchant
-    if skill then itemName = ns.GoalService.Name(goal) end
+    if view.skill then itemName = ns.GoalService.Name(goal) end
     crumbRest:SetText(string.format("  >  Crafting  >  %s%s|r", Theme.Hex.text, itemName))
     tracked:SetChecked(goal.tracked)
     alts:SetChecked(ns.db and ns.db.settings.includeAlts == true)
-
-    hero.icon:SetItem(item.icon, item.quality)
-    local quantity = (goal.target.itemID or enchant) and goal.target.quantity or 1
-    hero.name:SetText(Theme.QualityText(itemName, item.quality) .. (quantity > 1 and (Theme.Hex.text2 .. "  x" .. quantity .. "|r") or ""))
-    if enchant then
-      local recipe = enchant.recipe
-      hero.meta:SetText(string.format("%s enchant%s - %s", recipe.professionName or "Profession",
-        enchant.need > 1 and (" - needs " .. enchant.need) or "",
-        enchant.kind == "plans" and "taught by " .. ns.ItemProvider.GetName(enchant.teachItemID) or "taught by a trainer"))
-    elseif learn then
-      local recipe = learn.recipe
-      hero.meta:SetText(string.format("%s recipe%s - %s", recipe.professionName or "Profession",
-        learn.need > 1 and (" - needs " .. learn.need) or "",
-        learn.kind == "plans" and "taught by " .. ns.ItemProvider.GetName(learn.teachItemID) or (learn.kind == "combine" and "item-use combine" or "taught by a trainer")))
-    elseif skill then
-      hero.meta:SetText(string.format("Profession skill - you are at %d%s", skill.current, skill.max > 0 and (", cap " .. skill.max) or ""))
-    else
-      hero.meta:SetText(describeItem(goal.target.itemID))
-    end
-    local chips = {}
-    if enchant then
-      if enchant.learned then
-        chips[#chips + 1] = { "Known", "ok" }
-      elseif enchant.blocked == "profession" then
-        chips[#chips + 1] = { "No " .. (enchant.recipe.professionName or "profession"), "missing" }
-      elseif enchant.blocked == "skill" then
-        chips[#chips + 1] = { string.format("Needs %s %d - you have %d", enchant.recipe.professionName or "skill", enchant.need, enchant.have or 0), "partial" }
-      else
-        chips[#chips + 1] = { "Not learned", "partial" }
-      end
-      if not enchant.learned then
-        if enchant.kind == "plans" then
-          chips[#chips + 1] = { view.plan and view.plan.stepsMissing == 0 and "Formula in bags" or "Needs the formula", "info" }
-        else
-          chips[#chips + 1] = { enchant.trainer and enchant.trainer.name and ("Trainer: " .. enchant.trainer.name) or "Trainer (not recorded yet)", "info" }
-        end
-      end
-      chips[#chips + 1] = { string.format("%d of %d cast%s", enchant.casts, enchant.quantity, enchant.quantity == 1 and "" or "s"), enchant.remaining <= 0 and "ok" or "info" }
-      if not enchant.learned and #enchant.knownBy > 0 then chips[#chips + 1] = { Util.Join(enchant.knownBy) .. " know" .. (#enchant.knownBy == 1 and "s" or "") .. " it", "info" } end
-    elseif learn then
-      if learn.learned then
-        chips[#chips + 1] = { "Learned", "ok" }
-      elseif learn.blocked == "profession" then
-        chips[#chips + 1] = { "No " .. (learn.recipe.professionName or "profession"), "missing" }
-      elseif learn.blocked == "skill" then
-        chips[#chips + 1] = { string.format("Needs %s %d - you have %d", learn.recipe.professionName or "skill", learn.need, learn.have or 0), "partial" }
-      else
-        chips[#chips + 1] = { string.format("%s %d", learn.recipe.professionName or "Profession", learn.have or 0), "ok" }
-      end
-      if learn.kind == "plans" then
-        chips[#chips + 1] = { view.plan and view.plan.isComplete and "Plans in bags" or "Needs the plans", "info" }
-      elseif learn.kind == "trainer" then
-        chips[#chips + 1] = { learn.trainer and learn.trainer.name and ("Trainer: " .. learn.trainer.name) or "Trainer (not recorded yet)", "info" }
-      end
-      if #learn.knownBy > 0 then chips[#chips + 1] = { Util.Join(learn.knownBy) .. " know" .. (#learn.knownBy == 1 and "s" or "") .. " it", "info" } end
-    elseif skill then
-      chips[#chips + 1] = { string.format("%s %d / %d", skill.professionName, skill.current, skill.target), skill.reached and "ok" or "info" }
-      if skill.reached then
-        chips[#chips + 1] = { "Reached", "ok" }
-      elseif view.skillPlan then
-        chips[#chips + 1] = { string.format("%d craft%s over %d recipe%s", view.skillPlan.total, view.skillPlan.total == 1 and "" or "s", #view.skillPlan.list, #view.skillPlan.list == 1 and "" or "s"), view.skillPlan.covered and "ok" or "partial" }
-        if not view.skillPlan.covered then chips[#chips + 1] = { string.format("No recipe for %d-%d", view.skillPlan.gaps[1].from, view.skillPlan.gaps[1].to), "missing" } end
-      end
-      if skill.capBlocked then chips[#chips + 1] = { "Cap " .. skill.max .. " - train the next rank", "partial" } end
-    elseif view.recipe then
-      local skill
-      for _, p in ipairs(ns.ProfessionProvider.GetCharacterProfessions()) do
-        if p.name == view.recipe.professionName then skill = p end
-      end
-      if skill then
-        chips[#chips + 1] = { string.format("%s - you have %d", skill.name, skill.skillLevel or 0), "ok" }
-      elseif view.recipe.professionName then
-        chips[#chips + 1] = { view.recipe.professionName, "info" }
-      end
-      if view.status == Status.RECIPE_NOT_LEARNED or view.recipeStatus == "unlearned" then
-        local craft = view.tree and view.tree.root and view.tree.root.craft
-        if craft and craft.combine then
-          chips[#chips + 1] = { "Combine - anyone can", "ok" }
-        elseif craft and craft.unavailable then
-          chips[#chips + 1] = { "Recipe not learned - " .. craft.unavailable, "missing" }
-        elseif craft and craft.crafter and not craft.crafter.isCurrent then
-          chips[#chips + 1] = { craft.crafter.name .. " can learn it", "partial" }
-        else
-          chips[#chips + 1] = { "Recipe not learned", "partial" }
-        end
-        if view.recipe.skill and view.recipe.skill.min > 1 then
-          chips[#chips + 1] = { string.format("Needs %s %d", view.recipe.professionName or "skill", view.recipe.skill.min), "info" }
-        end
-      else
-        chips[#chips + 1] = { "Recipe known", "ok" }
-      end
-      if (view.recipe.quantityMax or 1) > 1 or (view.recipe.quantityMin or 1) > 1 then
-        local yield = view.recipe.quantityMin == view.recipe.quantityMax and tostring(view.recipe.quantityMin) or (view.recipe.quantityMin .. "-" .. view.recipe.quantityMax)
-        chips[#chips + 1] = { "Makes " .. yield .. " per craft", "info" }
-      end
-    elseif view.obtain then
-      chips[#chips + 1] = { "Obtain", "info" }
-      if view.hint and view.hint.label then
-        chips[#chips + 1] = { view.hint.label, "info" }
-      end
-      if view.questline and view.questline.line then
-        local line = view.questline.line
-        chips[#chips + 1] = { string.format("%s - %d of %d steps", line.attune.name, line.done, line.total), line.complete and "ok" or "info" }
-      end
-      if goal.type == "CRAFT_ITEM" then
-        chips[#chips + 1] = { "No known recipe", "missing" }
-      end
-    else
-      chips[#chips + 1] = { ns.StatusLabel[view.status] or "Unknown", "missing" }
-    end
-    for i, chip in ipairs(hero.chips) do
-      if chips[i] then
-        chip:SetChip(chips[i][1], chips[i][2])
-        chip:Show()
-      else
-        chip:Hide()
-      end
-    end
-    if view.waypoint then hero.waypoint:Show() else hero.waypoint:Hide() end
-    if not hero.stepper.box:HasFocus() then
-      hero.stepper:SetValue(skill and goal.target.rank or goal.target.quantity or 1)
-    end
-    hero.stepper:SetEnabledState(skill ~= nil or enchant ~= nil or goal.target.itemID ~= nil)
-    local percent = ns.Overview.Percent(view)
-    hero.percent:SetText(percent and (percent .. "%") or "-")
-    hero.bar:SetKind(percent == 100 and "ok" or "gold")
-    hero.bar:SetValue((percent or 0) / 100)
-    if skill then
-      hero.reagents:SetText(skill.reached and view.message or string.format("%d of %d skill points - %d craft%s planned", math.max(0, skill.current - skill.start), math.max(0, skill.target - skill.start),
-        view.plan and view.plan.craftsNeeded or 0, view.plan and view.plan.craftsNeeded == 1 and "" or "s"))
-    elseif enchant and (enchant.remaining <= 0 or not view.progress) then
-      hero.reagents:SetText(view.message or "")
-    elseif enchant then
-      hero.reagents:SetText(string.format("%d of %d reagents in your bags - %d cast%s to do", view.progress.ownedUnits, view.progress.requiredUnits, enchant.remaining, enchant.remaining == 1 and "" or "s"))
-    elseif learn and view.plan and view.plan.step then
-      hero.reagents:SetText(view.nextStep or view.message or "")
-    elseif view.progress and view.plan.obtain then
-      hero.reagents:SetText(string.format("%d of %d in your bags%s", view.progress.ownedUnits, view.progress.requiredUnits, view.sourceText and (" - " .. view.sourceText) or ""))
-    elseif view.progress then
-      hero.reagents:SetText(string.format("%d of %d reagents in your bags - %d craft%s needed", view.progress.ownedUnits, view.progress.requiredUnits, view.plan.craftsNeeded, view.plan.craftsNeeded == 1 and "" or "s"))
-    else
-      hero.reagents:SetText(view.message or "")
-    end
+    renderHero(self, goal, view, itemName)
 
     local sortKey = ns.chardb and ns.chardb.ui.materialSort or "missing"
     sort:SetLabel(Widgets.SortLabel(SORTS, sortKey))
-    if self.tab == "tree" then
-      table_:Hide()
-      sort:Hide()
-      alts:Hide()
-      craftwiseView:Hide()
-      treeView:Show()
-      treeView:Render(view)
-      return
+    local onTable = self.tab ~= "tree" and self.tab ~= "craftwise"
+    for _, widget in ipairs({ table_, sort, alts }) do
+      if onTable then widget:Show() else widget:Hide() end
     end
-    treeView:Hide()
-    if self.tab == "craftwise" then
-      table_:Hide()
-      sort:Hide()
-      alts:Hide()
-      craftwiseView:Show()
-      craftwiseView:Render(view)
-      return
-    end
-    craftwiseView:Hide()
-    if self.tab ~= "requirements" then
-      self.pool:HideFrom(1)
-      scroll:SetContentHeight(1)
-      local text = TAB_TEXT[self.tab] or TAB_TEXT.notes
-      self.tableMessage:Set(text[1], text[2])
-      self.tableMessage:Show()
-      return
-    end
-    if not view.plan then
-      self.pool:HideFrom(1)
-      scroll:SetContentHeight(1)
-      self.tableMessage:Set(ns.StatusLabel[view.status] or "Unavailable", view.message or "")
-      self.tableMessage:Show()
-      return
-    end
-    if #view.plan.materials == 0 and (learn or skill or enchant) then
-      -- Nothing to gather: a trainer visit, a recipe already known, a skill reached.
-      self.pool:HideFrom(1)
-      scroll:SetContentHeight(1)
-      self.tableMessage:Set(view.nextStep or "Nothing to gather", view.message or "")
-      self.tableMessage:Show()
-      buyValue:SetText("-")
-      Widgets.SetTextColor(buyValue, C.text3)
-      routeText:SetText("")
-      return
-    end
-    self.tableMessage:Hide()
-    local materials = sortMaterials(view.plan.materials, sortKey)
-    local buyTotal, pricedRows, unpricedRows = 0, 0, 0
-    for index, material in ipairs(materials) do
-      local row = self.pool:Get(index)
-      local info = ns.ItemProvider.GetItem(material.itemID)
-      row.itemID = material.itemID
-      row.material = material
-      row.icon:SetItem(info.icon, info.quality)
-      local label = info.name or ("Item " .. material.itemID)
-      if not info.loaded and not info.name then label = label .. " (loading...)" end
-      row.name:SetText(Theme.QualityText(label, info.quality))
-      local noteParts = {}
-      local sub = describeItem(material.itemID)
-      if sub ~= "" then noteParts[#noteParts + 1] = (sub:match("^(.-)%s+%-%s") or sub) end
-      local craftable = ns.ProfessionProvider.FindRecipesForItem(material.itemID)
-      if #craftable > 0 then noteParts[#noteParts + 1] = "craftable" end
-      row.note:SetText(table.concat(noteParts, " - "))
-      row.need:SetText(tostring(material.required))
-      row.have:SetText(tostring(material.owned))
-      Widgets.SetTextColor(row.have, Widgets.CountColor(material.owned, material.required))
-      if material.missing > 0 then
-        row.missing:SetText(tostring(material.missing))
-        Widgets.SetTextColor(row.missing, C.missing)
-        row.missing:Show()
-        row.check:Hide()
-      else
-        row.missing:SetText("")
-        row.check:Show()
-      end
-      local price = ns.PriceProvider.GetPrice(material.itemID)
-      if price then
-        row.price:SetText(Widgets.Money(price.copper, true))
-        row.subtotal:SetText(material.missing > 0 and Widgets.Money(price.copper * material.missing, true) or Theme.ColorText("text3", "-"))
-        if material.missing > 0 then buyTotal = buyTotal + price.copper * material.missing else buyTotal = buyTotal end
-        pricedRows = pricedRows + 1
-      else
-        row.price:SetText(Theme.ColorText("text3", "?"))
-        row.subtotal:SetText(Theme.ColorText("text3", material.missing > 0 and "?" or "-"))
-        if material.missing > 0 then unpricedRows = unpricedRows + 1 end
-      end
-      row:SetTags(sourceTags(material))
-      if material.missing > 0 and material.owned > 0 then
-        Widgets.SetColor(row.tint, C.partial, 0.045)
-      elseif material.missing > 0 then
-        Widgets.SetColor(row.tint, C.missing, 0.07)
-      else
-        Widgets.SetColor(row.tint, C.black, 0)
-      end
-    end
-    self.pool:HideFrom(#materials + 1)
-    scroll:SetContentHeight(#materials * ROW)
-    local compare = ns.CraftWise.Compare(view.fullTree or view.tree, { prices = ns.PriceProvider })
-    if compare and compare.hybrid.cost then
-      routeText:SetText("CraftWise route: " .. Widgets.Money(compare.hybrid.cost, true) .. (compare.hybrid.unknown > 0 and Theme.ColorText("text3", string.format(" (+%d unpriced)", compare.hybrid.unknown)) or ""))
-      Widgets.SetTextColor(routeText, C.text)
-    elseif compare and compare.recommended == "buy" then
-      routeText:SetText("CraftWise: buy the item - " .. Widgets.Money(compare.buy.cost, true))
-      Widgets.SetTextColor(routeText, C.text)
-    else
-      routeText:SetText("CraftWise: no price data")
-      Widgets.SetTextColor(routeText, C.text3)
-    end
-    screen.compare = compare
-    if pricedRows > 0 then
-      local gold = ns.CharacterProvider.AccountGold()
-      local afford = ns.ShoppingList.Affordable(buyTotal, gold)
-      local affordText = ""
-      if afford == "now" then
-        affordText = Theme.ColorText("ok", "  - affordable")
-      elseif afford == "account" then
-        affordText = Theme.ColorText("partial", string.format("  - short %s here, alts cover it", Widgets.Money(buyTotal - (gold.current or 0), true)))
-      elseif afford == "no" then
-        affordText = Theme.ColorText("missing", string.format("  - short %s", Widgets.Money(buyTotal - (gold.account or gold.current or 0), true)))
-      end
-      buyValue:SetText(Widgets.Money(buyTotal, true) .. affordText .. (unpricedRows > 0 and Theme.ColorText("text3", string.format("  (+%d unpriced)", unpricedRows)) or ""))
-      Widgets.SetTextColor(buyValue, C.text)
-    else
-      buyValue:SetText("no price data")
-      Widgets.SetTextColor(buyValue, C.text3)
-    end
+    if self.tab == "tree" then treeView:Show() treeView:Render(view) else treeView:Hide() end
+    if self.tab == "craftwise" then craftwiseView:Show() craftwiseView:Render(view) else craftwiseView:Hide() end
+    if onTable then renderRequirements(self, view, sortKey) end
   end
 
   return screen

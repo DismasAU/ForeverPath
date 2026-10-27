@@ -483,6 +483,48 @@ function SourceProvider.Describe(itemID)
   return lines
 end
 
+-- Short "where it comes from" tags for a plan material ({ itemID, missing,
+-- ownedBank, altSources }), at most one per kind: in bags, bank, a recipe,
+-- an alt's bags, a vendor, a drop / gathering / quest source, an alt crafter.
+function SourceProvider.MaterialTags(material)
+  local tags = {}
+  if material.missing == 0 then
+    tags[#tags + 1] = "In bags"
+  end
+  if material.ownedBank and material.ownedBank > 0 then
+    tags[#tags + 1] = "Bank"
+  end
+  local recipe = ns.ProfessionProvider.FindRecipesForItem(material.itemID)[1]
+  if recipe then
+    tags[#tags + 1] = recipe.learned and ("Craft - " .. (recipe.recipe.professionName or "?")) or "Recipe not learned"
+  end
+  local alt = (material.altSources or {})[1]
+  if alt then
+    tags[#tags + 1] = string.format("Alt: %s (%d)", alt.name, alt.count)
+  end
+  local hints = SourceProvider.Sources(material.itemID)
+  for _, hint in ipairs(hints) do
+    if hint.kind == "vendor" then
+      tags[#tags + 1] = "Vendor: " .. (hint.name or "?")
+      break
+    end
+  end
+  for _, hint in ipairs(hints) do
+    if (hint.kind == "gather" or hint.kind == "drop" or hint.kind == "quest") and not hint.unavailable then
+      tags[#tags + 1] = hint.gatherer and (hint.label .. " - " .. hint.gatherer) or (hint.short or hint.label)
+      break
+    end
+  end
+  local crafter = ns.CharacterProvider.CanCraft(material.itemID)[1]
+  if crafter then
+    tags[#tags + 1] = "Craft - Alt: " .. crafter.name
+  end
+  if #tags == 0 then
+    tags[1] = "Unknown source"
+  end
+  return tags
+end
+
 -- Human-readable state of the optional data addons, for /fp vendors.
 function SourceProvider.StatusInfo()
   local status = {}
