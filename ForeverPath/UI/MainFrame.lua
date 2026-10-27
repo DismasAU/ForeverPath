@@ -506,7 +506,7 @@ end
 function MainFrame.OpenGoal(goalID)
   ns.GoalService.Select(goalID)
   MainFrame.Show()
-  local goal = ns.GoalService.Store() and ns.GoalService.Store():Get(goalID)
+  local goal = ns.GoalService.Get(goalID)
   local SCREEN_FOR = { COMPLETE_ATTUNEMENT = "attunements", COMPLETE_QUEST = "quests", REACH_REPUTATION = "reputations" }
   MainFrame.ShowScreen(goal and SCREEN_FOR[goal.type] or "crafting")
 end

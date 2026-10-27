@@ -560,7 +560,7 @@ local function createSide(view, tree)
     if #uses > 0 then
       local parts = {}
       for _, use in ipairs(uses) do
-        local goal = ns.GoalService.Store() and ns.GoalService.Store():Get(use.goalID)
+        local goal = ns.GoalService.Get(use.goalID)
         parts[#parts + 1] = string.format("%s x%d", goal and ns.GoalService.Name(goal) or use.goalID, use.quantity)
       end
       alsoUsed:SetText(Theme.ColorText("text2", "Also used by: ") .. table.concat(parts, ", "))

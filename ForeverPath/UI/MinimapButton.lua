@@ -99,7 +99,7 @@ end
 
 function MinimapButton.TooltipLines(tooltip)
   tooltip:AddLine("ForeverPath " .. tostring(ns.VERSION or ""), 0.84, 0.71, 0.42)
-  local goals = ns.goals and ns.goals:Count({ open = true }) or 0
+  local goals = ns.GoalService.Count({ open = true })
   tooltip:AddLine(string.format("%d open goal%s", goals, goals == 1 and "" or "s"), 1, 1, 1)
   tooltip:AddLine("Left-click: open or close the window", 0.8, 0.8, 0.8)
   tooltip:AddLine("Right-click: show or hide the goal tracker", 0.8, 0.8, 0.8)

@@ -57,7 +57,7 @@ function Bootstrap.Init()
   Events.RegisterWoW("ADDON_LOADED", Bootstrap.OnAddonLoaded)
   Events.RegisterWoW("PLAYER_REGEN_ENABLED", Events.FlushCombatQueue)
   Events.RegisterWoW("PLAYER_LOGIN", function()
-    Log.Debug("Player login; %d goal(s) saved", ns.goals and ns.goals:Count() or 0)
+    Log.Debug("Player login; %d goal(s) saved", ns.GoalService.Count())
   end)
 end
 

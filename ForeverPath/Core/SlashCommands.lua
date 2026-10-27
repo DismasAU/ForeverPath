@@ -120,7 +120,7 @@ function handlers.goals()
     Log.Print("No open goals. Add one with /fp add <item id or link> [qty].")
     return
   end
-  local selected = ns.goals and ns.goals:GetSelectedID()
+  local selected = ns.GoalService.GetSelectedID()
   Log.Print("Goals:")
   for i, goal in ipairs(goals) do
     local marker = goal.id == selected and "*" or " "

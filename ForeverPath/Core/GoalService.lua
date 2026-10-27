@@ -79,7 +79,7 @@ function GoalService.AddItemGoal(itemID, quantity, goalType)
   quantity = Util.IsPositiveInt(quantity) and quantity or 1
   local explicit = goalType
   goalType = goalType or GoalService.TypeForItem(itemID)
-  local existing = store:FindByItem("CRAFT_ITEM", itemID) or store:FindByItem("OBTAIN_ITEM", itemID)
+  local existing = GoalService.FindItemGoal(itemID)
   if existing then
     if explicit and existing.type ~= explicit then
       store:SetType(existing.id, explicit)
@@ -753,7 +753,8 @@ end
 
 function GoalService.SetType(id, goalType)
   local store = GoalService.Store()
-  return store and store:SetType(id, goalType)
+  if not store then return false, "not loaded" end
+  return store:SetType(id, goalType)
 end
 
 function GoalService.SetRoute(id, itemID, route)
@@ -784,6 +785,23 @@ function GoalService.GetSelected()
   local store = GoalService.Store()
   if not store then return nil end
   return store:GetSelected()
+end
+
+function GoalService.GetSelectedID()
+  local store = GoalService.Store()
+  if not store then return nil end
+  return store:GetSelectedID()
+end
+
+function GoalService.Get(id)
+  local store = GoalService.Store()
+  if not store then return nil end
+  return store:Get(id)
+end
+
+-- The goal for an item, whether it is a craft or an obtain goal.
+function GoalService.FindItemGoal(itemID)
+  return findGoal("CRAFT_ITEM", "itemID", itemID) or findGoal("OBTAIN_ITEM", "itemID", itemID)
 end
 
 -- Tracked, open goals in priority order (drives the tracker and header pill).

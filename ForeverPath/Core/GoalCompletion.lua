@@ -132,8 +132,6 @@ local DONE_CHECKS = {
 function GoalCompletion.Check(reason)
   local completed = {}
   if not setting("autoComplete", true) then return completed end
-  local store = ns.GoalService and ns.GoalService.Store()
-  if not store then return completed end
   for _, goal in ipairs(ns.GoalService.List({ open = true })) do
     local check = DONE_CHECKS[goal.type]
     local info = check and goal.target and check(goal)
@@ -153,7 +151,7 @@ end
 -- for that spell. Returns how many goals it touched.
 function GoalCompletion.RecordCast(spellID)
   spellID = tonumber(spellID)
-  if not spellID or not ns.GoalService or not ns.GoalService.Store() then return 0 end
+  if not spellID then return 0 end
   local touched = 0
   for _, goal in ipairs(ns.GoalService.List({ open = true })) do
     if goal.type == "APPLY_ENCHANT" and goal.target and goal.target.spellID == spellID then
@@ -263,8 +261,6 @@ function GoalCompletion.Init()
   end
   Events.RegisterWoW("PLAYER_ENTERING_WORLD", function()
     -- Remember statuses so a later reopen is noticed, and baseline old goals.
-    local store = ns.GoalService and ns.GoalService.Store()
-    if not store then return end
     for _, goal in ipairs(ns.GoalService.List()) do
       GoalCompletion.lastStatus[goal.id] = goal.status
     end

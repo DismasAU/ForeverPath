@@ -358,7 +358,7 @@ local function Create(parent)
         row.icon:SetItem(candidate.icon, candidate.quality)
         row.name:SetText(Theme.QualityText(candidate.name, candidate.quality))
         row.meta:SetText(candidate.sourceLabel .. (candidate.ilvl and (" - ilvl " .. candidate.ilvl) or "") .. (candidate.zone and (" - " .. candidate.zone) or ""))
-        local existing = ns.GoalService.Store() and (ns.GoalService.Store():FindByItem("CRAFT_ITEM", candidate.itemID) or ns.GoalService.Store():FindByItem("OBTAIN_ITEM", candidate.itemID))
+        local existing = ns.GoalService.FindItemGoal(candidate.itemID)
         row.add:SetLabel(existing and "Goal" or "+ Goal")
         row.add:SetEnabledState(existing == nil)
       end
@@ -371,7 +371,7 @@ local function Create(parent)
       s.optionsEmpty:Hide()
     end
     if goal then s.openGoal:Show() else s.openGoal:Hide() end
-    local hasTargetGoal = targetItemID and ns.GoalService.Store() and (ns.GoalService.Store():FindByItem("CRAFT_ITEM", targetItemID) or ns.GoalService.Store():FindByItem("OBTAIN_ITEM", targetItemID)) or nil
+    local hasTargetGoal = targetItemID and ns.GoalService.FindItemGoal(targetItemID) or nil
     s.addTarget:SetEnabledState(targetItemID ~= nil and not hasTargetGoal)
     s.addTarget:SetLabel(hasTargetGoal and "Goal added" or "+ Goal for target")
   end
