@@ -85,7 +85,7 @@ end
 function GoalService.TypeForItem(itemID)
   local candidates = ns.Log.Try(ns.ProfessionProvider.FindRecipesForItem, itemID)
   if type(candidates) == "table" and #candidates > 0 then return "CRAFT_ITEM" end
-  local catalogue = ns.Data and ns.Data.Recipes
+  local catalogue = ns.Data.Recipes
   if catalogue and catalogue.Lookup then
     local hints = catalogue.Lookup(itemID)
     if type(hints) == "table" and #hints > 0 then return "CRAFT_ITEM" end
@@ -163,7 +163,7 @@ function GoalService.FindRecipeGoal(spellID)
 end
 
 local function recipeByID(spellID)
-  local catalogue = ns.Data and ns.Data.Recipes
+  local catalogue = ns.Data.Recipes
   local recipe = catalogue and catalogue.Get and catalogue.Get(spellID) or nil
   if not recipe and catalogue and catalogue.GetCombine then recipe = catalogue.GetCombine(spellID) end
   if not recipe and ns.db and ns.db.recipes then recipe = ns.db.recipes[spellID] end
@@ -208,7 +208,7 @@ function GoalService.AddRecipeFromInput(text)
   local spellID = GoalService.SpellIDFromText(text) or Util.ParseInt(text)
   local note = ""
   if not spellID then
-    local catalogue = ns.Data and ns.Data.Recipes
+    local catalogue = ns.Data.Recipes
     local hits = catalogue and catalogue.Search and catalogue.Search(text, 5) or {}
     if #hits == 0 then
       return nil, string.format("No recipe called \"%s\" is in the catalogue.", text)
@@ -268,7 +268,7 @@ function GoalService.AddEnchantFromInput(text, quantity)
   local spellID = GoalService.SpellIDFromText(text) or Util.ParseInt(text)
   local note = ""
   if not spellID then
-    local catalogue = ns.Data and ns.Data.Recipes
+    local catalogue = ns.Data.Recipes
     local hits = catalogue and catalogue.Search and catalogue.Search(text, 5, nil, "enchant") or {}
     if #hits == 0 then
       return nil, string.format("No enchant called \"%s\" is in the catalogue.", text)
@@ -317,7 +317,7 @@ end
 function GoalService.AddSkillGoal(professionName, rank)
   local store = GoalService.Store()
   if not store then return nil, LOADING end
-  local catalogue = ns.Data and ns.Data.Recipes
+  local catalogue = ns.Data.Recipes
   local professionID, canonical
   if catalogue and catalogue.FindProfession then
     professionID, canonical = catalogue.FindProfession(professionName)
@@ -577,7 +577,7 @@ function GoalService.Suggest(kind, text, limit)
   local function push(hit)
     if #out < limit then out[#out + 1] = hit end
   end
-  local catalogue = ns.Data and ns.Data.Recipes
+  local catalogue = ns.Data.Recipes
   local function items(n)
     for _, hit in ipairs(ItemProvider.SearchByName(text, n)) do
       local itemID = hit.itemID

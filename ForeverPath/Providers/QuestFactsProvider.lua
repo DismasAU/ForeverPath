@@ -31,7 +31,7 @@ function QuestFactsProvider.Store()
 end
 
 function QuestFactsProvider.Shipped(questID)
-  local catalogue = ns.Data and ns.Data.QuestCatalogue
+  local catalogue = ns.Data.QuestCatalogue
   if type(catalogue) ~= "table" then return nil end
   local entry = catalogue[tonumber(questID) or 0]
   return type(entry) == "table" and entry or nil
@@ -108,7 +108,7 @@ function QuestFactsProvider.ItemHints(itemID)
   if not itemID then return {} end
   if not hintIndex then
     hintIndex = {}
-    local catalogue = ns.Data and ns.Data.QuestCatalogue
+    local catalogue = ns.Data.QuestCatalogue
     for questID, row in pairs(type(catalogue) == "table" and catalogue or {}) do
       for _, item in ipairs(type(row.items) == "table" and row.items or {}) do
         local id = tonumber(item.itemID)
@@ -324,7 +324,7 @@ function QuestFactsProvider.Count()
 end
 
 function QuestFactsProvider.ShippedCount()
-  local catalogue = ns.Data and ns.Data.QuestCatalogue
+  local catalogue = ns.Data.QuestCatalogue
   local n = 0
   for _ in pairs(type(catalogue) == "table" and catalogue or {}) do n = n + 1 end
   return n

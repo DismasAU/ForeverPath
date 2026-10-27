@@ -84,7 +84,7 @@ function ClassicDB.Reset()
   ClassicDB.rewardIndex = nil
   ClassicDB.reputationIndex = nil
   ClassicDB.titleIndex = nil
-  if ns.Data and ns.Data.Recipes and ns.Data.Recipes.Invalidate then ns.Data.Recipes.Invalidate() end
+  ns.Data.Recipes.Invalidate()
 end
 
 ---------------------------------------------------------------------------
@@ -344,7 +344,7 @@ function ClassicDB.Trainer(recipeSpellID, side)
   local d = data()
   local row = d and d.trainers and d.trainers[tonumber(recipeSpellID) or 0]
   if not row then return nil end
-  local catalogue = ns.Data and ns.Data.Catalogue
+  local catalogue = ns.Data.Catalogue
   local profession = catalogue and catalogue.professions and catalogue.professions[row[1]]
   local record = { skill = profession and profession[1] or nil, skillLine = row[1], rank = row[2], cost = row[3], classic = true, trainers = {} }
   for i = 4, #row do
@@ -493,7 +493,7 @@ end
 
 -- An item the Forever client lists that classic-db has never heard of.
 function ClassicDB.IsNewInForever(itemID)
-  local index = ns.Data and ns.Data.ItemIndex
+  local index = ns.Data.ItemIndex
   if type(index) ~= "table" or not index[tonumber(itemID) or 0] then return false end
   return ClassicDB.KnowsItem(itemID) == false
 end

@@ -81,7 +81,7 @@ function TrainerProvider.ReadService(index)
   -- The spell link names the recipe exactly; without one, the catalogue is
   -- searched by recipe name within the required profession.
   local spellID = spellIDFromLink(callGlobal("GetTrainerServiceItemLink", index))
-  if not spellID and ns.Data and ns.Data.Recipes and ns.Data.Recipes.SpellIDByName then
+  if not spellID then
     spellID = ns.Data.Recipes.SpellIDByName(name, record.skill)
     record.byName = spellID ~= nil or nil
   end
@@ -131,7 +131,7 @@ local function isProfessionTrainer()
 end
 
 local function isProfessionSkill(name)
-  local catalogue = ns.Data and ns.Data.Recipes
+  local catalogue = ns.Data.Recipes
   if catalogue and catalogue.ProfessionID and catalogue.ProfessionID(name) then return true end
   return false
 end
@@ -149,7 +149,7 @@ function TrainerProvider.ScanTrainer()
   local zone, subzone = currentZone()
   local now = Util.Now()
   local recorded, changed = 0, false
-  local catalogue = ns.Data and ns.Data.Recipes
+  local catalogue = ns.Data.Recipes
   for index = 1, count do
     local record = TrainerProvider.ReadService(index)
     if record and record.rank then
@@ -252,11 +252,9 @@ function TrainerProvider.Status()
 end
 
 function TrainerProvider.Init()
-  if ns.Data and ns.Data.Recipes then
-    ns.Data.Recipes.trainerLookup = TrainerProvider.Requirement
-    -- Shared trainers change the requirements decoded recipes carry.
-    Events.On("FP_SHARED_DATA_CHANGED", ns.Data.Recipes.Invalidate)
-  end
+  ns.Data.Recipes.trainerLookup = TrainerProvider.Requirement
+  -- Shared trainers change the requirements decoded recipes carry.
+  Events.On("FP_SHARED_DATA_CHANGED", ns.Data.Recipes.Invalidate)
   Events.RegisterWoW("TRAINER_SHOW", function()
     TrainerProvider.open = true
     TrainerProvider.EnsureFilters()

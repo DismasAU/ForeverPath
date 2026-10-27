@@ -34,7 +34,7 @@ function Planner.DefaultDeps()
     item = ns.ItemProvider,
     profession = ns.ProfessionProvider,
     inventory = ns.InventoryProvider,
-    data = ns.Data and ns.Data.Recipes,
+    data = ns.Data.Recipes,
     characters = ns.CharacterProvider,
     sources = ns.SourceProvider,
     price = ns.PriceProvider,

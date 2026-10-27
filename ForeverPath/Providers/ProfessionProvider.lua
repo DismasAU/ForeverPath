@@ -105,7 +105,7 @@ function ProfessionProvider.GetRecipe(recipeID, refresh)
       local fresh = RecipeModel.FromSchematic(schematic, nil, {
         basicReagentType = Compat.reagentTypeBasic,
         now = cached and cached.scannedAt or nil,
-        isEnchant = ns.Data and ns.Data.Recipes and ns.Data.Recipes.IsEnchant or nil,
+        isEnchant = ns.Data.Recipes.IsEnchant,
       })
       if fresh and #fresh.reagents > 0 then
         fresh = RecipeModel.Merge(cached, fresh)
@@ -233,7 +233,7 @@ function ProfessionProvider.ProcessScanChunk(token)
       professionName = state.name,
       basicReagentType = Compat.reagentTypeBasic,
       now = now,
-      isEnchant = ns.Data and ns.Data.Recipes and ns.Data.Recipes.IsEnchant or nil,
+      isEnchant = ns.Data.Recipes.IsEnchant,
     })
     -- A recipe without reagents means the schematic was not fully loaded;
     -- keep whatever we had rather than storing an empty reagent list.

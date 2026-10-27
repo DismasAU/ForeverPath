@@ -144,7 +144,7 @@ end
 -- Unmet factions: the client's faction table
 ---------------------------------------------------------------------------
 local function catalogueFactions()
-  local c = ns.Data and ns.Data.Catalogue
+  local c = ns.Data.Catalogue
   return c and type(c.factions) == "table" and c.factions or nil
 end
 

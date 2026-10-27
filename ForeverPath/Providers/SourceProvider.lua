@@ -197,7 +197,7 @@ function SourceProvider.ItemClass(itemID)
     local ok, _, _, _, _, _, classID, subclassID = pcall(Compat.GetItemInfoInstant, itemID)
     if ok and type(classID) == "number" then return classID, subclassID end
   end
-  local catalogue = ns.Data and ns.Data.Recipes
+  local catalogue = ns.Data.Recipes
   if catalogue and catalogue.ItemClass then
     return catalogue.ItemClass(itemID)
   end
@@ -219,7 +219,7 @@ local function recipesFor(itemID)
       out[#out + 1] = candidate.recipe
     end
   end
-  local catalogue = ns.Data and ns.Data.Recipes
+  local catalogue = ns.Data.Recipes
   if catalogue and catalogue.Lookup then
     for _, recipe in ipairs(catalogue.Lookup(itemID) or {}) do out[#out + 1] = recipe end
   end
