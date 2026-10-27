@@ -116,7 +116,7 @@ end
 
 -- Status of the market source for the status bar and /fp prices.
 -- { installed, available, lastScan, freshness, text }
-function PriceProvider.Status(now)
+function PriceProvider.StatusInfo(now)
   now = now or Util.Now()
   local source = PriceProvider.Source("auctionator")
   local status = { installed = false, available = false }

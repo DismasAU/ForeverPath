@@ -573,7 +573,7 @@ local function refreshChrome(frame)
     frame.recipesDot:SetKind(age < 3 * 3600 and "ok" or (age < 86400 and "partial" or "missing"))
     frame.recipesText:SetText(string.format("Recipes: %d recorded - %s", total, Util.FormatAgo(latest)))
   end
-  local prices = ns.PriceProvider.Status()
+  local prices = ns.PriceProvider.StatusInfo()
   frame.pricesDot:SetKind(prices.kind == "text3" and "text" or prices.kind)
   frame.pricesText:SetText(prices.text)
 end

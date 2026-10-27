@@ -207,7 +207,7 @@ function TrainerProvider.Requirement(spellID)
 end
 
 -- "Georgio Bolero (Stormwind City), needs Tailoring 125, 1g"
-function TrainerProvider.Describe(spellID, moneyFn)
+function TrainerProvider.Label(spellID, moneyFn)
   local record = TrainerProvider.Requirement(spellID)
   if not record then return nil end
   local where = record.zone or "?"

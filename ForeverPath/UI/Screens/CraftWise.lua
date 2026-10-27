@@ -273,7 +273,7 @@ function CraftWiseView.Create(screen)
       marketOf = ns.PriceProvider.GetMarket,
     })
     self.result = result
-    local status = ns.PriceProvider.Status()
+    local status = ns.PriceProvider.StatusInfo()
     if not result.available and not result.buy.cost then
       for _, w in ipairs(self.content) do w:Hide() end
       self.empty:Set("No price data", status.text .. ". Vendors are recorded when you open them; Auction House prices come from Auctionator scans.")

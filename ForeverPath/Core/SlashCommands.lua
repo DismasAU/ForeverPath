@@ -362,7 +362,7 @@ end
 function handlers.vendors()
   if not requireLoaded() then return end
   local items, vendors = ns.VendorProvider.Count()
-  local status = ns.SourceProvider.Status()
+  local status = ns.SourceProvider.StatusInfo()
   Log.Print("Vendor data: %d item%s from %d vendor%s (recorded whenever you open a merchant). DungeonJournal: %s. AtlasLoot: %s.",
     items, items == 1 and "" or "s", vendors, vendors == 1 and "" or "s", status.journal, status.atlasloot)
 end
@@ -420,7 +420,7 @@ function handlers.export()
   if not requireLoaded() then return end
   local text, counts = ns.UI.ShareFrame.ShowExport()
   if text then
-    Log.Print("Export ready (%s): copy it from the window with Ctrl+C.", ns.Share.Describe(counts))
+    Log.Print("Export ready (%s): copy it from the window with Ctrl+C.", ns.Share.CountsLabel(counts))
   else
     Log.Print("Nothing to export: %s", tostring(counts))
   end
@@ -453,7 +453,7 @@ function handlers.shared(rest)
   end
   Log.Print("%s", ns.Share.Status())
   for i, entry in ipairs(list) do
-    Log.output(string.format("  %d. %s - %s - exported %s, imported %s", i, entry.label, ns.Share.Describe(entry.counts),
+    Log.output(string.format("  %d. %s - %s - exported %s, imported %s", i, entry.label, ns.Share.CountsLabel(entry.counts),
       Util.FormatAgo(entry.at), Util.FormatAgo(entry.importedAt)))
   end
 end
@@ -490,7 +490,7 @@ end
 
 function handlers.prices(rest)
   if not requireLoaded() then return end
-  local status = ns.PriceProvider.Status()
+  local status = ns.PriceProvider.StatusInfo()
   rest = Util.Trim(rest or "")
   if rest == "" then
     Log.Print("%s", status.text)

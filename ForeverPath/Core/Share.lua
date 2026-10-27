@@ -55,7 +55,7 @@ function Share.Counts(data)
   return { lootSeen = count(data.lootSeen), questFacts = count(data.questFacts), vendors = count(data.vendors), trainers = count(data.trainers) }
 end
 
-function Share.Describe(counts)
+function Share.CountsLabel(counts)
   return string.format("%d loot sources, %d quests, %d vendor items, %d trainer recipes", counts.lootSeen or 0, counts.questFacts or 0, counts.vendors or 0, counts.trainers or 0)
 end
 
@@ -94,7 +94,7 @@ function Share.Import(text)
   d.imported[payload.author] = entry
   Share.Changed()
   local counts = Share.Counts(entry)
-  return true, string.format("%s %s's data: %s.", replaced and "Updated" or "Imported", entry.label, Share.Describe(counts))
+  return true, string.format("%s %s's data: %s.", replaced and "Updated" or "Imported", entry.label, Share.CountsLabel(counts))
 end
 
 -- { { author, label, at, importedAt, counts } } newest first.

@@ -470,7 +470,7 @@ local function Create(parent)
     local panel = craftwise
     panel.goalID = goal and goal.id or nil
     panel.result = result
-    local status = ns.PriceProvider.Status()
+    local status = ns.PriceProvider.StatusInfo()
     if not result or (not result.available and not result.buy.cost) then
       for _, w in ipairs(panel.content) do w:Hide() end
       panel.empty:Set(goal and "No price data" or "No active goal", goal and status.text or "Add a crafting goal to compare buying and crafting.")

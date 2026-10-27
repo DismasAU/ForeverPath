@@ -68,7 +68,7 @@ function ShareFrame.ShowExport()
     frame.hint:SetText(tostring(counts))
     frame.box:SetText("")
   else
-    frame.hint:SetText("Press Ctrl+C to copy, then send it to a friend or guildmate; they paste it with /fp import. Contains: " .. ns.Share.Describe(counts) .. ".")
+    frame.hint:SetText("Press Ctrl+C to copy, then send it to a friend or guildmate; they paste it with /fp import. Contains: " .. ns.Share.CountsLabel(counts) .. ".")
     frame.box:SetText(text)
   end
   frame.import:Hide()

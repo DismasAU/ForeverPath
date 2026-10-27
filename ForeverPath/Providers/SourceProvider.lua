@@ -476,7 +476,7 @@ function SourceProvider.Describe(itemID)
 end
 
 -- Human-readable state of the optional data addons, for /fp vendors.
-function SourceProvider.Status()
+function SourceProvider.StatusInfo()
   local status = {}
   status.atlasloot = SourceProvider.HasAtlasLoot() and ("installed, index " .. SourceProvider.atlas.state) or "not installed"
   if SourceProvider.HasDungeonJournal() then
