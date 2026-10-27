@@ -122,9 +122,12 @@ function InventoryProvider.GetBagCount(itemID)
   return 0
 end
 
--- Returns { bags, bank, bankSource, bankScannedAt, total }.
+-- Returns { bags, bank|nil, bankSource, bankScannedAt|nil, total,
+--           alts|nil, altSources|nil = { { name, count, freshness } } }.
 -- bankSource: "live" (bank open), "cached" (snapshot), "client" (GetItemCount
 -- reported more with the bank included; unverified on Forever), or "none".
+-- total is bags + bank; alts are never in it (the ledger adds them only
+-- when settings.includeAlts is on).
 function InventoryProvider.GetCounts(itemID)
   local bags = InventoryProvider.GetBagCount(itemID)
   local result = { bags = bags, bank = nil, bankSource = "none", bankScannedAt = nil }

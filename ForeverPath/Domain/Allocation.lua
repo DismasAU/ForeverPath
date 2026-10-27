@@ -44,7 +44,8 @@ end
 
 -- What is still free: counts minus earlier claims. Bags are consumed first,
 -- then the bank, then alts' snapshots (only when includeAlts is true).
--- Returns { bags, bank|nil, alts|nil, total, bankSource, reserved }.
+-- Returns { bags, bank|nil, alts|nil, total, bankSource, bankScannedAt|nil,
+-- altSources|nil, reserved }.
 function Ledger:Available(itemID, counts, includeBank, includeAlts)
   local c = Allocation.Normalize(counts)
   local used = self:Used(itemID)
@@ -65,9 +66,10 @@ function Ledger:Available(itemID, counts, includeBank, includeAlts)
 end
 
 -- Claims up to `wanted` units of itemID. Returns a counts table describing
--- what was taken: { bags, bank|nil, total, bankSource, reserved, availableBags,
--- availableBank, availableTotal } where `reserved` is how much earlier claims
--- had already removed and `available*` is what was free before this claim.
+-- what was taken: { bags, bank|nil, alts|nil, total, bankSource, bankScannedAt,
+-- altSources, reserved, availableBags, availableBank, availableAlts,
+-- availableTotal } where `reserved` is how much earlier claims had already
+-- removed and `available*` is what was free before this claim.
 function Ledger:Take(itemID, counts, wanted, includeBank, includeAlts)
   local free = self:Available(itemID, counts, includeBank, includeAlts)
   wanted = math.max(0, tonumber(wanted) or 0)
