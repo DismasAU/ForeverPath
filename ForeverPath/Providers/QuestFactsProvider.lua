@@ -27,7 +27,6 @@ local call = ns.Util.SafeCall
 
 function QuestFactsProvider.Store()
   if not ns.db then return nil end
-  ns.db.questFacts = ns.db.questFacts or {}
   return ns.db.questFacts
 end
 

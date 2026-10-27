@@ -206,10 +206,7 @@ local function Create(parent)
   function screen:Select(attuneID)
     if attuneID ~= self.attuneID then self.stepKey = nil end
     self.attuneID = attuneID
-    if ns.chardb then
-      ns.chardb.ui = ns.chardb.ui or {}
-      ns.chardb.ui.attunement = attuneID
-    end
+    if ns.chardb then ns.chardb.ui.attunement = attuneID end
     self:Refresh()
   end
 

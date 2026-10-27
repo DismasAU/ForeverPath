@@ -18,7 +18,6 @@ end
 
 function VendorProvider.Store()
   if not ns.db then return nil end
-  ns.db.vendors = ns.db.vendors or {}
   return ns.db.vendors
 end
 

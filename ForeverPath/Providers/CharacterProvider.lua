@@ -66,7 +66,6 @@ end
 
 function CharacterProvider.Store()
   if not ns.db then return nil end
-  ns.db.characters = ns.db.characters or {}
   return ns.db.characters
 end
 

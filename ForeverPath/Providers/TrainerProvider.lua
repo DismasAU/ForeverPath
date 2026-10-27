@@ -24,14 +24,12 @@ end
 -- spellID -> { skill, rank, cost, trainer, zone, subzone, seenAt }
 function TrainerProvider.Store()
   if not ns.db then return nil end
-  ns.db.trainers = ns.db.trainers or {}
   return ns.db.trainers
 end
 
 -- trainer name -> { zone, subzone, recipes, seenAt }
 function TrainerProvider.Trainers()
   if not ns.db then return nil end
-  ns.db.trainerNPCs = ns.db.trainerNPCs or {}
   return ns.db.trainerNPCs
 end
 

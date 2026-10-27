@@ -33,7 +33,6 @@ end
 
 function LootLearner.Store()
   if not ns.db then return nil end
-  ns.db.lootSeen = ns.db.lootSeen or {}
   return ns.db.lootSeen
 end
 
