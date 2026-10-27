@@ -190,9 +190,7 @@ function InventoryProvider.Init()
     InventoryProvider.bankOpen = true
     InventoryProvider.ScanBank()
     -- Some clients populate bank tabs slightly after the frame opens.
-    if Compat.After then
-      Compat.After(0.5, function() Log.Call(InventoryProvider.ScanBank) end)
-    end
+    Compat.After(0.5, function() Log.Call(InventoryProvider.ScanBank) end)
   end)
   Events.RegisterWoW("BANKFRAME_CLOSED", function()
     InventoryProvider.bankOpen = false

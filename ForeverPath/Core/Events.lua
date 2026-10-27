@@ -103,11 +103,7 @@ function Events.Debounce(key, delay, fn)
     Events.pending[key] = nil
     ns.Log.Call(fn)
   end
-  if ns.Compat.After then
-    ns.Compat.After(delay or 0, run)
-  else
-    run()
-  end
+  ns.Compat.After(delay or 0, run)
 end
 
 -- Defers work that touches protected UI until combat ends.

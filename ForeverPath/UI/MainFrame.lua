@@ -239,11 +239,7 @@ local function createHeader(frame)
   search:SetScript("OnEditFocusLost", function(self)
     if (self:GetText() or "") == "" then self.placeholder:Show() end
     Widgets.SetBackdrop(self, C.inset, C.lineDark)
-    if ns.Compat.After then
-      ns.Compat.After(0.2, function() MainFrame.HideSuggestions() end)
-    else
-      MainFrame.HideSuggestions()
-    end
+    ns.Compat.After(0.2, MainFrame.HideSuggestions)
   end)
   frame.search = search
   MainFrame.linkTargets[#MainFrame.linkTargets + 1] = search

@@ -190,9 +190,7 @@ function VendorProvider.Init()
     VendorProvider.open = true
     VendorProvider.ScanMerchant()
     -- Item data for merchant slots can arrive a moment after the frame opens.
-    if Compat.After then
-      Compat.After(0.5, function() Log.Call(VendorProvider.ScanMerchant) end)
-    end
+    Compat.After(0.5, function() Log.Call(VendorProvider.ScanMerchant) end)
   end)
   Events.RegisterWoW("MERCHANT_UPDATE", function()
     if VendorProvider.open then

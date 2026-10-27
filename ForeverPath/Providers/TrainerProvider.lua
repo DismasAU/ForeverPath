@@ -260,9 +260,7 @@ function TrainerProvider.Init()
     TrainerProvider.EnsureFilters()
     TrainerProvider.ScanTrainer()
     -- Lines can fill in a moment after the frame opens.
-    if Compat.After then
-      Compat.After(0.5, function() Log.Call(TrainerProvider.ScanTrainer) end)
-    end
+    Compat.After(0.5, function() Log.Call(TrainerProvider.ScanTrainer) end)
   end)
   Events.RegisterWoW("TRAINER_UPDATE", function()
     if TrainerProvider.open then

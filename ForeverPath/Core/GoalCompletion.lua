@@ -244,8 +244,6 @@ function GoalCompletion.Init()
     for _, goal in ipairs(ns.GoalService.List()) do
       GoalCompletion.lastStatus[goal.id] = goal.status
     end
-    if ns.Compat.After then
-      ns.Compat.After(3, function() GoalCompletion.Check("login") end)
-    end
+    ns.Compat.After(3, function() GoalCompletion.Check("login") end)
   end)
 end

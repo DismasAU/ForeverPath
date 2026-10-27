@@ -103,7 +103,11 @@ function Compat.Detect()
   end
 
   Compat.InCombatLockdown = pick(_G.InCombatLockdown) or function() return false end
-  Compat.After = (type(C_Timer) == "table" and type(C_Timer.After) == "function") and C_Timer.After or nil
+  -- After(delay, fn) always exists: C_Timer.After, or fn run at once when the
+  -- client has no timer. Code that must not run early (a timeout, a toast's
+  -- hold) checks Compat.hasTimer instead.
+  Compat.hasTimer = type(C_Timer) == "table" and type(C_Timer.After) == "function"
+  Compat.After = Compat.hasTimer and C_Timer.After or function(_, fn) fn() end
   -- Quest state (attunement steps): C_QuestLog on this engine, legacy globals as fallback.
   Compat.IsQuestFlaggedCompleted = (type(C_QuestLog) == "table" and type(C_QuestLog.IsQuestFlaggedCompleted) == "function") and C_QuestLog.IsQuestFlaggedCompleted
     or (type(_G.IsQuestFlaggedCompleted) == "function" and _G.IsQuestFlaggedCompleted) or nil

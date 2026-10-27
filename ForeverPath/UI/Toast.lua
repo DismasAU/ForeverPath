@@ -77,7 +77,7 @@ local function showNext()
   frame.sub:SetText(opts.detail and (opts.detail .. (opts.sub and ("  -  " .. opts.sub) or "")) or (opts.sub or ""))
   frame:SetAlpha(1)
   frame:Show()
-  if ns.Compat.After then
+  if ns.Compat.hasTimer then
     ns.Compat.After(Toast.HOLD, function()
       if Toast.generation == generation then Toast.Dismiss() end
     end)
@@ -104,7 +104,7 @@ function Toast.Dismiss()
     frame:Hide()
     if #Toast.queue > 0 then showNext() end
   end
-  if type(UIFrameFadeOut) == "function" and ns.Compat.After then
+  if type(UIFrameFadeOut) == "function" and ns.Compat.hasTimer then
     Toast.fading = true
     pcall(UIFrameFadeOut, frame, 0.4, 1, 0)
     ns.Compat.After(0.4, finish)

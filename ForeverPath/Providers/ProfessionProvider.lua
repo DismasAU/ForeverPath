@@ -208,13 +208,9 @@ function ProfessionProvider.ScanOpenProfession()
 end
 
 local function scheduleChunk(token)
-  if Compat.After then
-    Compat.After(0, function()
-      Log.Call(ProfessionProvider.ProcessScanChunk, token)
-    end)
-  else
-    ProfessionProvider.ProcessScanChunk(token)
-  end
+  Compat.After(0, function()
+    Log.Call(ProfessionProvider.ProcessScanChunk, token)
+  end)
 end
 
 function ProfessionProvider.ProcessScanChunk(token)
@@ -297,11 +293,7 @@ function ProfessionProvider.FinishScan(state)
   Events.Fire("FP_RECIPES_UPDATED", state.professionID)
   if ProfessionProvider.scanQueue then
     ProfessionProvider.waitingFor = nil
-    if Compat.After then
-      Compat.After(0.5, function() Log.Call(ProfessionProvider.NextQueuedScan) end)
-    else
-      ProfessionProvider.NextQueuedScan()
-    end
+    Compat.After(0.5, function() Log.Call(ProfessionProvider.NextQueuedScan) end)
   end
 end
 
@@ -365,7 +357,7 @@ function ProfessionProvider.NextQueuedScan()
       ProfessionProvider.openedByUs = true
       ProfessionProvider.waitingFor = profession.skillLine
       Log.Print("Opening %s to record its recipes...", profession.name)
-      if Compat.After then
+      if Compat.hasTimer then
         local expected = profession.skillLine
         Compat.After(QUEUE_TIMEOUT, function()
           if ProfessionProvider.waitingFor == expected then

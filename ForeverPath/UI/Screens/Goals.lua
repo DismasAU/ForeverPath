@@ -65,7 +65,7 @@ local function createNewGoalBar(screen)
     onEnter = function() screen:Submit() end,
     onChange = function(_, userInput) if userInput then screen:UpdateSuggestions() end end,
     onFocusLost = function()
-      if ns.Compat.After then ns.Compat.After(0.2, function() ns.UI.MainFrame.HideSuggestions() end) else ns.UI.MainFrame.HideSuggestions() end
+      ns.Compat.After(0.2, ns.UI.MainFrame.HideSuggestions)
     end,
   })
   input:SetPoint("LEFT", label, "RIGHT", 14, 0)
