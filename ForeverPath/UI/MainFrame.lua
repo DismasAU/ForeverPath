@@ -59,10 +59,6 @@ function MainFrame.EvaluateViews()
   return MainFrame.views
 end
 
-function MainFrame.GetView(goalID)
-  return MainFrame.views[goalID]
-end
-
 function MainFrame.ActiveGoal()
   local selected = ns.GoalService.GetSelected()
   if selected and ns.GoalModel.IsOpen(selected) then
