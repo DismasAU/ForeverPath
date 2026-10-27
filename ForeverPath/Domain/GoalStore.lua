@@ -38,8 +38,26 @@ local function notify(self, event, goal)
 end
 
 -- Drops malformed entries (corrupted saved data, hand edits). Returns the count.
+-- Goals of a type this version does not know (saved by a newer one) are
+-- parked in storage.parkedGoals, untouched, and come back as soon as a
+-- version that knows the type loads. Anything else malformed is dropped.
+-- Returns the number dropped.
 function GoalStore:Sanitize()
   local dropped = 0
+  local parked = type(self.storage.parkedGoals) == "table" and self.storage.parkedGoals or {}
+  self.storage.parkedGoals = parked
+  for id, goal in pairs(parked) do
+    if type(goal) == "table" and GoalModel.IsSupported(goal.type) and self.storage.goals[id] == nil then
+      self.storage.goals[id] = goal
+      parked[id] = nil
+    end
+  end
+  for id, goal in pairs(self.storage.goals) do
+    if type(goal) == "table" and type(goal.type) == "string" and not GoalModel.IsSupported(goal.type) then
+      parked[id] = goal
+      self.storage.goals[id] = nil
+    end
+  end
   for id, goal in pairs(self.storage.goals) do
     local ok = GoalModel.Validate(goal)
     if not ok or goal.id ~= id then

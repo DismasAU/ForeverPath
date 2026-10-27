@@ -45,6 +45,7 @@ Database.DEFAULTS = {
   char = {
     schemaVersion = ns.SCHEMA_VERSION,
     goals = {},        -- goalID -> goal (see Domain/GoalModel.lua)
+    parkedGoals = {},  -- goalID -> goal of a type this version does not know (see GoalStore:Sanitize)
     selectedGoalId = nil,
     knownRecipes = {}, -- recipeID -> true (learned) / false (seen but not learned)
     professions = {},  -- professionID -> { name, skillLevel, maxSkillLevel, scannedAt, recipeCount }
@@ -133,7 +134,7 @@ function Database.Prepare(stored, defaults, migrations, targetVersion)
   local hadVersion = stored.schemaVersion ~= nil
   local ok, info = Database.Migrate(stored, migrations, targetVersion)
   if not ok and info == "newer" then
-    ns.Log.Print("Saved data was written by a newer ForeverPath version (schema %s). Running read-only compatible mode.", tostring(stored.schemaVersion))
+    ns.Log.Print("Saved data was written by a newer ForeverPath version (schema %s). It is used as far as this version understands it; goals of types it does not know are kept aside, untouched, until you update.", tostring(stored.schemaVersion))
   elseif not ok then
     ns.Log.Error("Database migration problem: %s", tostring(info))
   elseif hadVersion and #info > 0 then

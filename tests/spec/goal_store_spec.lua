@@ -131,6 +131,20 @@ describe("GoalStore", function()
     assert_nil(storage.selectedGoalId)
   end)
 
+  it("parks goals of unknown types instead of deleting them, and restores them once known", function()
+    local future = { id = "future", type = "SLAY_DRAGON", status = "ACTIVE", target = { name = "Onyxia" } }
+    local storage = { goals = { future = future } }
+    local store = newStore(storage)
+    assert_eq(store.dropped, 0, "a goal from a newer version is not malformed")
+    assert_eq(store:Count(), 0, "this version neither lists nor plans it")
+    assert_eq(storage.parkedGoals.future, future, "kept untouched in the saved table")
+    ns.GoalModel.Types.SLAY_DRAGON = { label = "Slay dragon", badge = "Dragon", targetKind = "dragon" }
+    store = newStore(storage)
+    assert_eq(store:Count(), 1, "a version that knows the type gets it back")
+    assert_nil(storage.parkedGoals.future)
+    ns.GoalModel.Types.SLAY_DRAGON = nil
+  end)
+
   it("round-trips through the storage table like SavedVariables", function()
     local storage = {}
     local store = newStore(storage)

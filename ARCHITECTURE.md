@@ -535,8 +535,8 @@ unvisited NPCs. `Share.Changed` drops the learner index and decoded recipes.
   `characters`, `vendors`, `trainers`, `trainerNPCs`, `questFacts`
   (questID -> `{ giver, turnin, items, itemsAt }`), `lootSeen` (loot
   learner), `imported` (shared data by author token), `shareToken`.
-- `ForeverPathCharDB` (character): `schemaVersion`, `goals`, `selectedGoalId`,
-  `knownRecipes`, `professions`, `bankCache`, `window`, `tracker`, `ui`,
+- `ForeverPathCharDB` (character): `schemaVersion`, `goals`, `parkedGoals`,
+  `selectedGoalId`, `knownRecipes`, `professions`, `bankCache`, `window`, `tracker`, `ui`,
   `shopping` (`bought`, `included`, `sort`, `filter`).
 
 Schema 2 (0.2.0) moved `window` to the character table and added the goal
@@ -545,8 +545,11 @@ copies a v1 account-wide window into the character table once.
 
 `Database.Prepare` runs ordered migrations (`Database.migrations.global/char`,
 entries `{ version, up }`) against the stored shape, then fills defaults. Data
-written by a newer schema is left untouched. `GoalStore.New` drops malformed
-goals on load and reports the count.
+written by a newer schema is not migrated, and the player is told it is used
+as far as this version understands it. `GoalStore.New` parks goals of a type
+this version does not know in `parkedGoals` (untouched; a version that knows
+the type takes them back), drops other malformed goals and reports that
+count.
 
 ## Extension points
 
