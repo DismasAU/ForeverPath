@@ -512,11 +512,10 @@ function QuestProvider.Search(text, limit)
   local hits, seen = {}, {}
   local function consider(id, name, where)
     if seen[id] or type(name) ~= "string" then return end
-    local lower = string.lower(name)
-    local position = lower:find(needle, 1, true)
-    if position then
+    local rank = Util.MatchRank(name, needle)
+    if rank then
       seen[id] = true
-      hits[#hits + 1] = { questID = id, name = name, where = where, rank = lower == needle and 0 or (position == 1 and 1 or 2) }
+      hits[#hits + 1] = { questID = id, name = name, where = where, rank = rank }
     end
   end
   local faction = QuestProvider.Faction()

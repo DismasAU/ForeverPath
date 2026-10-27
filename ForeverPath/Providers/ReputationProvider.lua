@@ -235,20 +235,18 @@ function ReputationProvider.Search(text, limit)
   if needle == "" then return {} end
   local hits, seen = {}, {}
   for _, record in ipairs(ReputationProvider.List()) do
-    local lower = string.lower(record.name)
-    local position = lower:find(needle, 1, true)
-    if position then
-      hits[#hits + 1] = { factionID = record.factionID, name = record.name, record = record, rank = lower == needle and 0 or (position == 1 and 1 or 2) }
+    local rank = Util.MatchRank(record.name, needle)
+    if rank then
+      hits[#hits + 1] = { factionID = record.factionID, name = record.name, record = record, rank = rank }
       if record.factionID then seen[record.factionID] = true end
     end
   end
   -- Factions not met yet, from the client's table.
   for factionID, row in pairs(catalogueFactions() or {}) do
     if not seen[factionID] and type(row[1]) == "string" then
-      local lower = string.lower(row[1])
-      local position = lower:find(needle, 1, true)
-      if position then
-        hits[#hits + 1] = { factionID = factionID, name = row[1], unmet = true, rank = lower == needle and 0 or (position == 1 and 1 or 2) }
+      local rank = Util.MatchRank(row[1], needle)
+      if rank then
+        hits[#hits + 1] = { factionID = factionID, name = row[1], unmet = true, rank = rank }
       end
     end
   end

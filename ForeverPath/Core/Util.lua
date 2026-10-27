@@ -114,6 +114,22 @@ function Util.SortedKeys(t, comparator)
   return keys
 end
 
+-- Rank of a name against a lower-cased needle: 0 exact, 1 starts with it,
+-- 2 a word starts with it ("Mace of the Storms" for "storm"), 3 anywhere
+-- inside a word ("Thunderstorm Blade"); nil when it does not match. Every
+-- type-ahead search sorts by it, so all categories rank alike.
+function Util.MatchRank(name, needle)
+  if type(name) ~= "string" then return nil end
+  local lower = name:lower()
+  if lower == needle then return 0 end
+  local position = lower:find(needle, 1, true)
+  if not position then return nil end
+  if position == 1 then return 1 end
+  local before = lower:sub(position - 1, position - 1)
+  if before == " " or before == "-" or before == "'" or before == ":" or before == "(" or before == "/" then return 2 end
+  return 3
+end
+
 -- Human readable "how long ago" text.
 function Util.FormatAgo(timestamp, now)
   if type(timestamp) ~= "number" then

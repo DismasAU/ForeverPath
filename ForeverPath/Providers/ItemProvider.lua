@@ -177,21 +177,6 @@ function ItemProvider.RegisterNameSource(fn)
   if type(fn) == "function" then ItemProvider.nameSources[#ItemProvider.nameSources + 1] = fn end
 end
 
--- Rank of a name against a lower-cased needle: 0 exact, 1 starts with it,
--- 2 a word starts with it ("Mace of the Storms" for "storm"), 3 anywhere
--- inside a word ("Thunderstorm Blade"); nil when it does not match.
-function ItemProvider.MatchRank(name, needle)
-  if type(name) ~= "string" then return nil end
-  local lower = name:lower()
-  if lower == needle then return 0 end
-  local position = lower:find(needle, 1, true)
-  if not position then return nil end
-  if position == 1 then return 1 end
-  local before = lower:sub(position - 1, position - 1)
-  if before == " " or before == "-" or before == "'" or before == ":" or before == "(" or before == "/" then return 2 end
-  return 3
-end
-
 -- Name search over cached names, scanned recipe names, the catalogue and
 -- every registered name source. Exact matches first, then names starting
 -- with the text, then names with a word starting with it, then any other
@@ -213,7 +198,7 @@ function ItemProvider.SearchByName(query, limit)
     if seen[itemID] or type(name) ~= "string" then
       return
     end
-    local rank = ItemProvider.MatchRank(name, needle)
+    local rank = Util.MatchRank(name, needle)
     if rank then
       seen[itemID] = true
       local bucket = buckets[rank]

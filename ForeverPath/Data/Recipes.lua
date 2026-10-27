@@ -364,12 +364,10 @@ function Recipes.Search(text, limit, professionName, kind)
   local hits = {}
   for spellID, row in pairs(c.recipes) do
     local name = row[1] or ""
-    local lower = string.lower(name)
-    local position = lower:find(needle, 1, true)
+    local rank = ns.Util.MatchRank(name, needle)
     local enchant = (row[3] or 0) == 0
     local kindOK = kind == nil or (kind == "enchant" and enchant) or (kind == "item" and not enchant)
-    if position and kindOK and (not wantedProfession or row[2] == wantedProfession) then
-      local rank = lower == needle and 0 or (position == 1 and 1 or 2)
+    if rank and kindOK and (not wantedProfession or row[2] == wantedProfession) then
       hits[#hits + 1] = { spellID = spellID, name = name, professionID = row[2], professionName = Recipes.ProfessionName(row[2]), rank = rank, enchant = enchant or nil }
     end
   end
