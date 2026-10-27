@@ -94,6 +94,24 @@ describe("Minimap button through LibDBIcon", function()
 
   before_each(function() _G.LibStub = nil end)
 
+  it("draws its own button when only part of the library set is loaded", function()
+    local ns = H.fresh()
+    local icons = installLibs()
+    local ldbOnly = _G.LibStub
+    _G.LibStub = { GetLibrary = function(_, name) if name == "LibDBIcon-1.0" then return nil end return ldbOnly:GetLibrary(name) end }
+    _G.ForeverPathMinimapButton = nil
+    H.login(ns)
+    assert_nil(icons.registered.ForeverPath, "LibDBIcon missing: nothing registered")
+    assert_not_nil(_G.ForeverPathMinimapButton, "the native button stands in")
+    assert_eq(ns.UI.MinimapButton.button, _G.ForeverPathMinimapButton)
+    _G.LibStub = { GetLibrary = function() error("broken LibStub") end }
+    _G.ForeverPathMinimapButton = nil
+    ns = H.fresh()
+    H.login(ns)
+    assert_not_nil(_G.ForeverPathMinimapButton, "a LibStub that raises falls back to the native button")
+    _G.LibStub = nil
+  end)
+
   it("registers a launcher with the mark instead of drawing its own button", function()
     local ns = H.fresh()
     local icons = installLibs()
