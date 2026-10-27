@@ -33,7 +33,8 @@ local function statusFor(node)
 end
 
 -- Picks the craft option to use: learned first, then a combine (anyone can),
--- then a catalogue recipe someone could learn, then any other.
+-- then a catalogue recipe someone could learn, then any other. Never one
+-- that would craft an item from itself (option.cycle).
 local function bestCraft(options)
   local combine, learnable, fallback
   for _, option in ipairs(options) do
@@ -378,7 +379,7 @@ local function rankRoutes(node, craftOption)
   -- A catalogue recipe nobody has learned: a combine anyone can do ranks
   -- with alt crafting, a learnable recipe just above the Auction House, and
   -- one nobody can do is only shown when there is no other way at all.
-  if craftOption and not craftOption.cycle and not node.raw then
+  if craftOption and not node.raw then
     local rank = craftOption.combine and DependencyResolver.RouteRank.combine
       or (craftOption.unavailable and DependencyResolver.UNAVAILABLE_RANK or DependencyResolver.RouteRank.learn)
     if rank < bestRank then
