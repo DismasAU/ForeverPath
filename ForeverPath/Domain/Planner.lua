@@ -29,21 +29,9 @@ local Allocation = ns.Allocation
 local Planner = {}
 ns.Planner = Planner
 
-function Planner.DefaultDeps()
-  return {
-    item = ns.ItemProvider,
-    profession = ns.ProfessionProvider,
-    inventory = ns.InventoryProvider,
-    catalogue = ns.Data.Recipes,
-    characters = ns.CharacterProvider,
-    sources = ns.SourceProvider,
-    price = ns.PriceProvider,
-    attune = ns.AttuneProvider,
-    quest = ns.QuestProvider,
-    reputation = ns.ReputationProvider,
-    settings = ns.db and ns.db.settings or {},
-  }
-end
+-- Planner.DefaultDeps() -> the deps table above wired to the addon's own
+-- providers. It is defined in App/PlannerDeps.lua, the composition root, so
+-- nothing in Domain names a provider.
 
 -- Whether this character has learned a recipe spell (false without the
 -- profession provider, or when it raises - which is logged).

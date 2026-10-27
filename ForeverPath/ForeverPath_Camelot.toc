@@ -56,6 +56,7 @@ Providers\EquipmentProvider.lua
 Providers\ReputationProvider.lua
 Providers\PriceProvider.lua
 Providers\AuctionPriceProvider.lua
+App\PlannerDeps.lua
 App\Share.lua
 App\GoalService.lua
 App\GoalCompletion.lua

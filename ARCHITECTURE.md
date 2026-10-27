@@ -54,6 +54,7 @@ ForeverPath/
     PriceProvider.lua        pricing boundary: cheapest of registered sources, freshness, status
     AuctionPriceProvider.lua Auctionator v1 API adapter (lowest buyout, age, 7-day mean, listings)
   App/                       application services and wiring over the layers above
+    PlannerDeps.lua          the Planner's composition root: Planner.DefaultDeps over the providers
     Share.lua                /fp export / import of learned data, sanitised against per-kind schemas
     GoalService.lua          application service: GoalStore instance, "input text -> goal", shopping state (loads after Providers)
     GoalCompletion.lua       auto-completes goals (bag counts, casts, skill, quests, reputation) and celebrates
@@ -187,7 +188,7 @@ stored as a timestamped snapshot in `ForeverPathCharDB.bankCache`.
 
 ## Provider interfaces
 
-The Planner depends on these shapes only (see `Planner.DefaultDeps`):
+The Planner depends on these shapes only (`Planner.DefaultDeps`, in App/PlannerDeps.lua, wires them):
 
 ```lua
 item.GetItem(itemID)        -> { itemID, exists = true|false|nil, loaded, name, link, icon, quality, unavailable }
