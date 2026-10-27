@@ -46,10 +46,10 @@ function Planner.DefaultDeps()
 end
 
 -- Whether this character has learned a recipe spell (false without the
--- profession provider or when it raises).
+-- profession provider, or when it raises - which is logged).
 local function isLearned(deps, spellID)
   local profession = deps.profession
-  return profession ~= nil and Util.SafeCall(profession.IsLearned, spellID) == true
+  return profession ~= nil and Log.Try(profession.IsLearned, spellID) == true
 end
 
 local function professionList(deps)

@@ -13,7 +13,7 @@ local isLearned, buildCraftPlan = Shared.isLearned, Shared.buildCraftPlan
 
 -- The account characters that know a recipe spell (empty without the provider).
 local function whoKnows(deps, spellID)
-  local names = deps.characters and Util.SafeCall(deps.characters.WhoKnows, spellID)
+  local names = deps.characters and Log.Try(deps.characters.WhoKnows, spellID)
   return type(names) == "table" and names or {}
 end
 
@@ -61,10 +61,10 @@ function Planner.Trainable(professionName, window, deps)
       local skillLine = p.skillLine or (data.ProfessionID and data.ProfessionID(p.name))
       local current = p.skillLevel or 0
       local entry = { profession = p.name, skill = current, max = p.maxSkillLevel or 0, scanned = scanned[p.name] == true, now = {}, soon = {}, cost = 0 }
-      for _, spellID in ipairs(skillLine and data.ForProfession(skillLine) or {}) do
-        local recipe = data.Get(spellID)
+      for _, spellID in ipairs(skillLine and Log.Try(data.ForProfession, skillLine) or {}) do
+        local recipe = Log.Try(data.Get, spellID)
         local trainer = recipe and recipe.trainer
-        if trainer and not (profession.IsLearned and profession.IsLearned(spellID)) then
+        if trainer and not isLearned(deps, spellID) then
           local rank = tonumber(trainer.rank) or (recipe.skill and recipe.skill.min) or 0
           local row = { recipe = recipe, rank = rank, cost = tonumber(trainer.cost) or 0, trainer = trainer.name, zone = trainer.zone, classic = trainer.classic }
           if rank <= current then
