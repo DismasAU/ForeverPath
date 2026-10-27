@@ -461,7 +461,7 @@ end
 function handlers.train(rest)
   if not requireLoaded() then return end
   local name = Util.Trim(rest or "")
-  local plans = ns.Planner.Trainable(nil, name ~= "" and name or nil)
+  local plans = ns.Planner.Trainable(name ~= "" and name or nil)
   if #plans == 0 then
     Log.Print(name ~= "" and ("You do not have " .. name .. ".") or "This character has no profession with trainer recipes.")
     return

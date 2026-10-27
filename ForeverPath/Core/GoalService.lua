@@ -316,7 +316,7 @@ end
 -- This character's standing in a profession (live list first, then recorded windows).
 local function professionStanding(name, professionID)
   if ns.Planner and ns.Planner.CurrentSkill then
-    return ns.Planner.CurrentSkill(ns.Planner.DefaultDeps(), name, professionID)
+    return ns.Planner.CurrentSkill(name, professionID)
   end
   return nil
 end
@@ -654,7 +654,7 @@ function GoalService.Suggest(kind, text, limit)
       if count < n and needle ~= "" and string.find(string.lower(p.name or ""), needle, 1, true) then
         count = count + 1
         local target = rank and tonumber(rank) or nil
-        local standing = ns.Planner and ns.Planner.CurrentSkill and ns.Planner.CurrentSkill(ns.Planner.DefaultDeps(), p.name, p.id) or nil
+        local standing = ns.Planner and ns.Planner.CurrentSkill and ns.Planner.CurrentSkill(p.name, p.id) or nil
         push({ kind = "skill", text = p.name .. (target and (" " .. target) or ""), meta = standing and string.format("You are at %d", standing.skillLevel or 0) or "Profession",
           professionName = p.name, add = function() return GoalService.AddSkillGoal(p.name, target) end })
       end

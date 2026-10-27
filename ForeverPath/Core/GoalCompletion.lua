@@ -80,7 +80,7 @@ end
 function GoalCompletion.SkillLevel(target)
   local planner = ns.Planner
   if not planner or not planner.CurrentSkill then return nil end
-  local standing = planner.CurrentSkill(planner.DefaultDeps(), target.professionName, target.professionID)
+  local standing = planner.CurrentSkill(target.professionName, target.professionID)
   return standing and standing.skillLevel or nil
 end
 

@@ -61,7 +61,7 @@ end
 -- What learn and enchant views share about a recipe: whether it is learned,
 -- who on the account knows it, and this character's standing in its profession.
 local function recipeStanding(deps, recipe, spellID)
-  local profession = Planner.CurrentSkill(deps, recipe.professionName, recipe.professionID)
+  local profession = Planner.CurrentSkill(recipe.professionName, recipe.professionID, deps)
   local need = recipe.skill and recipe.skill.min or 0
   return {
     recipe = recipe, spellID = spellID, learned = isLearned(deps, spellID), knownBy = whoKnows(deps, spellID),
@@ -357,7 +357,8 @@ end
 
 -- This character's standing in a profession: { name, skillLevel, maxSkillLevel, icon, source }
 -- from the live profession list, else from a recorded window; nil without either.
-function Planner.CurrentSkill(deps, professionName, professionID)
+function Planner.CurrentSkill(professionName, professionID, deps)
+  deps = deps or Planner.DefaultDeps()
   local profession = deps.profession
   if not profession then return nil end
   local function matches(p)
@@ -382,7 +383,7 @@ end
 -- { { profession, skill, max, scanned, now = { { recipe, rank, cost, trainer, zone } }, soon = {...}, cost } }
 Planner.TRAIN_WINDOW = 25
 
-function Planner.Trainable(deps, professionName, window)
+function Planner.Trainable(professionName, window, deps)
   deps = deps or Planner.DefaultDeps()
   window = window or Planner.TRAIN_WINDOW
   local data = deps.data
@@ -814,7 +815,8 @@ end
 -- profession with its thresholds, learned flag, whether its requirement is
 -- known (trainer recorded or plans), reagent cost (nil when any price is
 -- unknown) and reagent count.
-function Planner.SkillCandidates(deps, professionID)
+function Planner.SkillCandidates(professionID, deps)
+  deps = deps or Planner.DefaultDeps()
   local Recipes = deps.data
   local out = {}
   if not Recipes or not Recipes.ForProfession or not Recipes.Get then return out end
@@ -904,7 +906,7 @@ function Planner.EvaluateSkill(view, goal, deps)
   if (not professionID or professionID == 0) and Recipes and Recipes.ProfessionID then
     professionID = Recipes.ProfessionID(target.professionName)
   end
-  local profession = Planner.CurrentSkill(deps, target.professionName, professionID)
+  local profession = Planner.CurrentSkill(target.professionName, professionID, deps)
   view.item = { name = target.professionName, icon = (profession and profession.icon) or target.icon, quality = 1, loaded = true, exists = true }
   if not profession then
     view.status = Status.PROFESSION_MISSING
@@ -938,7 +940,7 @@ function Planner.EvaluateSkill(view, goal, deps)
   end
   skill.scanned = scanned
 
-  local candidates = Planner.SkillCandidates(deps, professionID)
+  local candidates = Planner.SkillCandidates(professionID, deps)
   local plan = ns.SkillPlanner.Plan(current, rank, candidates)
   view.skillPlan = plan
   local crafts = {}
