@@ -34,7 +34,8 @@ end
 -- plans it when that is not Crafting; amount, the target field the
 -- goal's stepper edits and what it is called (nil: nothing to count);
 -- title(target, nameLookup) and name(target, nameLookup) when the generic
--- "<label>: <target.name>" / target.name does not fit.
+-- "<label>: <target.name>" / target.name does not fit; reopen(target) when a
+-- completed goal reopened starts over.
 GoalModel.Types = {
   CRAFT_ITEM = { label = "Craft item", badge = "Crafting", targetKind = "item",
     amount = { field = "quantity", label = "Quantity" },
@@ -56,7 +57,8 @@ GoalModel.Types = {
     name = function(t) return string.format("%s %d", t.professionName or "Skill", t.rank or 0) end },
   APPLY_ENCHANT = { label = "Apply enchant", badge = "Enchant", targetKind = "enchant",
     amount = { field = "quantity", label = "Casts" },
-    title = function(t) return string.format("Cast %dx %s", t.quantity or 1, t.name or ("Enchant " .. tostring(t.spellID))) end },
+    title = function(t) return string.format("Cast %dx %s", t.quantity or 1, t.name or ("Enchant " .. tostring(t.spellID))) end,
+    reopen = function(t) t.casts = 0 end },
 }
 
 GoalModel.MAX_SKILL = 1000
@@ -292,9 +294,26 @@ function GoalModel.SetRank(goal, rank, now)
   return true
 end
 
+-- How many casts of an enchant goal's spell have been seen.
+function GoalModel.SetCasts(goal, casts, now)
+  if goal.type ~= "APPLY_ENCHANT" then
+    return false, "not an enchant goal"
+  end
+  if type(casts) ~= "number" or casts < 0 or casts ~= math.floor(casts) then
+    return false, "casts must be a whole number"
+  end
+  goal.target.casts = casts
+  goal.updatedAt = now or Util.Now()
+  return true
+end
+
 function GoalModel.SetStatus(goal, status, now)
   if not GoalModel.Statuses[status] then
     return false, "unknown status"
+  end
+  local def = GoalModel.Types[goal.type]
+  if goal.status == GoalModel.Statuses.COMPLETED and status ~= GoalModel.Statuses.COMPLETED and def and def.reopen then
+    def.reopen(goal.target)
   end
   goal.status = status
   goal.updatedAt = now or Util.Now()

@@ -14,7 +14,6 @@ local _, ns = ...
 local Events = ns.Events
 local Log = ns.Log
 local GoalModel = ns.GoalModel
-local Util = ns.Util
 
 local GoalCompletion = { lastStatus = {} }
 ns.GoalCompletion = GoalCompletion
@@ -134,11 +133,9 @@ function GoalCompletion.RecordCast(spellID)
   if not spellID then return 0 end
   local touched = 0
   for _, goal in ipairs(ns.GoalService.List({ open = true })) do
-    if goal.type == "APPLY_ENCHANT" and goal.target and goal.target.spellID == spellID then
-      goal.target.casts = (tonumber(goal.target.casts) or 0) + 1
-      goal.updatedAt = Util.Now()
+    if goal.type == "APPLY_ENCHANT" and goal.target and goal.target.spellID == spellID
+      and ns.GoalService.SetCasts(goal.id, (tonumber(goal.target.casts) or 0) + 1) then
       touched = touched + 1
-      Events.Fire("FP_GOALS_CHANGED", "updated", goal)
     end
   end
   if touched > 0 then
@@ -196,12 +193,6 @@ function GoalCompletion.Init()
       if last == GoalModel.Statuses.COMPLETED and GoalModel.IsOpen(goal) then
         -- Reopened: start counting again from what is in the bags now.
         GoalCompletion.Baseline(goal, true)
-      end
-    elseif event == "updated" and goal.type == "APPLY_ENCHANT" then
-      local last = GoalCompletion.lastStatus[goal.id]
-      if last == GoalModel.Statuses.COMPLETED and GoalModel.IsOpen(goal) then
-        -- Reopened: the casts start over.
-        goal.target.casts = 0
       end
     end
     GoalCompletion.lastStatus[goal.id] = goal.status

@@ -680,6 +680,12 @@ function GoalService.SetQuantity(id, quantity)
   return store:SetQuantity(id, quantity)
 end
 
+function GoalService.SetCasts(id, casts)
+  local store = GoalService.Store()
+  if not store then return false, "not loaded" end
+  return store:SetCasts(id, casts)
+end
+
 function GoalService.SetStatus(id, status)
   local store = GoalService.Store()
   if not store then return false, "not loaded" end
