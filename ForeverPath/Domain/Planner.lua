@@ -44,6 +44,33 @@ function Planner.DefaultDeps()
   }
 end
 
+-- Whether this character has learned a recipe spell (false without the
+-- profession provider or when it raises).
+local function isLearned(deps, spellID)
+  local profession = deps.profession
+  return profession ~= nil and Util.SafeCall(profession.IsLearned, spellID) == true
+end
+
+-- The account characters that know a recipe spell (empty without the provider).
+local function whoKnows(deps, spellID)
+  local names = deps.characters and Util.SafeCall(deps.characters.WhoKnows, spellID)
+  return type(names) == "table" and names or {}
+end
+
+-- What learn and enchant views share about a recipe: whether it is learned,
+-- who on the account knows it, and this character's standing in its profession.
+local function recipeStanding(deps, recipe, spellID)
+  local profession = Planner.CurrentSkill(deps, recipe.professionName, recipe.professionID)
+  local need = recipe.skill and recipe.skill.min or 0
+  return {
+    recipe = recipe, spellID = spellID, learned = isLearned(deps, spellID), knownBy = whoKnows(deps, spellID),
+    profession = profession, hasProfession = profession ~= nil, need = need,
+    have = profession and profession.skillLevel or nil,
+    skillOK = profession ~= nil and (profession.skillLevel or 0) >= need,
+    teachItemID = recipe.teachItemID, trainer = recipe.trainer,
+  }
+end
+
 local function professionList(deps)
   local names = {}
   local ok, list = pcall(deps.profession.GetScannedProfessions)
@@ -103,11 +130,7 @@ function Planner.Candidates(itemID, deps)
     if type(hints) == "table" then
       for _, hint in ipairs(hints) do
         if not (hint.recipeID and seen[hint.recipeID]) then
-          local learned = false
-          if hint.recipeID and not hint.combine and deps.profession and deps.profession.IsLearned then
-            local ok, known = pcall(deps.profession.IsLearned, hint.recipeID)
-            learned = ok and known == true
-          end
+          local learned = hint.recipeID ~= nil and not hint.combine and isLearned(deps, hint.recipeID)
           candidates[#candidates + 1] = { recipe = hint, learned = learned, static = true }
         end
       end
@@ -587,26 +610,9 @@ function Planner.EvaluateLearn(view, goal, deps)
     view.message = string.format("No recipe with spell id %s is in the catalogue or your recorded professions.", tostring(target.spellID))
     return view
   end
-  local learned = false
-  if deps.profession and deps.profession.IsLearned then
-    local ok, known = pcall(deps.profession.IsLearned, target.spellID)
-    learned = ok and known == true
-  end
-  local profession = Planner.CurrentSkill(deps, recipe.professionName, recipe.professionID)
-  local need = recipe.skill and recipe.skill.min or 0
-  local knownBy = {}
-  if deps.characters and deps.characters.WhoKnows then
-    local ok, names = pcall(deps.characters.WhoKnows, target.spellID)
-    if ok and type(names) == "table" then knownBy = names end
-  end
-  local learn = {
-    recipe = recipe, spellID = target.spellID, learned = learned, knownBy = knownBy,
-    profession = profession, hasProfession = profession ~= nil, need = need,
-    have = profession and profession.skillLevel or nil,
-    skillOK = profession ~= nil and (profession.skillLevel or 0) >= need,
-    kind = recipe.combine and "combine" or (recipe.teachItemID and "plans" or "trainer"),
-    teachItemID = recipe.teachItemID, trainer = recipe.trainer,
-  }
+  local learn = recipeStanding(deps, recipe, target.spellID)
+  learn.kind = recipe.combine and "combine" or (recipe.teachItemID and "plans" or "trainer")
+  local learned, profession, need, knownBy = learn.learned, learn.profession, learn.need, learn.knownBy
   view.learn = learn
   local name = recipe.name or "the recipe"
   if learned or learn.kind == "combine" then
@@ -703,29 +709,12 @@ function Planner.EvaluateEnchant(view, goal, deps)
     view.message = string.format("%s makes an item: add it as a crafting goal instead.", recipe.name or "That recipe")
     return view
   end
-  local learned = false
-  if deps.profession and deps.profession.IsLearned then
-    local ok, known = pcall(deps.profession.IsLearned, target.spellID)
-    learned = ok and known == true
-  end
-  local profession = Planner.CurrentSkill(deps, recipe.professionName, recipe.professionID)
-  local need = recipe.skill and recipe.skill.min or 0
-  local knownBy = {}
-  if deps.characters and deps.characters.WhoKnows then
-    local ok, names = pcall(deps.characters.WhoKnows, target.spellID)
-    if ok and type(names) == "table" then knownBy = names end
-  end
+  local enchant = recipeStanding(deps, recipe, target.spellID)
+  local learned, profession, need, knownBy = enchant.learned, enchant.profession, enchant.need, enchant.knownBy
   local quantity = target.quantity or 1
   local casts = math.min(tonumber(target.casts) or 0, quantity)
-  local enchant = {
-    recipe = recipe, spellID = target.spellID, learned = learned, knownBy = knownBy,
-    profession = profession, hasProfession = profession ~= nil, need = need,
-    have = profession and profession.skillLevel or nil,
-    skillOK = profession ~= nil and (profession.skillLevel or 0) >= need,
-    kind = recipe.teachItemID and "plans" or "trainer",
-    teachItemID = recipe.teachItemID, trainer = recipe.trainer,
-    casts = casts, quantity = quantity, remaining = quantity - casts,
-  }
+  enchant.kind = recipe.teachItemID and "plans" or "trainer"
+  enchant.casts, enchant.quantity, enchant.remaining = casts, quantity, quantity - casts
   if not profession then
     enchant.blocked = "profession"
   elseif not enchant.skillOK then
@@ -849,11 +838,7 @@ function Planner.SkillCandidates(deps, professionID)
   for _, spellID in ipairs(Recipes.ForProfession(professionID)) do
     local recipe = Recipes.Get(spellID)
     if recipe and recipe.skill then
-      local learned = false
-      if deps.profession and deps.profession.IsLearned then
-        local ok, known = pcall(deps.profession.IsLearned, spellID)
-        learned = ok and known == true
-      end
+      local learned = isLearned(deps, spellID)
       local cost, weight, known = 0, 0, true
       for _, reagent in ipairs(recipe.reagents or {}) do
         weight = weight + reagent.quantity
