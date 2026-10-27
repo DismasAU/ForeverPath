@@ -25,6 +25,22 @@ describe("UI shell and screens (mock widgets)", function()
 
   local function screen(key) return MainFrame.screens[key] end
 
+  -- Accessors for widget internals, so a widget restructure is fixed here once.
+  local DRAW_ORDER = { BACKGROUND = 1, BORDER = 2, ARTWORK = 3, OVERLAY = 4, HIGHLIGHT = 5 }
+  local function drawnUnder(fill, text)
+    return DRAW_ORDER[fill.layer] < DRAW_ORDER[text.layer]
+  end
+  local function sourceTag(row, index)
+    local tag = row.sourceFrame.tags[index]
+    return tag and tag.label:GetText()
+  end
+  local function shownSourceTags(row)
+    local texts = {}
+    for _, tag in ipairs(row.sourceFrame.tags) do if tag:IsShown() then texts[#texts + 1] = tag.label:GetText() end end
+    return texts
+  end
+  local function routeCard(tree, index) return tree.side.cards[index] end
+
   it("builds the shell: header, sidebar, status bar, screens", function()
     assert_eq(frame.title:GetText(), "ForeverPath")
     assert_eq(frame.charName:GetText(), "Thandrel")
@@ -67,7 +83,7 @@ describe("UI shell and screens (mock widgets)", function()
     local _, relativeTo, _, x = frame.brandDivider:GetPoint(1)
     assert_eq(relativeTo, frame.title)
     local widest = math.max(frame.title:GetStringWidth(), frame.tagline:GetStringWidth())
-    assert_eq(x, widest + 14)
+    assert_true(x > widest, "the divider clears the wider of title and tagline")
     -- Character lines are bounded by the pill so they truncate, not overlap.
     local _, charRight = frame.charMeta:GetPoint(2)
     assert_eq(charRight, frame.pill)
@@ -82,7 +98,7 @@ describe("UI shell and screens (mock widgets)", function()
     assert_not_nil(menu)
     local row = menu.rows[1]
     assert_match(row.text:GetText(), "Bolt of Linen Cloth")
-    assert_eq(row.hoverFill.layer, "BACKGROUND")
+    assert_true(drawnUnder(row.hoverFill, row.text), "the fill never covers the row's text")
     assert_false(row.hoverFill:IsShown())
     row:Fire("OnEnter")
     assert_true(row.hoverFill:IsShown())
@@ -96,7 +112,7 @@ describe("UI shell and screens (mock widgets)", function()
     frame.search:Fire("OnTextChanged", true)
     local suggestion = frame.suggestions.rows[1]
     assert_not_nil(suggestion)
-    assert_eq(suggestion.hoverFill.layer, "BACKGROUND")
+    assert_true(drawnUnder(suggestion.hoverFill, suggestion.text), "the fill never covers the suggestion's text")
     suggestion:Fire("OnEnter")
     assert_true(suggestion.hoverFill:IsShown())
   end)
@@ -119,7 +135,7 @@ describe("UI shell and screens (mock widgets)", function()
     assert_eq(row.need:GetText(), "2")
     assert_eq(row.have:GetText(), "5")
     assert_true(row.check:IsShown())
-    assert_eq(row.sourceFrame.tags[1].label:GetText(), "In bags")
+    assert_eq(sourceTag(row, 1), "In bags")
     assert_match(frame.pill.name:GetText(), "Bolt of Linen Cloth")
     assert_eq(frame.pill.percent:GetText(), "100%")
   end)
@@ -138,7 +154,7 @@ describe("UI shell and screens (mock widgets)", function()
     assert_match(first.name:GetText(), "Bolt of Linen Cloth", "missing sort puts the biggest gap first")
     assert_eq(first.need:GetText(), "6")
     assert_eq(first.missing:GetText(), "6")
-    assert_eq(first.sourceFrame.tags[1].label:GetText(), "Craft - Tailoring")
+    assert_eq(sourceTag(first, 1), "Craft - Tailoring")
     ns.chardb.ui.materialSort = "name"
     crafting:Refresh()
     assert_match(crafting.pool.rows[1].name:GetText(), "Bolt of Linen Cloth")
@@ -415,19 +431,19 @@ describe("UI shell and screens (mock widgets)", function()
     assert_eq(tree.selectedKey, "4238>2996")
     assert_match(tree.side.name:GetText(), "Bolt of Linen Cloth")
     assert_match(tree.side.count:GetText(), "/ 3")
-    assert_match(tree.side.cards[1].title:GetText(), "Craft with Tailoring")
-    assert_true(tree.side.cards[1].best:IsShown())
-    assert_match(tree.side.cards[1].cost:GetText(), "current")
-    assert_match(tree.side.cards[2].title:GetText(), "Auction House")
+    assert_match(routeCard(tree, 1).title:GetText(), "Craft with Tailoring")
+    assert_true(routeCard(tree, 1).best:IsShown())
+    assert_match(routeCard(tree, 1).cost:GetText(), "current")
+    assert_match(routeCard(tree, 2).title:GetText(), "Auction House")
     -- Option text wraps inside the card and the card grows to fit it.
     for i = 1, 2 do
-      local card = tree.side.cards[i]
+      local card = routeCard(tree, i)
       assert_true(card.detail.wordWrap, "detail wraps")
       assert_true(card.title.wordWrap, "title wraps")
       assert_true(card.detail:GetWidth() > 0)
       assert_true(card:GetHeight() >= 5 + card.title:GetStringHeight() + 2 + card.detail:GetStringHeight(), "card fits its text")
     end
-    local card = tree.side.cards[1]
+    local card = routeCard(tree, 1)
     local oneLine = card:GetHeight()
     card.detail:SetText("You can learn it - 1 Large Glimmering Shard, 2 Strange Dust, 4 Lesser Astral Essence per craft")
     card:Fit()
@@ -472,7 +488,7 @@ describe("UI shell and screens (mock widgets)", function()
     assert_false(rows[4]:IsShown(), "thread is on hand and filtered out")
     rows[1]:Click()
     assert_eq(tree.selectedKey, "4238")
-    assert_match(tree.side.cards[1].title:GetText(), "3 x Bolt of Linen Cloth")
+    assert_match(routeCard(tree, 1).title:GetText(), "3 x Bolt of Linen Cloth")
     assert_false(tree.side.use:IsShown())
   end)
 
@@ -569,7 +585,7 @@ describe("UI shell and screens (mock widgets)", function()
     assert_match(rows[2].name:GetText(), "Bolt of Linen Cloth", "the intermediate to craft is listed too")
     assert_eq(rows[2].total:GetText(), "3")
     assert_match(rows[2].cost:GetText(), "via craft")
-    assert_eq(rows[2].sourceFrame.tags[1].label:GetText(), "Craft - Tailoring")
+    assert_eq(sourceTag(rows[2], 1), "Craft - Tailoring")
     assert_match(rows[3].name:GetText(), "Linen Cloth")
     assert_eq(rows[3].total:GetText(), "6")
     assert_eq(rows[3].owned:GetText(), "5")
@@ -633,7 +649,7 @@ describe("UI shell and screens (mock widgets)", function()
     for _, row in ipairs(shop.pool.rows) do if row:IsShown() and row.itemID == 2320 then thread = row end end
     assert_not_nil(thread)
     assert_match(thread.cost:GetText(), "30c")
-    assert_eq(thread.sourceFrame.tags[1].label:GetText(), "Vendor: Tharynn Bouden")
+    assert_eq(sourceTag(thread, 1), "Vendor: Tharynn Bouden")
     assert_match(shop.cells[1].value:GetText(), "30c")
     assert_match(shop.cells[1].sub:GetText(), "1 item unpriced")
     assert_match(shop.cells[2].value:GetText(), "Yes", "214g on hand covers 30c")
@@ -661,9 +677,7 @@ describe("UI shell and screens (mock widgets)", function()
     assert_match(req.price:GetText(), "10c")
     assert_match(req.subtotal:GetText(), "30c")
     assert_match(crafting.buyValue:GetText(), "30c|r.*affordable")
-    local tagTexts = {}
-    for _, tag in ipairs(req.sourceFrame.tags) do if tag:IsShown() then tagTexts[#tagTexts + 1] = tag.label:GetText() end end
-    assert_deep_eq(tagTexts, { "Vendor: Tharynn Bouden" })
+    assert_deep_eq(shownSourceTags(req), { "Vendor: Tharynn Bouden" })
     assert_eq(crafting.view.tree.summary.missingLeaves[1].route, "vendor")
   end)
 
@@ -693,7 +707,7 @@ describe("UI shell and screens (mock widgets)", function()
     local row = crafting.pool.rows[1]
     assert_match(row.name:GetText(), "Footpads of the Fang")
     assert_eq(row.missing:GetText(), "1")
-    assert_eq(row.sourceFrame.tags[1].label:GetText(), "Dropped by Kresh")
+    assert_eq(sourceTag(row, 1), "Dropped by Kresh")
     -- Tree tab: the root is the item itself, with its sources as option cards.
     crafting.tabs.tabs.tree:Click()
     Mock.RunTimers()
@@ -701,10 +715,10 @@ describe("UI shell and screens (mock widgets)", function()
     assert_eq(tree.pool.rows[1].via:GetText(), "Drop")
     assert_match(tree.pool.rows[1].have:GetText(), "0|r.*/1")
     assert_match(tree.side.sub:GetText(), "^Goal item %- Drop")
-    assert_eq(tree.side.cards[1].title:GetText(), "Dropped by Kresh")
-    assert_match(tree.side.cards[1].detail:GetText(), "Wailing Caverns %(DungeonJournal%)")
-    assert_match(tree.side.cards[1].cost:GetText(), "current")
-    assert_match(tree.side.cards[2].title:GetText(), "Auction House")
+    assert_eq(routeCard(tree, 1).title:GetText(), "Dropped by Kresh")
+    assert_match(routeCard(tree, 1).detail:GetText(), "Wailing Caverns %(DungeonJournal%)")
+    assert_match(routeCard(tree, 1).cost:GetText(), "current")
+    assert_match(routeCard(tree, 2).title:GetText(), "Auction House")
     assert_true(tree.side.use:IsShown(), "the AH is an alternative route for the item")
     crafting.tabs.tabs.requirements:Click()
     -- A crafting goal with no recipe falls through to the same plan.

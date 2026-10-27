@@ -147,7 +147,11 @@ function Widget:RegisterEvent(event)
 end
 function Widget:UnregisterEvent(event) self.events[event] = nil end
 function Widget:IsEventRegistered(event) return self.events[event] == true end
-function Widget:CreateFontString(name, _, template) return newWidget("FontString", name, self, template) end
+function Widget:CreateFontString(name, layer, template)
+  local fontString = newWidget("FontString", name, self, template)
+  fontString.layer = layer or "ARTWORK"
+  return fontString
+end
 function Widget:CreateTexture(name, layer)
   local texture = newWidget("Texture", name, self)
   texture.layer = layer or "ARTWORK"
