@@ -36,12 +36,13 @@ end
 
 local function passResults(ok, ...)
   if ok then return ... end
+  if ns.Log then ns.Log.Debug("Client call failed: %s", tostring((...))) end
   return nil
 end
 
 -- Calls `fn` when it is a function and returns all of its results; returns
--- nil when `fn` is missing or raises. For client APIs that may be absent or
--- throw on some builds.
+-- nil when `fn` is missing or raises (a raise shows in debug mode only). For
+-- client APIs that may be absent or throw on some builds.
 function Util.SafeCall(fn, ...)
   if type(fn) ~= "function" then return nil end
   return passResults(pcall(fn, ...))
