@@ -549,11 +549,14 @@ goals on load and reports the count.
 
 ## Extension points
 
-- **New goal types**: add an entry to `GoalModel.Types` and a validator, then
-  a branch in `Planner.Evaluate` (or a per-type planner table). Screens are
-  declared in `MainFrame.Nav`; `MainFrame.OpenGoal` maps a goal type to
-  the screen that plans it (attunements, quests, reputations), everything
-  else (items, recipes, skills, enchants) opens on Crafting.
+- **New goal types**: add an entry to `GoalModel.Types` (label, badge,
+  targetKind, and when they apply `screen`, `amount`, `title`, `name`) and a
+  validator; register its evaluator in `EVALUATORS` (Planner.lua), its done
+  check in `DONE_CHECKS` and its toast in `ANNOUNCEMENTS`
+  (GoalCompletion.lua), and a `Find*Goal` / `Add*Goal` pair in GoalService
+  over `findGoal`, `reuseGoal` and `createGoal`. `MainFrame.OpenGoal` and
+  the Crafting screen send a type with a `screen` there; everything else
+  (items, recipes, skills, enchants) opens on Crafting.
 - **Type-ahead**: `GoalService.Suggest(kind, text, limit)` returns hits
   `{ kind, text, meta, add(quantity) }` for one goal kind or "all";
   `MainFrame.ShowSuggestions(box, hits, { quantity, onAdd })` renders the

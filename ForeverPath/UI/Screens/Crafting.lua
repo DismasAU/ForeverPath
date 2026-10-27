@@ -181,13 +181,6 @@ local HEADER_COLUMNS = {
   { "Need", COLUMNS.need, "RIGHT" },
 }
 
--- Goal types planned on another screen: { empty-state title, screen name }.
-local ELSEWHERE = {
-  COMPLETE_ATTUNEMENT = { "Attunement goal", "Attunements" },
-  COMPLETE_QUEST = { "Quest goal", "Quests" },
-  REACH_REPUTATION = { "Reputation goal", "Reputations" },
-}
-
 local TAB_TEXT = {
   notes = { "Notes", "Per-goal notes arrive in a later version." },
 }
@@ -684,9 +677,10 @@ local function Create(parent)
       self:ShowEmpty("No goal selected", "Add a crafting goal from My Goals or the search box, then pick it here.")
       return
     end
-    local elsewhere = ELSEWHERE[goal.type]
-    if elsewhere then
-      self:ShowEmpty(elsewhere[1], string.format("%s is planned on the %s screen.", ns.GoalService.Name(goal), elsewhere[2]))
+    -- Goal types planned on their own screen (GoalModel.Types[type].screen).
+    local def = ns.GoalModel.Types[goal.type]
+    if def and def.screen then
+      self:ShowEmpty(def.badge .. " goal", string.format("%s is planned on the %s screen.", ns.GoalService.Name(goal), ns.UI.Screens[def.screen].label))
       return
     end
     for _, widget in ipairs(chrome) do widget:Show() end

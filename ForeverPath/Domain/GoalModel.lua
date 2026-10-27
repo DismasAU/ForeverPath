@@ -30,7 +30,8 @@ local function standingLabel(target)
   return GoalModel.StandingLabels[target.standing or 0] or "?"
 end
 
--- Per goal type: label and badge; targetKind; amount, the target field the
+-- Per goal type: label and badge; targetKind; screen, the UI screen that
+-- plans it when that is not Crafting; amount, the target field the
 -- goal's stepper edits and what it is called (nil: nothing to count);
 -- title(target, nameLookup) and name(target, nameLookup) when the generic
 -- "<label>: <target.name>" / target.name does not fit.
@@ -43,12 +44,12 @@ GoalModel.Types = {
     amount = { field = "quantity", label = "Quantity" },
     title = function(t, lookup) return string.format("Obtain %dx %s", t.quantity or 1, itemName(t, lookup)) end,
     name = itemName },
-  COMPLETE_QUEST = { label = "Complete quest", badge = "Quest", targetKind = "quest" },
-  REACH_REPUTATION = { label = "Reach reputation", badge = "Reputation", targetKind = "faction",
+  COMPLETE_QUEST = { label = "Complete quest", badge = "Quest", targetKind = "quest", screen = "quests" },
+  REACH_REPUTATION = { label = "Reach reputation", badge = "Reputation", targetKind = "faction", screen = "reputations",
     title = function(t) return string.format("Reach %s with %s", standingLabel(t), t.name or ("faction " .. tostring(t.factionID))) end,
     name = function(t) return string.format("%s - %s", t.name or ("Faction " .. tostring(t.factionID)), standingLabel(t)) end },
   LEARN_RECIPE = { label = "Learn recipe", badge = "Recipe", targetKind = "recipe" },
-  COMPLETE_ATTUNEMENT = { label = "Complete attunement", badge = "Attunement", targetKind = "attunement" },
+  COMPLETE_ATTUNEMENT = { label = "Complete attunement", badge = "Attunement", targetKind = "attunement", screen = "attunements" },
   REACH_SKILL = { label = "Reach profession skill", badge = "Skill", targetKind = "skill",
     amount = { field = "rank", label = "Target skill" },
     title = function(t) return string.format("Reach %s %d", t.professionName or "skill", t.rank or 0) end,
