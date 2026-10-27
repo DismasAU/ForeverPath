@@ -185,6 +185,21 @@ end
 
 -- Requirement recorded for a recipe spell, else the classic trainer data
 -- (classic = true), or nil.
+local function str(value)
+  return type(value) == "string" and value or nil
+end
+
+-- A trainer record from another player's import, rebuilt field by field so
+-- nothing but the expected strings and numbers gets through.
+local function sharedRecord(entry)
+  return {
+    trainer = str(entry.trainer), zone = str(entry.zone), subzone = str(entry.subzone), skill = str(entry.skill),
+    rank = tonumber(entry.rank), cost = tonumber(entry.cost),
+    mapID = tonumber(entry.mapID), x = tonumber(entry.x), y = tonumber(entry.y),
+    shared = true,
+  }
+end
+
 function TrainerProvider.Requirement(spellID)
   local store = TrainerProvider.Store()
   local recorded = store and store[spellID] or nil
@@ -194,7 +209,7 @@ function TrainerProvider.Requirement(spellID)
   if ns.Share then
     ns.Share.EachImported("trainers", function(_, trainers)
       local entry = trainers[spellID]
-      if not shared and type(entry) == "table" then shared = entry end
+      if not shared and type(entry) == "table" then shared = sharedRecord(entry) end
     end)
   end
   if shared then return shared end

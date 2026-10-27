@@ -192,8 +192,9 @@ function Recipes.ApplyTrainer(recipe)
   if not ok or type(record) ~= "table" then return recipe end
   recipe.trainer = { name = record.trainer, zone = record.zone, subzone = record.subzone, cost = record.cost, skill = record.skill, rank = record.rank,
     classic = record.classic, mapID = record.mapID, x = record.x, y = record.y }
-  if tonumber(record.rank) and record.rank > (recipe.skill.min or 0) then
-    recipe.skill.min = record.rank
+  local rank = tonumber(record.rank)
+  if rank and rank > (recipe.skill.min or 0) then
+    recipe.skill.min = rank
     recipe.skill.source = "trainer"
   end
   return recipe
