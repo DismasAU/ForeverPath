@@ -25,7 +25,7 @@ describe("Planner", function()
         GetRecipe = function(id, refresh) return recipe, true end,
       },
       inventory = { GetCounts = function(id) return { bags = 1, bank = nil, bankSource = "none" } end },
-      data = { Lookup = function() return nil end },
+      catalogue = { Lookup = function() return nil end },
       settings = { includeBank = true },
     }
     for k, v in pairs(overrides or {}) do d[k] = v end

@@ -94,7 +94,7 @@ Planner.TRAIN_WINDOW = 25
 function Planner.Trainable(professionName, window, deps)
   deps = deps or Planner.DefaultDeps()
   window = window or Planner.TRAIN_WINDOW
-  local data = deps.data
+  local data = deps.catalogue
   local profession = deps.profession
   local out = {}
   if not (data and data.ForProfession and profession and profession.GetCharacterProfessions) then return out end
@@ -309,7 +309,7 @@ end
 -- unknown) and reagent count.
 function Planner.SkillCandidates(professionID, deps)
   deps = deps or Planner.DefaultDeps()
-  local Recipes = deps.data
+  local Recipes = deps.catalogue
   local out = {}
   if not Recipes or not Recipes.ForProfession or not Recipes.Get then return out end
   local priceOf = deps.price and deps.price.GetPrice or nil
@@ -393,7 +393,7 @@ end
 -- craft nodes are done for the points, so only their reagents are needed.
 function Planner.EvaluateSkill(view, goal, deps)
   local target = goal.target
-  local Recipes = deps.data
+  local Recipes = deps.catalogue
   local professionID = target.professionID
   if (not professionID or professionID == 0) and Recipes and Recipes.ProfessionID then
     professionID = Recipes.ProfessionID(target.professionName)

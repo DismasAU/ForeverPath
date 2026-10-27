@@ -6,7 +6,7 @@
 --                    FindRecipesForItem(itemID) -> { { recipe = r, learned = bool }, ... },
 --                    GetRecipe(recipeID, refresh) -> recipe
 --   deps.inventory   GetCounts(itemID) -> { bags, bank, bankSource, bankScannedAt }
---   deps.data        Lookup(itemID) -> static recipe hints (future)
+--   deps.catalogue   the recipe catalogue (Data/Recipes.lua): Lookup(itemID) -> static recipe hints, Get, ForProfession, Sources ...
 --   deps.settings    { includeBank = bool }
 --   deps.ledger      Allocation ledger shared across goals (EvaluateAll creates one)
 --   deps.characters  Sources(itemID) -> alt hints (optional)
@@ -34,7 +34,7 @@ function Planner.DefaultDeps()
     item = ns.ItemProvider,
     profession = ns.ProfessionProvider,
     inventory = ns.InventoryProvider,
-    data = ns.Data.Recipes,
+    catalogue = ns.Data.Recipes,
     characters = ns.CharacterProvider,
     sources = ns.SourceProvider,
     price = ns.PriceProvider,
@@ -89,7 +89,7 @@ local function inventoryContext(deps)
       includeAlts = includeAlts,
       sources = Planner.SourceFinder(deps),
       crafters = deps.characters and deps.characters.WithProfession or nil,
-      soulbound = deps.data and deps.data.IsSoulbound or nil,
+      soulbound = deps.catalogue and deps.catalogue.IsSoulbound or nil,
       isRaw = deps.sources and deps.sources.IsRawMaterial or nil,
     }
   end
@@ -107,8 +107,8 @@ function Planner.Candidates(itemID, deps)
       if candidate.recipe and candidate.recipe.recipeID then seen[candidate.recipe.recipeID] = true end
     end
   end
-  if deps.data and deps.data.Lookup then
-    local hints = deps.data.Lookup(itemID)
+  if deps.catalogue and deps.catalogue.Lookup then
+    local hints = deps.catalogue.Lookup(itemID)
     if type(hints) == "table" then
       for _, hint in ipairs(hints) do
         if not (hint.recipeID and seen[hint.recipeID]) then
@@ -188,7 +188,7 @@ local function evaluate(goal, deps)
   view.candidates = candidates
   local learned, unlearned = chooseCandidate(candidates)
   local obtain = goal.type == "OBTAIN_ITEM"
-  local catalogue = deps.data and deps.data.IsAvailable and deps.data.IsAvailable() or false
+  local catalogue = deps.catalogue and deps.catalogue.IsAvailable and deps.catalogue.IsAvailable() or false
 
   if #candidates == 0 and not obtain and not catalogue and not deps.profession.HasScanData() then
     view.status = Status.RECIPES_NOT_SCANNED
@@ -308,7 +308,7 @@ end
 
 -- A recipe by spell id: the catalogue first, then a recorded profession window.
 function Planner.RecipeByID(spellID, deps)
-  local data, profession = deps.data or {}, deps.profession or {}
+  local data, profession = deps.catalogue or {}, deps.profession or {}
   local recipe = Log.Try(data.Get, spellID)
   if type(recipe) ~= "table" then recipe = Log.Try(data.GetCombine, spellID) end
   if type(recipe) ~= "table" then recipe = Log.Try(profession.GetRecipe, spellID, false) end
@@ -381,9 +381,9 @@ function Planner.StepItemsPlan(tree, complete)
 end
 
 -- 1 bind on pickup, 2 on equip, 3 on use, 4 quest item; nil when unknown.
--- The client's answer (deps.item) first, then the catalogue's (deps.data).
+-- The client's answer (deps.item) first, then the catalogue's (deps.catalogue).
 function Planner.BindType(itemID, deps)
-  local item, data = deps and deps.item, deps and deps.data
+  local item, data = deps and deps.item, deps and deps.catalogue
   local bind = item and item.BindType and Log.Try(item.BindType, itemID)
   if bind then return bind end
   return data and data.ItemBind and data.ItemBind(itemID) or nil
@@ -574,7 +574,7 @@ end
 
 -- Source hints for the resolver: static data plus alt characters.
 function Planner.SourceFinder(deps)
-  local static = deps.data and deps.data.Sources
+  local static = deps.catalogue and deps.catalogue.Sources
   local characters = deps.characters and deps.characters.Sources
   local sources = deps.sources and deps.sources.Sources
   local finders = {}

@@ -198,7 +198,7 @@ inventory.GetCounts(itemID) -> { bags, bank|nil, bankSource = "live"|"cached"|"c
 characters.Sources(itemID)  -> { { kind = "alt"|"altcraft", name, count, label, detail } }
 sources.Sources(itemID)     -> { { kind = "vendor"|"drop"|"gather", name, price, label, detail, ... } }  (SourceProvider)
 price.GetPrice(itemID)      -> { copper, source, timestamp, kind, vendor? } | nil   (cheapest source; unknown is nil, never 0)
-data.Lookup(itemID)         -> static recipes or nil
+catalogue.Lookup(itemID)    -> static recipes or nil   (the recipe catalogue, Data/Recipes.lua)
 attune / quest / reputation -> AttuneProvider, QuestProvider, ReputationProvider (their own evaluators' needs)
 ```
 
@@ -618,7 +618,7 @@ count.
   sets `Recipes.trainerLookup`; `Recipes.ApplyTrainer` raises `skill.min`
   to the recorded rank and attaches `recipe.trainer` when a recipe is
   decoded, and `Recipes.Invalidate` drops decoded recipes after a new visit.
-- **Source hints**: `Planner.SourceFinder` chains `deps.data.Sources` (static
+- **Source hints**: `Planner.SourceFinder` chains `deps.catalogue.Sources` (static
   table, still empty), `SourceProvider.Sources` (vendors, DungeonJournal,
   AtlasLoot, quest rewards, heuristics) and `CharacterProvider.Sources`
   (alts). The resolver picks the default route by
