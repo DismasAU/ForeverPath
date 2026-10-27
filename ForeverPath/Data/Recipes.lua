@@ -188,8 +188,8 @@ Recipes.trainerLookup = nil
 function Recipes.ApplyTrainer(recipe)
   local lookup = Recipes.trainerLookup
   if type(lookup) ~= "function" then return recipe end
-  local ok, record = pcall(lookup, recipe.recipeID)
-  if not ok or type(record) ~= "table" then return recipe end
+  local record = ns.Log.Try(lookup, recipe.recipeID)
+  if type(record) ~= "table" then return recipe end
   recipe.trainer = { name = record.trainer, zone = record.zone, subzone = record.subzone, cost = record.cost, skill = record.skill, rank = record.rank,
     classic = record.classic, mapID = record.mapID, x = record.x, y = record.y }
   local rank = tonumber(record.rank)
