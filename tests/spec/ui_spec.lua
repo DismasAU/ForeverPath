@@ -62,7 +62,7 @@ describe("UI shell and screens (mock widgets)", function()
     assert_eq(ns2.UI.MainFrame.currentScreen, "quests")
   end)
 
-  it("keeps the header divider clear of the tagline and hover fills under text", function()
+  it("keeps the header divider clear of the tagline and the character lines inside the pill", function()
     -- Divider sits after the wider of title and tagline (the caps tagline here).
     local _, relativeTo, _, x = frame.brandDivider:GetPoint(1)
     assert_eq(relativeTo, frame.title)
@@ -71,10 +71,11 @@ describe("UI shell and screens (mock widgets)", function()
     -- Character lines are bounded by the pill so they truncate, not overlap.
     local _, charRight = frame.charMeta:GetPoint(2)
     assert_eq(charRight, frame.pill)
+  end)
 
-    -- Goal switcher rows: hover fill lives on the BACKGROUND layer and only
-    -- shows while the mouse is over the row (an opaque HIGHLIGHT texture
-    -- would cover the text).
+  it("fills goal switcher rows on hover, under their text", function()
+    -- The hover fill lives on the BACKGROUND layer and only shows while the
+    -- mouse is over the row (an opaque HIGHLIGHT texture would cover the text).
     ns.GoalService.AddCraftGoal(2996, 1)
     Mock.RunTimers()
     local menu = MainFrame.OpenGoalSwitcher(frame.pill)
@@ -88,8 +89,9 @@ describe("UI shell and screens (mock widgets)", function()
     row:Fire("OnLeave")
     assert_false(row.hoverFill:IsShown())
     ns.UI.Widgets.CloseMenu()
+  end)
 
-    -- Same for header search suggestions.
+  it("fills header search suggestions on hover, under their text", function()
     frame.search:SetText("lin")
     frame.search:Fire("OnTextChanged", true)
     local suggestion = frame.suggestions.rows[1]
@@ -377,17 +379,21 @@ describe("UI shell and screens (mock widgets)", function()
     assert_eq(ns.chardb.tracker.x, -20)
   end)
 
-  it("renders the dependency tree tab with routes, selection and filters", function()
+  -- A Linen Bag goal on the Crafting screen's Dependency Tree tab.
+  local function openTree()
     ns.GoalService.AddCraftGoal(4238, 1)
     MainFrame.ShowScreen("crafting")
     Mock.RunTimers()
     local crafting = screen("crafting")
     crafting.tabs.tabs.tree:Click()
-    local tree = crafting.treeView
+    return crafting, crafting.treeView, crafting.treeView.pool.rows
+  end
+
+  it("renders the dependency tree tab", function()
+    local crafting, tree, rows = openTree()
     assert_true(tree:IsShown())
     assert_false(crafting.table:IsShown())
     assert_false(crafting.sort:IsShown())
-    local rows = tree.pool.rows
     assert_match(rows[1].name:GetText(), "Linen Bag")
     assert_match(rows[1].note:GetText(), "1 craft")
     assert_match(rows[2].name:GetText(), "Bolt of Linen Cloth")
@@ -402,8 +408,10 @@ describe("UI shell and screens (mock widgets)", function()
     assert_eq(rows[4].badge.label:GetText(), "MISSING")
     assert_false(rows[5] and rows[5]:IsShown() or false)
     assert_match(tree.resolvedText:GetText(), "0 of 3 dependencies resolved")
+  end)
 
-    -- Default selection is the first unresolved direct reagent.
+  it("selects the first unresolved reagent and fits route cards to their text", function()
+    local _, tree = openTree()
     assert_eq(tree.selectedKey, "4238>2996")
     assert_match(tree.side.name:GetText(), "Bolt of Linen Cloth")
     assert_match(tree.side.count:GetText(), "/ 3")
@@ -427,13 +435,15 @@ describe("UI shell and screens (mock widgets)", function()
     assert_true(card:GetHeight() > oneLine, "and the card grows to show all of it")
     assert_eq(tree.side.use.label:GetText(), "Use buying route")
     assert_false(tree.side.reset:IsShown())
+  end)
 
-    -- Switch the bolt to the buying route: the branch collapses to a leaf.
+  it("switches a reagent to the buying route and back", function()
+    local _, tree, rows = openTree()
     tree.side.use:Click()
     Mock.RunTimers()
     assert_eq(ns.GoalService.GetSelected().routes[2996], "buy")
     assert_match(rows[2].via:GetText(), "AH")
-    assert_match(rows[3].name:GetText(), "Coarse Thread")
+    assert_match(rows[3].name:GetText(), "Coarse Thread", "the bought bolt's branch collapses to a leaf")
     assert_false(rows[4]:IsShown())
     assert_true(tree.side.reset:IsShown())
     assert_eq(tree.side.use.label:GetText(), "Use crafting route")
@@ -442,8 +452,10 @@ describe("UI shell and screens (mock widgets)", function()
     Mock.RunTimers()
     assert_nil(ns.GoalService.GetSelected().routes)
     assert_true(rows[4]:IsShown())
+  end)
 
-    -- Collapse, expand all, unresolved filter, selecting the root.
+  it("collapses and expands branches, filters to unresolved and selects the root", function()
+    local _, tree, rows = openTree()
     rows[2].chevron:Click()
     assert_true(tree.collapsed["4238>2996"])
     assert_false(rows[4]:IsShown())
@@ -462,8 +474,10 @@ describe("UI shell and screens (mock widgets)", function()
     assert_eq(tree.selectedKey, "4238")
     assert_match(tree.side.cards[1].title:GetText(), "3 x Bolt of Linen Cloth")
     assert_false(tree.side.use:IsShown())
+  end)
 
-    -- The requirements tab still works and the tree hides.
+  it("hides the tree when the Requirements tab comes back", function()
+    local crafting, tree = openTree()
     crafting.tabs.tabs.requirements:Click()
     assert_false(tree:IsShown())
     assert_true(crafting.table:IsShown())
