@@ -657,7 +657,7 @@ local function Create(parent)
     end
     self.pool:HideFrom(#materials + 1)
     scroll:SetContentHeight(#materials * ROW)
-    local compare = ns.CraftWise.Compare(view.fullTree or view.tree, { priceOf = ns.PriceProvider.GetPrice, marketOf = ns.PriceProvider.GetMarket })
+    local compare = ns.CraftWise.Compare(view.fullTree or view.tree, { prices = ns.PriceProvider })
     if compare and compare.hybrid.cost then
       routeText:SetText("CraftWise route: " .. Widgets.Money(compare.hybrid.cost, true) .. (compare.hybrid.unknown > 0 and Theme.ColorText("text3", string.format(" (+%d unpriced)", compare.hybrid.unknown)) or ""))
       Widgets.SetTextColor(routeText, C.text)

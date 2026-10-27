@@ -466,7 +466,7 @@ local function Create(parent)
         if v and v.tree then goal, view = g, v break end
       end
     end
-    local result = view and ns.CraftWise.Compare(view.fullTree or view.tree, { priceOf = ns.PriceProvider.GetPrice, marketOf = ns.PriceProvider.GetMarket }) or nil
+    local result = view and ns.CraftWise.Compare(view.fullTree or view.tree, { prices = ns.PriceProvider }) or nil
     local panel = craftwise
     panel.goalID = goal and goal.id or nil
     panel.result = result

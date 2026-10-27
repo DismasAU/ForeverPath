@@ -34,7 +34,7 @@ describe("CraftWise", function()
 
   it("compares buying, crafting and the hybrid per component", function()
     local prices = { [CLOTH] = 10, [THREAD] = 20, [BOLT] = 15, [BAG] = 500 }
-    local result = CW.Compare(tree({}), { priceOf = pricer(prices) })
+    local result = CW.Compare(tree({}), { priceOf = pricer(prices), prices = ns.PriceProvider })
     assert_eq(result.buy.cost, 500, "buy the finished bag")
     assert_eq(result.craft.cost, 120, "6 cloth + 3 thread")
     assert_eq(result.hybrid.cost, 105, "3 bolts bought at 15c beat crafting them from 60c of cloth")

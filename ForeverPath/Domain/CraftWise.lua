@@ -46,7 +46,7 @@ local function evaluate(node, ctx, rows, depth)
   end
   local info = node.itemID and ctx.priceOf(node.itemID) or nil
   row.price = info
-  row.freshness = info and ns.PriceProvider and ns.PriceProvider.Freshness(info, ctx.now) or nil
+  row.freshness = info and ctx.freshness(info, ctx.now) or nil
   -- A soulbound item has no market, whatever a price source says; a craft
   -- done for skill points cannot be bought at all.
   row.buy = (info and not node.soulbound and not node.forSkill) and info.copper * node.missing or nil
@@ -100,12 +100,24 @@ local function evaluate(node, ctx, rows, depth)
   return row
 end
 
--- opts: priceOf(itemID) -> priceInfo | nil, marketOf(itemID) (default priceOf), now
+local function none() return nil end
+
+-- opts: prices = a price source { GetPrice, GetMarket, Freshness,
+-- WorstFreshness } (PriceProvider in the addon); priceOf(itemID) and
+-- marketOf(itemID) override its lookups (marketOf defaults to priceOf); now.
+-- Without a source there is no price, and no freshness.
 function CraftWise.Compare(tree, opts)
   opts = opts or {}
   if type(tree) ~= "table" or type(tree.root) ~= "table" then return nil, "tree required" end
-  local ctx = { priceOf = opts.priceOf or function() return nil end, now = opts.now }
-  local marketOf = opts.marketOf or ctx.priceOf
+  local prices = opts.prices or {}
+  local ctx = {
+    priceOf = opts.priceOf or prices.GetPrice or none,
+    freshness = prices.Freshness or none,
+    worstFreshness = prices.WorstFreshness,
+    now = opts.now,
+  }
+  -- An explicit priceOf also stands in for the market, as before.
+  local marketOf = opts.marketOf or (not opts.priceOf and prices.GetMarket) or ctx.priceOf
   local rows = {}
   local root = tree.root
   local rootRow = evaluate(root, ctx, rows, 0)
@@ -121,7 +133,7 @@ function CraftWise.Compare(tree, opts)
   local market = root.itemID and marketOf(root.itemID) or nil
   result.buy.price = market
   result.buy.cost = market and market.copper * wanted or nil
-  result.buy.freshness = market and ns.PriceProvider and ns.PriceProvider.Freshness(market, ctx.now) or nil
+  result.buy.freshness = market and ctx.freshness(market, ctx.now) or nil
   result.buy.listings = market and market.listings or nil
   result.buy.avg7 = market and market.avg7 and market.avg7 * wanted or nil
 
@@ -168,7 +180,7 @@ function CraftWise.Compare(tree, opts)
         result.plan[node.itemID] = row.choice == "craft" and "craft" or (row.choice == "buy" or row.choice == "vendor") and "buy" or nil
       end
       if row.freshness and row.choice ~= "owned" and row.choice ~= "craft" then
-        worst = ns.PriceProvider and ns.PriceProvider.WorstFreshness(worst, row.freshness) or worst
+        worst = ctx.worstFreshness and ctx.worstFreshness(worst, row.freshness) or worst
       end
     end
     -- Only descend into components that are crafted in the hybrid plan.
