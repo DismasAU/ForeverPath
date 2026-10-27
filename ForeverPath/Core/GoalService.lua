@@ -715,15 +715,16 @@ function GoalService.Suggest(kind, text, limit)
   return out
 end
 
+-- Returns the removed goal, or nil, reason.
 function GoalService.Remove(id)
   local store = GoalService.Store()
-  if not store then return nil end
+  if not store then return nil, "not loaded" end
   return store:Remove(id)
 end
 
 function GoalService.Select(id)
   local store = GoalService.Store()
-  if not store then return false end
+  if not store then return false, "not loaded" end
   return store:Select(id)
 end
 

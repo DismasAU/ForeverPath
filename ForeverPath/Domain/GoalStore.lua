@@ -126,7 +126,7 @@ end
 function GoalStore:Remove(id)
   local goal = self.storage.goals[id]
   if not goal then
-    return nil
+    return nil, "no such goal"
   end
   self.storage.goals[id] = nil
   if self.storage.selectedGoalId == id then
@@ -140,7 +140,7 @@ end
 
 function GoalStore:Select(id)
   if id ~= nil and not self.storage.goals[id] then
-    return false
+    return false, "no such goal"
   end
   if self.storage.selectedGoalId == id then
     return true
