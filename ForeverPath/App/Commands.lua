@@ -506,7 +506,7 @@ function handlers.prices(rest)
     return
   end
   Log.Print("Prices for %s:", ns.ItemProvider.GetName(itemID))
-  for _, line in ipairs(ns.PriceProvider.Describe(itemID, Util.Money)) do
+  for _, line in ipairs(ns.PriceProvider.Describe(itemID)) do
     Log.output("  " .. line)
   end
 end

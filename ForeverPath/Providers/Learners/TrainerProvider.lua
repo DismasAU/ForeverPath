@@ -220,14 +220,14 @@ function TrainerProvider.Requirement(spellID)
 end
 
 -- "Georgio Bolero (Stormwind City), needs Tailoring 125, 1g"
-function TrainerProvider.Label(spellID, moneyFn)
+function TrainerProvider.Label(spellID)
   local record = TrainerProvider.Requirement(spellID)
   if not record then return nil end
   local where = record.zone or "?"
   if record.subzone then where = where .. " - " .. record.subzone end
   local text = string.format("%s (%s), needs %s %d", record.trainer or "trainer", where, record.skill or "skill", record.rank or 0)
   if record.cost and record.cost > 0 then
-    text = text .. ", " .. (moneyFn and moneyFn(record.cost) or (record.cost .. "c"))
+    text = text .. ", " .. Util.Money(record.cost)
   end
   if record.classic then text = text .. " (classic data)" end
   return text

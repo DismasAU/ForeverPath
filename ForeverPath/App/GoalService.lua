@@ -813,10 +813,7 @@ function GoalService.ShoppingList()
   end
   return ns.ShoppingList.Build(entries, {
     included = GoalService.InShopping, bought = state and state.bought or {}, nameOf = ItemProvider.GetName, sort = state and state.sort,
-    priceOf = function(itemID)
-      local info = ns.PriceProvider.GetPrice(itemID)
-      return info and info.copper or nil
-    end,
+    priceOf = ns.PriceProvider.GetPrice,
     gold = ns.CharacterProvider.AccountGold(),
   })
 end

@@ -146,10 +146,10 @@ describe("TrainerProvider", function()
     assert_eq(stepRow.cost, 500)
     assert_eq(stepRow.affordable, "now")
     assert_eq(list.cost.remaining, 500, "the training cost is part of what you pay")
-    local lines = ns.ShoppingList.Lines(list, ns.ItemProvider.GetName, nil, function(c) return c .. "c" end)
+    local lines = ns.ShoppingList.Lines(list, ns.ItemProvider.GetName)
     local trainLine
     for _, line in ipairs(lines) do if line:find("Train Bolt") then trainLine = line end end
-    assert_eq(trainLine, "  Train Bolt of Woolen Cloth - Train - Georgio Bolero (Stormwind City) - 500c")
+    assert_eq(trainLine, "  Train Bolt of Woolen Cloth - Train - Georgio Bolero (Stormwind City) - " .. ns.Util.Money(500))
     local overview = ns.Overview.Build({ { goal = goal, view = view } }, { nameOf = ns.ItemProvider.GetName })
     assert_eq(#overview.missing, 1, "steps are not missing materials")
     assert_eq(overview.missing[1].itemID, 2592)

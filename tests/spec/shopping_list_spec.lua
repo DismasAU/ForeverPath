@@ -151,7 +151,7 @@ describe("ShoppingList", function()
       if id == THREAD then return { { kind = "vendor", name = "Tharynn", price = 10, label = "Buy from Tharynn" } } end
       return {}
     end
-    local list = SL.Build(entries({ [CLOTH] = 5 }, {}, sources), { nameOf = nameOf, priceOf = function(id) return id == THREAD and 10 or nil end })
+    local list = SL.Build(entries({ [CLOTH] = 5 }, {}, sources), { nameOf = nameOf, priceOf = function(id) return id == THREAD and { copper = 10 } or nil end })
     local byItem = {}
     for _, r in ipairs(list.rows) do byItem[r.itemID] = r end
     assert_eq(byItem[THREAD].category, "vendor")
@@ -187,7 +187,7 @@ describe("ShoppingList", function()
 
   it("tells whether the remaining cost is affordable now, with alts' gold, or not at all", function()
     local prices = { [THREAD] = 10, [CLOTH] = 4 }
-    local priceOf = function(id) return prices[id] end
+    local priceOf = function(id) return prices[id] and { copper = prices[id] } or nil end
     local list = SL.Build(entries({}, {}), { nameOf = nameOf, priceOf = priceOf, gold = { current = 100, account = 160 } })
     -- bag: 3 thread (30c) + bolts crafted from 6 cloth; bolt goal: 2 cloth. 8 cloth = 32c. Total 62c.
     assert_eq(list.cost.known, 62)
@@ -197,7 +197,8 @@ describe("ShoppingList", function()
     assert_eq(aff.shortNow, 0)
     assert_eq(aff.altsGold, 60)
     for _, r in ipairs(list.rows) do if r.cost then assert_eq(r.affordable, "now") end end
-    assert_match(SL.AffordabilityText(aff), "^Affordable now: 62c of your 100c$")
+    local money = ns.Util.Money
+    assert_eq(SL.AffordabilityText(aff), "Affordable now: " .. money(62) .. " of your " .. money(100))
     assert_match(SL.Lines(list, nameOf)[2], "^  Cost: Affordable now")
     -- Only the account covers it.
     list = SL.Build(entries({}, {}), { nameOf = nameOf, priceOf = priceOf, gold = { current = 31, account = 100 } })
@@ -205,7 +206,7 @@ describe("ShoppingList", function()
     assert_eq(aff.status, "account")
     assert_eq(aff.shortNow, 31)
     assert_eq(aff.shortAccount, 0)
-    assert_match(SL.AffordabilityText(aff), "^Short by 31c on this character; alts hold 69c, so the account covers it$")
+    assert_eq(SL.AffordabilityText(aff), "Short by " .. money(31) .. " on this character; alts hold " .. money(69) .. ", so the account covers it")
     local byItem = {}
     for _, r in ipairs(list.rows) do byItem[r.itemID] = r end
     assert_eq(byItem[THREAD].affordable, "now", "30c fits in 31c")
@@ -215,10 +216,10 @@ describe("ShoppingList", function()
     aff = list.affordability
     assert_eq(aff.status, "no")
     assert_eq(aff.shortAccount, 42)
-    assert_match(SL.AffordabilityText(aff), "^Not affordable: short by 42c even with every character's gold$")
+    assert_eq(SL.AffordabilityText(aff), "Not affordable: short by " .. money(42) .. " even with every character's gold")
     for _, r in ipairs(list.rows) do if r.cost then assert_eq(r.affordable, "no") end end
     -- Bought rows no longer count; unpriced rows are mentioned; no gold = unknown.
-    list = SL.Build(entries({}, {}), { nameOf = nameOf, priceOf = function(id) return id == THREAD and 10 or nil end, bought = { [THREAD] = true }, gold = { current = 5 } })
+    list = SL.Build(entries({}, {}), { nameOf = nameOf, priceOf = function(id) return id == THREAD and { copper = 10 } or nil end, bought = { [THREAD] = true }, gold = { current = 5 } })
     assert_eq(list.cost.bought, 30)
     assert_eq(list.cost.remaining, 0)
     assert_match(SL.AffordabilityText(list.affordability), "^Nothing left to pay for %(1 item unpriced%)$")

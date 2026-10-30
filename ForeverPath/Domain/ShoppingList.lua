@@ -102,7 +102,7 @@ end
 -- opts.included(goal) -> bool (default ShoppingList.DefaultIncluded)
 -- opts.bought = { [itemID] = true }
 -- opts.nameOf(itemID)
--- opts.priceOf(itemID) -> copper per unit | nil (unknown)
+-- opts.priceOf(itemID) -> priceInfo { copper, ... } | nil (unknown), as PriceProvider.GetPrice and CraftWise
 -- opts.gold = { current = copper, account = copper } (optional; enables affordability)
 function ShoppingList.Build(entries, opts)
   opts = opts or {}
@@ -212,7 +212,8 @@ function ShoppingList.Build(entries, opts)
       result.units.reserved = result.units.reserved + r.reserved
       -- Estimated cost from the price boundary (vendor and AH prices); a
       -- train step costs what the trainer charges.
-      local unit = r.step and r.stepCost or (r.itemID and opts.priceOf and opts.priceOf(r.itemID)) or nil
+      local info = not r.step and r.itemID and opts.priceOf and opts.priceOf(r.itemID) or nil
+      local unit = r.step and r.stepCost or (type(info) == "table" and info.copper) or nil
       if type(unit) == "number" then
         r.unitPrice = unit
         r.cost = unit * r.missing
@@ -319,9 +320,9 @@ function ShoppingList.Filter(rows, category)
   return out
 end
 
--- One sentence on whether the remaining cost is payable. moneyFn formats copper.
-function ShoppingList.AffordabilityText(aff, moneyFn)
-  moneyFn = moneyFn or function(c) return tostring(c) .. "c" end
+-- One sentence on whether the remaining cost is payable.
+function ShoppingList.AffordabilityText(aff)
+  local moneyFn = ns.Util.Money
   if not aff or aff.status == "unknown" then return nil end
   local unpriced = aff.unpriced > 0 and string.format(" (%d item%s unpriced)", aff.unpriced, aff.unpriced == 1 and "" or "s") or ""
   if aff.remaining <= 0 then
@@ -339,8 +340,7 @@ function ShoppingList.AffordabilityText(aff, moneyFn)
 end
 
 -- Chat-ready lines. linkOf(itemID) may return an item link; falls back to the name.
--- moneyFn(copper) formats money for the cost line (optional).
-function ShoppingList.Lines(list, nameOf, linkOf, moneyFn)
+function ShoppingList.Lines(list, nameOf, linkOf)
   nameOf = nameOf or function(itemID) return "Item " .. tostring(itemID) end
   local lines = {}
   local goalNames = {}
@@ -350,7 +350,7 @@ function ShoppingList.Lines(list, nameOf, linkOf, moneyFn)
   lines[#lines + 1] = string.format("Shopping list (%d item%s for %s): %d of %d units in hand",
     #list.rows, #list.rows == 1 and "" or "s", #goalNames > 0 and table.concat(goalNames, ", ") or "no goals",
     list.units.owned, list.units.total)
-  local affordText = ShoppingList.AffordabilityText(list.affordability, moneyFn)
+  local affordText = ShoppingList.AffordabilityText(list.affordability)
   if affordText then
     lines[#lines + 1] = "  Cost: " .. affordText
   end
@@ -358,7 +358,7 @@ function ShoppingList.Lines(list, nameOf, linkOf, moneyFn)
     if r.step then
       lines[#lines + 1] = string.format("  %sTrain %s - %s%s", r.bought and "[done] " or "", r.name or "recipe",
         #r.sources > 0 and table.concat(r.sources, ", ") or "trainer",
-        r.cost and moneyFn and (" - " .. moneyFn(r.cost)) or "")
+        r.cost and (" - " .. ns.Util.Money(r.cost)) or "")
     else
       local label = linkOf and linkOf(r.itemID) or nameOf(r.itemID)
       lines[#lines + 1] = string.format("  %s%d x %s - %s%s", r.bought and "[bought] " or "", r.missing, label,

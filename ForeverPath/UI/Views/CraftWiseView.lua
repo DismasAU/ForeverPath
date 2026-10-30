@@ -108,7 +108,7 @@ local function createRow(content, index)
       local trainer = r.node.step.trainer
       lines[#lines + 1] = trainer and trainer.name and ("Train at " .. trainer.name .. (trainer.zone and (", " .. trainer.zone) or "")) or "Train at a profession trainer (not yet recorded)"
     elseif r.price then
-      for _, text in ipairs(ns.PriceProvider.Describe(r.itemID, function(c) return Widgets.Money(c, true) end)) do lines[#lines + 1] = text end
+      for _, text in ipairs(ns.PriceProvider.Describe(r.itemID)) do lines[#lines + 1] = text end
     else
       lines[#lines + 1] = "No price recorded: open a vendor that sells it, or scan the Auction House with Auctionator."
     end

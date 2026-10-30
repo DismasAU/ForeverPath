@@ -261,7 +261,7 @@ local function Create(parent)
     for _, line in ipairs(ShoppingList.Lines(list, ns.ItemProvider.GetName, function(itemID)
       local item = ns.ItemProvider.GetItem(itemID)
       return item and item.link or nil
-    end, function(copper) return Widgets.Money(copper, true) end)) do
+    end)) do
       ns.Log.output(line)
     end
     ns.UI.MainFrame.SetStatus("Shopping list printed to your chat frame.", "ok")

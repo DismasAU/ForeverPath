@@ -3,6 +3,12 @@
 -- Sources register themselves (vendor recorder in 0.6.0, Auctionator in
 -- 0.8.0). A lookup asks every source and returns the cheapest known price;
 -- the others are kept on the result so the UI can say "vendor 10c, AH 8c".
+-- Sources are ForeverPath modules, so they are called through Log.Try: a
+-- bug in one is logged instead of reading as "no price recorded".
+--
+--   source = { GetPrice(itemID) -> priceInfo | nil, IsAvailable() -> boolean (optional),
+--              market = true for an Auction House source, label = "Auctionator",
+--              Status() -> { installed, available, lastScan } (market sources) }
 --
 --   PriceProvider.IsAvailable() -> boolean
 --   PriceProvider.GetPrice(itemID) -> priceInfo | nil, reason
@@ -14,6 +20,7 @@
 local _, ns = ...
 
 local Util = ns.Util
+local Log = ns.Log
 
 local PriceProvider = {
   sources = {},
@@ -45,14 +52,26 @@ function PriceProvider.Source(name)
   return nil
 end
 
+local function available(source)
+  if not source.IsAvailable then return true end
+  return Log.Try(source.IsAvailable) == true
+end
+
 function PriceProvider.IsAvailable()
   for _, entry in ipairs(PriceProvider.sources) do
-    local ok, available = pcall(entry.source.IsAvailable or function() return true end)
-    if ok and available then
+    if available(entry.source) then
       return true
     end
   end
   return false
+end
+
+-- The first registered Auction House source (source.market), or nil.
+local function marketSource()
+  for _, entry in ipairs(PriceProvider.sources) do
+    if entry.source.market then return entry.source, entry.name end
+  end
+  return nil
 end
 
 -- Cheapest known price across sources; alternatives hold the rest.
@@ -60,8 +79,8 @@ function PriceProvider.GetPrice(itemID)
   local best
   local found = {}
   for _, entry in ipairs(PriceProvider.sources) do
-    local ok, info = pcall(entry.source.GetPrice, itemID)
-    if ok and type(info) == "table" and type(info.copper) == "number" and info.copper > 0 then
+    local info = Log.Try(entry.source.GetPrice, itemID)
+    if type(info) == "table" and type(info.copper) == "number" and info.copper > 0 then
       info.source = info.source or entry.name
       found[#found + 1] = info
       if not best or info.copper < best.copper then best = info end
@@ -80,11 +99,11 @@ end
 
 -- The Auction House price only (ignores vendors), for "buy the finished item".
 function PriceProvider.GetMarket(itemID)
-  local source = PriceProvider.Source("auctionator")
+  local source, name = marketSource()
   if not source then return nil end
-  local ok, info = pcall(source.GetPrice, itemID)
-  if ok and type(info) == "table" and type(info.copper) == "number" then
-    info.source = info.source or "auctionator"
+  local info = Log.Try(source.GetPrice, itemID)
+  if type(info) == "table" and type(info.copper) == "number" then
+    info.source = info.source or name
     return info
   end
   return nil
@@ -118,23 +137,20 @@ end
 -- { installed, available, lastScan, freshness, text }
 function PriceProvider.StatusInfo(now)
   now = now or Util.Now()
-  local source = PriceProvider.Source("auctionator")
+  local source = marketSource()
+  local reported = source and Log.Try(source.Status or function() return nil end) or nil
   local status = { installed = false, available = false }
-  if source then
-    local ok, installed = pcall(source.installed or function() return false end)
-    status.installed = ok and installed == true
-    local okA, available = pcall(source.IsAvailable or function() return true end)
-    status.available = okA and available == true
-    if type(source.LastScan) == "function" then
-      local okScan, t = pcall(source.LastScan)
-      if okScan then status.lastScan = t end
-    end
+  if type(reported) == "table" then
+    status.installed = reported.installed == true
+    status.available = reported.available == true
+    status.lastScan = reported.lastScan
   end
+  local label = source and source.label or "Auctionator"
   if not status.installed then
-    status.text = "AH prices: Auctionator not installed"
+    status.text = "AH prices: " .. label .. " not installed"
     status.kind = "text3"
   elseif not status.available then
-    status.text = "AH prices: Auctionator API unavailable"
+    status.text = "AH prices: " .. label .. " API unavailable"
     status.kind = "missing"
   elseif not status.lastScan then
     status.text = "AH prices: no scan yet - open the Auction House and scan"
@@ -152,8 +168,8 @@ function PriceProvider.StatusLine()
 end
 
 -- Chat lines for /fp prices <item>.
-function PriceProvider.Describe(itemID, moneyFn)
-  moneyFn = moneyFn or function(c) return tostring(c) .. "c" end
+function PriceProvider.Describe(itemID)
+  local moneyFn = Util.Money
   local lines = {}
   local best = PriceProvider.GetPrice(itemID)
   if not best then
