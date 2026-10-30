@@ -61,9 +61,14 @@ Database.DEFAULTS = {
       y = -220,
     },
     ui = {
-      screen = "dashboard",
-      materialSort = "missing",
-      goalSort = "priority",
+      screen = "dashboard",        -- last screen shown
+      materialSort = "missing",    -- Crafting materials table
+      goalSort = "priority",       -- My Goals list
+      equipmentSource = "any",     -- Equipment source filter
+      equipmentFilter = "all",     -- Equipment: all slots or upgrades only
+      questsFeedOnly = false,      -- Quests: only quests that feed a goal
+      -- Selections, unset until the player picks one: questsTab, quest,
+      -- faction, attunement, equipmentSlot.
     },
     shopping = {
       bought = {},     -- itemID -> true (ticked off)
@@ -165,6 +170,14 @@ function Database.Load()
   ns.chardb = charTable
   ns.Log.debugEnabled = globalTable.settings.debug and true or false
   return globalTable, charTable
+end
+
+-- A saved setting (ns.db.settings[name]), or `default` when it is unset or
+-- before the database loads. The one place that answers both cases.
+function Database.Setting(name, default)
+  local settings = ns.db and ns.db.settings
+  if settings and settings[name] ~= nil then return settings[name] end
+  return default
 end
 
 function Database.IsLoaded()

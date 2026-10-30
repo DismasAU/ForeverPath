@@ -42,7 +42,7 @@ local function build()
   frame.icon, frame.title, frame.name, frame.sub = icon, title, name, sub
   frame:SetScript("OnClick", function(self)
     Toast.Dismiss()
-    if self.goalID and ns.UI.MainFrame then
+    if self.goalID then
       ns.UI.MainFrame.Show()
       ns.UI.MainFrame.ShowScreen("goals")
     end

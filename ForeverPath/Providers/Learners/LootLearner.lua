@@ -58,10 +58,10 @@ local function sourceName(kind, id, guid)
       local name = call(_G.UnitName, "target")
       if type(name) == "string" and name ~= "" then return name end
     end
-    local npc = ns.ClassicDB and ns.ClassicDB.Npc(id)
+    local npc = ns.ClassicDB.Npc(id)
     return npc and npc.name or nil
   end
-  local object = ns.ClassicDB and ns.ClassicDB.Object(id)
+  local object = ns.ClassicDB.Object(id)
   return object and object.name or nil
 end
 

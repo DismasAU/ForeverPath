@@ -232,8 +232,8 @@ function QuestProvider.Eligible(entry)
   if not entry then return false end
   local faction = QuestProvider.Faction()
   if entry.faction and entry.faction ~= "Both" and faction and entry.faction ~= faction then return false end
-  if entry.classic and ns.ClassicDB then return ns.ClassicDB.Eligible(entry.id) end
-  if entry.questie and ns.QuestieBridge then
+  if entry.classic then return ns.ClassicDB.Eligible(entry.id) end
+  if entry.questie then
     local _, classID = Compat.PlayerClass()
     return ns.QuestieBridge.Eligible(entry, classID)
   end
@@ -581,7 +581,7 @@ function QuestProvider.StatusLine()
   local sources = {}
   if QuestProvider.HasJournal() then sources[#sources + 1] = "ForeverDungeonJournal" end
   if QuestProvider.HasAttune() then sources[#sources + 1] = "Attune" end
-  if ns.QuestieBridge and ns.QuestieBridge.IsAvailable() then sources[#sources + 1] = "Questie" end
+  if ns.QuestieBridge.IsAvailable() then sources[#sources + 1] = "Questie" end
   local numQuests, max = QuestProvider.LogCapacity()
   local QF = ns.QuestFactsProvider
   local CDB = ns.ClassicDB

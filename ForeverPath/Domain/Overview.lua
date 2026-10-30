@@ -19,7 +19,7 @@ local function routeLabel(leaf)
   if leaf.noRoute then return "Soulbound" end
   if leaf.route == "buy" then return "Buy" end
   if leaf.route == "gather" and leaf.gatherer then return "Gather - " .. leaf.gatherer end
-  local labels = ns.DependencyResolver and ns.DependencyResolver.RouteLabels or {}
+  local labels = ns.DependencyResolver.RouteLabels
   return labels[leaf.route] or "Obtain"
 end
 Overview.RouteLabel = routeLabel

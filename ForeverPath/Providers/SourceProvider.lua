@@ -205,7 +205,6 @@ function SourceProvider.ItemClass(itemID)
 end
 
 function SourceProvider.ClassHint(itemID)
-  if not ns.Data or not ns.Data.ItemClasses then return nil end
   local classID, subclassID = SourceProvider.ItemClass(itemID)
   if type(classID) ~= "number" then return nil end
   return ns.Data.ItemClasses.Lookup(classID, subclassID)
@@ -214,7 +213,7 @@ end
 -- Every recipe (recorded or catalogue) that makes itemID.
 local function recipesFor(itemID)
   local out = {}
-  if ns.ProfessionProvider and ns.ProfessionProvider.FindRecipesForItem then
+  do
     for _, candidate in ipairs(ns.ProfessionProvider.FindRecipesForItem(itemID) or {}) do
       out[#out + 1] = candidate.recipe
     end
@@ -257,7 +256,7 @@ end
 -- Characters that have a gathering skill, this character first, then the
 -- snapshotted alts: { { name, skillLevel, isCurrent } }.
 function SourceProvider.GatherersFor(skill)
-  if not skill or not ns.CharacterProvider or not ns.CharacterProvider.WithProfession then return {} end
+  if not skill then return {} end
   return ns.CharacterProvider.WithProfession(skill)
 end
 
@@ -545,5 +544,5 @@ function SourceProvider.StatusLine()
 end
 
 function SourceProvider.Init()
-  if ns.ItemProvider and ns.ItemProvider.RegisterNameSource then ns.ItemProvider.RegisterNameSource(SourceProvider.JournalNames) end
+  ns.ItemProvider.RegisterNameSource(SourceProvider.JournalNames)
 end

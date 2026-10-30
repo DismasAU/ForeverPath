@@ -41,7 +41,7 @@ local function create()
   frame.import = Widgets.Button(frame, "Import", { primary = true, onClick = function()
     local ok, message = ns.Share.Import(box:GetText())
     frame.status:SetText(Theme.ColorText(ok and "ok" or "missing", message))
-    if ns.UI.MainFrame then ns.UI.MainFrame.SetStatus(message, ok and "ok" or "error") end
+    ns.UI.MainFrame.SetStatus(message, ok and "ok" or "error")
     if ok then box:SetText("") end
   end })
   frame.import:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 12)

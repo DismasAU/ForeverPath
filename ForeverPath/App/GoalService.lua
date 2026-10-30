@@ -124,7 +124,7 @@ function GoalService.TypeForItem(itemID)
     if type(hints) == "table" and #hints > 0 then return GoalModel.TypeIDs.CRAFT_ITEM end
   end
   local haveCatalogue = catalogue and catalogue.IsAvailable and catalogue.IsAvailable()
-  if not haveCatalogue and ns.ProfessionProvider and ns.ProfessionProvider.HasScanData and not ns.ProfessionProvider.HasScanData() then
+  if not haveCatalogue and not ns.ProfessionProvider.HasScanData() then
     return GoalModel.TypeIDs.CRAFT_ITEM
   end
   return GoalModel.TypeIDs.OBTAIN_ITEM
@@ -162,9 +162,9 @@ end
 function GoalService.AddAttunementGoal(attuneID)
   local store = GoalService.Store()
   if not store then return nil, LOADING end
-  local attune = ns.AttuneProvider and ns.AttuneProvider.Get(attuneID)
+  local attune = ns.AttuneProvider.Get(attuneID)
   if not attune then
-    return nil, ns.AttuneProvider and ns.AttuneProvider.IsAvailable() and "Unknown attunement." or "Attunement goals need the Attune addon."
+    return nil, ns.AttuneProvider.IsAvailable() and "Unknown attunement." or "Attunement goals need the Attune addon."
   end
   local existing = GoalService.FindAttunementGoal(attune.id)
   if existing then return reuseGoal(store, existing) end
@@ -173,7 +173,7 @@ end
 
 -- Attunement goal from free text (name, for the player's faction).
 function GoalService.AddAttunementFromInput(text)
-  if not ns.AttuneProvider or not ns.AttuneProvider.IsAvailable() then
+  if not ns.AttuneProvider.IsAvailable() then
     return nil, "Attunement goals need the Attune addon installed and enabled."
   end
   local attune = ns.AttuneProvider.Find(Util.Trim(text or ""))
@@ -308,14 +308,6 @@ function GoalService.FindSkillGoal(professionName)
   return findGoal(GoalModel.TypeIDs.REACH_SKILL, "professionName", professionName)
 end
 
--- This character's standing in a profession (live list first, then recorded windows).
-local function professionStanding(name, professionID)
-  if ns.Planner and ns.Planner.CurrentSkill then
-    return ns.Planner.CurrentSkill(name, professionID)
-  end
-  return nil
-end
-
 -- The next classic cap above the current one (75, 150, 225, 300), or the
 -- current cap when it is not reached yet.
 function GoalService.NextSkillTarget(standing)
@@ -336,7 +328,7 @@ function GoalService.AddSkillGoal(professionName, rank)
   if catalogue and catalogue.FindProfession then
     professionID, canonical = catalogue.FindProfession(professionName)
   end
-  local standing = professionStanding(canonical or professionName, professionID)
+  local standing = ns.Planner.CurrentSkill(canonical or professionName, professionID)
   if not canonical then
     -- Not a catalogue profession: accept it when the character has it (e.g. a secondary skill).
     if standing then canonical = standing.name else
@@ -594,7 +586,7 @@ function GoalService.Suggest(kind, text, limit)
     for _, p in ipairs(catalogue and catalogue.Professions and catalogue.Professions() or {}) do
       if count < n and needle ~= "" and string.find(string.lower(p.name or ""), needle, 1, true) then
         count = count + 1
-        local standing = ns.Planner and ns.Planner.CurrentSkill and ns.Planner.CurrentSkill(p.name, p.id) or nil
+        local standing = ns.Planner.CurrentSkill(p.name, p.id)
         push({ kind = "skill", text = p.name .. (target and (" " .. target) or ""), meta = standing and string.format("You are at %d", standing.skillLevel or 0) or "Profession",
           professionName = p.name, add = function() return GoalService.AddSkillGoal(p.name, target) end })
       end

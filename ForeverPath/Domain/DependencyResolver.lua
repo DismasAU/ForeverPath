@@ -631,10 +631,8 @@ function DependencyResolver.Summarize(tree)
   end
   walk(tree.root)
   -- Kills / nodes / casts for what is still missing, from the chosen source's chance.
-  if ns.Farming then
-    for _, entry in ipairs(summary.missingLeaves) do
-      entry.farm = ns.Farming.Estimate(entry.hintRef, entry.count)
-    end
+  for _, entry in ipairs(summary.missingLeaves) do
+    entry.farm = ns.Farming.Estimate(entry.hintRef, entry.count)
   end
   table.sort(summary.missingLeaves, function(a, b)
     if a.count ~= b.count then return a.count > b.count end

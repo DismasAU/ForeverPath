@@ -392,7 +392,7 @@ function ProfessionProvider.Init()
   Events.RegisterWoW("TRADE_SKILL_SHOW", onTradeSkillUpdate)
   Events.RegisterWoW("TRADE_SKILL_DATA_SOURCE_CHANGED", onTradeSkillUpdate)
   Events.RegisterWoW("NEW_RECIPE_LEARNED", function(recipeID)
-    if ns.chardb and Util.IsPositiveInt(recipeID) then
+    if Util.IsPositiveInt(recipeID) then
       ns.chardb.knownRecipes[recipeID] = true
       Events.Fire("FP_RECIPES_UPDATED", nil)
     end

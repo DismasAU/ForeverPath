@@ -83,13 +83,11 @@ function AuctionPriceProvider.GetPrice(itemID)
 end
 
 function AuctionPriceProvider.Init()
-  if ns.PriceProvider then
-    ns.PriceProvider.RegisterSource("auctionator", {
-      IsAvailable = AuctionPriceProvider.IsAvailable,
-      GetPrice = AuctionPriceProvider.GetPrice,
-      LastScan = AuctionPriceProvider.LastScan,
-      installed = function() return _G.Auctionator ~= nil end,
-    })
-  end
+  ns.PriceProvider.RegisterSource("auctionator", {
+    IsAvailable = AuctionPriceProvider.IsAvailable,
+    GetPrice = AuctionPriceProvider.GetPrice,
+    LastScan = AuctionPriceProvider.LastScan,
+    installed = function() return _G.Auctionator ~= nil end,
+  })
   Log.Debug("Auctionator price source: %s", AuctionPriceProvider.IsAvailable() and "available" or "not available")
 end

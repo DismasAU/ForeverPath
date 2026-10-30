@@ -354,11 +354,11 @@ local function Create(parent)
   screen.tabs = tabs
   screen.tab = "open"
   local sort = Widgets.Dropdown(body, Widgets.SortLabel(SORTS, "priority"), 160, function(self)
-    local current = ns.chardb and ns.chardb.ui.goalSort or "priority"
+    local current = ns.chardb.ui.goalSort
     local items = {}
     for _, s in ipairs(SORTS) do items[#items + 1] = { text = s.label:gsub("Sort: ", ""), value = s.key, selected = s.key == current } end
     Widgets.Menu(self, items, function(value)
-      if ns.chardb then ns.chardb.ui.goalSort = value end
+      ns.chardb.ui.goalSort = value
       self:SetLabel(Widgets.SortLabel(SORTS, value))
       screen:Refresh()
     end)
@@ -462,7 +462,7 @@ local function Create(parent)
     local completedCount = ns.GoalService.Count({ status = GoalModel.Statuses.COMPLETED })
     tabs:SetLabel("open", string.format("Open - %d", openCount))
     tabs:SetLabel("completed", string.format("Completed - %d", completedCount))
-    local sortKey = ns.chardb and ns.chardb.ui.goalSort or "priority"
+    local sortKey = ns.chardb.ui.goalSort
     sort:SetLabel(Widgets.SortLabel(SORTS, sortKey))
 
     local selected = ns.GoalService.GetSelected()

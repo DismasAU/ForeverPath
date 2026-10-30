@@ -177,14 +177,14 @@ local function Create(parent)
   title:SetPoint("LEFT", top, "LEFT", 2, 0)
   local tabs = Widgets.Tabs(top, TABS, function(key)
     screen.tab = key
-    if ns.chardb and ns.chardb.ui then ns.chardb.ui.questsTab = key end
+    ns.chardb.ui.questsTab = key
     screen:Refresh()
   end)
   tabs:SetPoint("LEFT", title, "RIGHT", 18, 0)
   tabs:SetPoint("BOTTOM", top, "BOTTOM", 0, 0)
   tabs:SetWidth(300)
   local feedOnly = Widgets.Checkbox(top, "Only quests that feed a goal", function(checked)
-    if ns.chardb and ns.chardb.ui then ns.chardb.ui.questsFeedOnly = checked end
+    ns.chardb.ui.questsFeedOnly = checked
     screen:Refresh()
   end)
   feedOnly:SetPoint("RIGHT", top, "RIGHT", 0, 0)
@@ -232,7 +232,7 @@ local function Create(parent)
 
   function screen:Select(questID)
     self.questID = questID
-    if ns.chardb and ns.chardb.ui then ns.chardb.ui.quest = questID end
+    ns.chardb.ui.quest = questID
     self:Refresh()
   end
 
@@ -500,7 +500,7 @@ local function Create(parent)
     side:Show()
     tabs:Show()
     feedOnly:Show()
-    local ui = ns.chardb and ns.chardb.ui or {}
+    local ui = ns.chardb.ui
     if ui.questsTab and ui.questsTab ~= self.tab then
       self.tab = ui.questsTab
       tabs:Select(self.tab)

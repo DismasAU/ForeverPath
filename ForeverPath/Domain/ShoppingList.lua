@@ -55,7 +55,7 @@ local function sourceLabels(node)
     elseif option.kind == "vendor" then
       add("Vendor: " .. (option.name or "?"))
     elseif (option.kind == "gather" or option.kind == "drop" or option.kind == "quest") and not option.unavailable then
-      add(option.short or option.label or (ns.DependencyResolver and ns.DependencyResolver.RouteLabels[option.kind]) or option.kind)
+      add(option.short or option.label or ns.DependencyResolver.RouteLabels[option.kind] or option.kind)
     elseif option.kind == "craft" and node.route ~= "craft" then
       if option.learned then
         add("Craft - " .. (option.professionName or "?"))
@@ -201,7 +201,7 @@ function ShoppingList.Build(entries, opts)
       local held = r.itemID and math.min(claimedByExcluded[r.itemID] or 0, math.max(0, (stock[r.itemID] or 0) - r.usable)) or 0
       r.owned = math.min(r.total, r.usable + held)
       r.reserved = r.owned - r.usable
-      r.farm = ns.Farming and ns.Farming.Estimate(r.hint, r.missing) or nil
+      r.farm = ns.Farming.Estimate(r.hint, r.missing)
       kept[#kept + 1] = r
       result.counts.all = result.counts.all + 1
       result.counts[r.category] = (result.counts[r.category] or 0) + 1

@@ -206,7 +206,7 @@ local function Create(parent)
   function screen:Select(attuneID)
     if attuneID ~= self.attuneID then self.stepKey = nil end
     self.attuneID = attuneID
-    if ns.chardb then ns.chardb.ui.attunement = attuneID end
+    ns.chardb.ui.attunement = attuneID
     self:Refresh()
   end
 
@@ -235,7 +235,7 @@ local function Create(parent)
     -- A newly selected attunement goal takes over; an explicit picker choice otherwise stays.
     if goalAttune and (goal.id ~= self.lastGoalID or not attuneID) then attuneID = goalAttune end
     self.lastGoalID = goal and goal.id or nil
-    attuneID = attuneID or (ns.chardb and ns.chardb.ui and ns.chardb.ui.attunement) or nil
+    attuneID = attuneID or ns.chardb.ui.attunement
     if not attuneID or not AP.Get(attuneID) then
       local first = AP.List()[1]
       attuneID = first and first.id or nil

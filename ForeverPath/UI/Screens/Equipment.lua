@@ -108,13 +108,13 @@ local function Create(parent)
       items[#items + 1] = { text = g.label, value = g.key, selected = g.key == screen:SourceFilter() }
     end
     Widgets.Menu(self, items, function(value)
-      if ns.chardb and ns.chardb.ui then ns.chardb.ui.equipmentSource = value end
+      ns.chardb.ui.equipmentSource = value
       screen:Refresh()
     end)
   end)
   source:SetPoint("RIGHT", sb, "RIGHT", -12, 0)
   local segment = Widgets.Segment(sb, { { key = "all", label = "All slots" }, { key = "upgrades", label = "Upgrades only" } }, function(key)
-    if ns.chardb and ns.chardb.ui then ns.chardb.ui.equipmentFilter = key end
+    ns.chardb.ui.equipmentFilter = key
     screen:Refresh()
   end)
   segment:SetPoint("RIGHT", source, "LEFT", -12, 0)
@@ -241,13 +241,12 @@ local function Create(parent)
   screen.empty:Hide()
 
   function screen:SourceFilter()
-    local ui = ns.chardb and ns.chardb.ui
-    return ui and ui.equipmentSource or "any"
+    return ns.chardb.ui.equipmentSource
   end
 
   function screen:Select(slotKey)
     self.slotKey = slotKey
-    if ns.chardb and ns.chardb.ui then ns.chardb.ui.equipmentSlot = slotKey end
+    ns.chardb.ui.equipmentSlot = slotKey
     self:Refresh()
   end
 
@@ -390,8 +389,8 @@ local function Create(parent)
     strip:Show()
     equipped:Show()
     side:Show()
-    local ui = ns.chardb and ns.chardb.ui or {}
-    local filter = ui.equipmentFilter or "all"
+    local ui = ns.chardb.ui
+    local filter = ui.equipmentFilter
     if segment.selected ~= filter then segment:Select(filter) end
     local sourceKey = self:SourceFilter()
     for _, g in ipairs(EP.SourceGroups) do

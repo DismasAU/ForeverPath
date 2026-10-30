@@ -579,11 +579,11 @@ local function Create(parent)
   screen.tabs = tabs
   screen.tab = "requirements"
   local sort = Widgets.Dropdown(screen, Widgets.SortLabel(SORTS, "missing"), 150, function(self)
-    local current = ns.chardb and ns.chardb.ui.materialSort or "missing"
+    local current = ns.chardb.ui.materialSort
     local items = {}
     for _, s in ipairs(SORTS) do items[#items + 1] = { text = s.label:gsub("Sort: ", ""), value = s.key, selected = s.key == current } end
     Widgets.Menu(self, items, function(value)
-      if ns.chardb then ns.chardb.ui.materialSort = value end
+      ns.chardb.ui.materialSort = value
       screen:Refresh()
     end)
   end)
@@ -694,7 +694,7 @@ local function Create(parent)
     alts:SetChecked(ns.GoalService.IncludesAlts())
     renderHero(self, goal, view, itemName)
 
-    local sortKey = ns.chardb and ns.chardb.ui.materialSort or "missing"
+    local sortKey = ns.chardb.ui.materialSort
     sort:SetLabel(Widgets.SortLabel(SORTS, sortKey))
     local onTable = self.tab ~= "tree" and self.tab ~= "craftwise"
     for _, widget in ipairs({ table_, sort, alts }) do

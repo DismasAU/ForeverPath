@@ -36,7 +36,7 @@ MainFrame.Nav = {
 -- Shared data
 ---------------------------------------------------------------------------
 local function windowSettings()
-  return ns.chardb and ns.chardb.window or nil
+  return ns.chardb.window or nil
 end
 
 function MainFrame.CharacterInfo()
@@ -97,12 +97,8 @@ function MainFrame.ResetWindow()
   if MainFrame.frame then
     MainFrame.RestorePosition()
   end
-  if ns.UI.Tracker and ns.UI.Tracker.ResetPosition then
-    ns.UI.Tracker.ResetPosition()
-  end
-  if ns.UI.MinimapButton then
-    ns.UI.MinimapButton.ResetPosition()
-  end
+  ns.UI.Tracker.ResetPosition()
+  ns.UI.MinimapButton.ResetPosition()
 end
 
 ---------------------------------------------------------------------------
@@ -422,7 +418,7 @@ function MainFrame.Create()
 
   frame.versionText:SetText("ForeverPath " .. tostring(ns.VERSION))
   MainFrame.RestorePosition()
-  local startScreen = ns.chardb and ns.chardb.ui and ns.chardb.ui.screen or "dashboard"
+  local startScreen = ns.chardb.ui.screen or "dashboard"
   MainFrame.ShowScreen(MainFrame.screens[startScreen] and startScreen or "dashboard", true)
   return frame
 end
@@ -454,9 +450,7 @@ function MainFrame.ShowScreen(key, silent)
     end
   end
   MainFrame.currentScreen = key
-  if ns.chardb and ns.chardb.ui then
-    ns.chardb.ui.screen = key
-  end
+  ns.chardb.ui.screen = key
   if not silent then
     MainFrame.Refresh()
   end
@@ -535,7 +529,7 @@ local function refreshChrome(frame)
   if bags.dirty then
     ns.InventoryProvider.ScanBags()
   end
-  local bankCache = ns.chardb and ns.chardb.bankCache
+  local bankCache = ns.chardb.bankCache
   if bags.scannedAt then
     frame.bagsDot:SetKind("ok")
     local text = "Bags synced - " .. Util.FormatAgo(bags.scannedAt)
@@ -583,12 +577,10 @@ function MainFrame.RequestRefresh()
   Events.Debounce("ui-refresh", 0.05, function()
     if MainFrame.IsShown() then
       MainFrame.Refresh()
-    elseif ns.UI.Tracker and ns.UI.Tracker.IsShown() then
+    elseif ns.UI.Tracker.IsShown() then
       ns.GoalService.EvaluateViews()
     end
-    if ns.UI.Tracker then
-      ns.UI.Tracker.Refresh()
-    end
+    ns.UI.Tracker.Refresh()
   end)
 end
 

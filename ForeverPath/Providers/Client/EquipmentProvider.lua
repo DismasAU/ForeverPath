@@ -177,7 +177,7 @@ function EquipmentProvider.Equipped()
     local worn = { slot = slot, itemID = tonumber(itemID) }
     if worn.itemID then
       worn.link = call(_G.GetInventoryItemLink, "player", slot.id)
-      local info = ns.ItemProvider and ns.ItemProvider.GetItem(worn.itemID) or {}
+      local info = ns.ItemProvider.GetItem(worn.itemID) or {}
       worn.name, worn.quality, worn.icon = info.name, info.quality, info.icon
       worn.link = worn.link or info.link
       worn.ilvl = EquipmentProvider.ItemLevel(worn.link or worn.itemID)
@@ -290,7 +290,7 @@ function EquipmentProvider.Candidates(slotKey, opts)
   local out = {}
   for _, candidate in pairs(best) do
     local facts = EquipmentProvider.Facts(candidate.itemID)
-    local info = ns.ItemProvider and ns.ItemProvider.GetItem(candidate.itemID) or {}
+    local info = ns.ItemProvider.GetItem(candidate.itemID) or {}
     local entry = candidate.entry
     candidate.name = info.name or (facts and facts.name) or ("Item " .. candidate.itemID)
     candidate.quality = info.quality or (facts and facts.quality)
@@ -411,7 +411,7 @@ local function changed(reason)
 end
 
 function EquipmentProvider.Init()
-  if ns.ItemProvider and ns.ItemProvider.RegisterNameSource then ns.ItemProvider.RegisterNameSource(EquipmentProvider.ItemNames) end
+  ns.ItemProvider.RegisterNameSource(EquipmentProvider.ItemNames)
   if not EquipmentProvider.IsAvailable() then
     Log.Debug("GetInventoryItemID missing; equipment provider disabled")
     return

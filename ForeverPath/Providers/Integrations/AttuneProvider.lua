@@ -151,7 +151,7 @@ local function stepName(step)
     local npc = d and type(d.npcs) == "table" and d.npcs[tonumber(id)] or nil
     return type(npc) == "table" and tostring(npc[3] or ("NPC " .. id)) or ("NPC " .. id)
   elseif t == "Item" then
-    return ns.ItemProvider and ns.ItemProvider.GetName(tonumber(id)) or ("Item " .. id)
+    return ns.ItemProvider.GetName(tonumber(id))
   elseif t == "Level" then
     return "Reach level " .. id
   elseif t == "End" then

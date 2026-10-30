@@ -16,7 +16,7 @@ local MAX_ROWS = 6
 local ROW = 20
 
 local function settings()
-  return ns.chardb and ns.chardb.tracker or nil
+  return ns.chardb.tracker or nil
 end
 
 function Tracker.IsShown()

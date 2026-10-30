@@ -203,7 +203,7 @@ local function Create(parent)
   function screen:Select(factionID)
     self.factionID = factionID
     self.side.targetStanding = nil
-    if ns.chardb and ns.chardb.ui then ns.chardb.ui.faction = factionID end
+    ns.chardb.ui.faction = factionID
     self:Refresh()
   end
 
@@ -258,7 +258,7 @@ local function Create(parent)
     end
     for i = shown + 1, MAX_QUESTS do s.questRows[i]:Hide() end
     if shown == 0 then
-      s.questsEmpty:SetText(ns.QuestProvider and ns.QuestProvider.HasJournal() and "No known dungeon quest rewards this reputation." or "Quest reputation rewards come from ForeverDungeonJournal.")
+      s.questsEmpty:SetText(ns.QuestProvider.HasJournal() and "No known dungeon quest rewards this reputation." or "Quest reputation rewards come from ForeverDungeonJournal.")
       s.questsEmpty:Show()
     else
       s.questsEmpty:Hide()
@@ -306,7 +306,7 @@ local function Create(parent)
     list:Show()
     side:Show()
     status:SetText(Theme.ColorText("text3", RP.StatusLine():gsub("^Reputations: ", "")))
-    local ui = ns.chardb and ns.chardb.ui or {}
+    local ui = ns.chardb.ui
     local goal = ns.GoalService.GetSelected()
     local goalFaction = goal and goal.type == ns.GoalModel.TypeIDs.REACH_REPUTATION and goal.target.factionID or nil
     local factionID = self.factionID

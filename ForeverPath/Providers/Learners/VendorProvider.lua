@@ -84,7 +84,7 @@ function VendorProvider.ScanMerchant()
       }
       store[itemID] = store[itemID] or {}
       store[itemID][npc] = entry
-      if ns.ItemProvider and info.name then ns.ItemProvider.RememberName(itemID, info.name) end
+      if info.name then ns.ItemProvider.RememberName(itemID, info.name) end
       recorded = recorded + 1
     end
   end
@@ -179,9 +179,7 @@ function VendorProvider.Count()
 end
 
 function VendorProvider.Init()
-  if ns.PriceProvider then
-    ns.PriceProvider.RegisterSource("vendor", { IsAvailable = function() return true end, GetPrice = VendorProvider.GetPrice })
-  end
+  ns.PriceProvider.RegisterSource("vendor", { IsAvailable = function() return true end, GetPrice = VendorProvider.GetPrice })
   if not VendorProvider.IsAvailable() then
     Log.Debug("Merchant API unavailable; vendor recording disabled")
     return

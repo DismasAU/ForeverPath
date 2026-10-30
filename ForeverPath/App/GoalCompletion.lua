@@ -20,11 +20,7 @@ ns.GoalCompletion = GoalCompletion
 
 GoalCompletion.SOUND = 888 -- SOUNDKIT.LEVELUP: the level-up fanfare
 
-local function setting(key, default)
-  local settings = ns.db and ns.db.settings
-  if settings and settings[key] ~= nil then return settings[key] end
-  return default
-end
+local setting = ns.Database.Setting
 
 local function itemGoal(goal)
   local def = goal and GoalModel.Types[goal.type]

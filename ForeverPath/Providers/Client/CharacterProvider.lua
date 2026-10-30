@@ -117,7 +117,7 @@ end
 function CharacterProvider.CollectProfessions()
   local list, byName = {}, {}
   local live = 0
-  if ns.ProfessionProvider then
+  do
     for _, p in ipairs(ns.ProfessionProvider.GetCharacterProfessions()) do
       if p.name and not byName[p.name] then
         local entry = { name = p.name, skillLevel = p.skillLevel, maxSkillLevel = p.maxSkillLevel, skillLine = p.skillLine, icon = p.icon, slot = p.slot }
@@ -252,7 +252,7 @@ function CharacterProvider.WithProfession(name, skillLine)
     return (name and p.name == name) or (skillLine and skillLine ~= 0 and p.skillLine == skillLine)
   end
   local currentName = CharacterProvider.Identity().name
-  if ns.ProfessionProvider and ns.ProfessionProvider.GetCharacterProfessions then
+  do
     for _, p in ipairs(ns.ProfessionProvider.GetCharacterProfessions() or {}) do
       if matches(p) and currentName and not seen[currentName] then
         out[#out + 1] = { name = currentName, skillLevel = p.skillLevel, maxSkillLevel = p.maxSkillLevel, isCurrent = true }
@@ -318,7 +318,7 @@ end
 -- when settings.includeAlts is on.
 function CharacterProvider.Sources(itemID)
   local options = {}
-  local includeBank = not (ns.db and ns.db.settings and ns.db.settings.includeBank == false)
+  local includeBank = ns.Database.Setting("includeBank", true) ~= false
   for _, alt in ipairs(CharacterProvider.Alts(itemID, includeBank)) do
     options[#options + 1] = {
       kind = "alt", name = alt.name, count = alt.total,
@@ -339,7 +339,7 @@ end
 -- For the Characters banner: which alt covers the most of the given needs.
 -- needs: { [itemID] = count }. Returns { name, key, record, covered, items = { { itemID, count } } } or nil.
 function CharacterProvider.BestCoverage(needs)
-  local includeBank = not (ns.db and ns.db.settings and ns.db.settings.includeBank == false)
+  local includeBank = ns.Database.Setting("includeBank", true) ~= false
   local best
   for _, entry in ipairs(CharacterProvider.List()) do
     if not entry.isCurrent then

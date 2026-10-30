@@ -281,7 +281,7 @@ function ClassicDB.Giver(questID)
   local entry = ClassicDB.Quest(questID)
   if not entry then return nil end
   local place = ClassicDB.PlaceOf(entry.starterNpcs, entry.starterObjects)
-  if not place and entry.starterItem and ns.ItemProvider then
+  if not place and entry.starterItem then
     local name = ns.ItemProvider.GetName(entry.starterItem)
     place = { name = name, label = name .. " (item)", item = entry.starterItem, classic = true }
   end
@@ -470,7 +470,7 @@ function ClassicDB.ItemHints(itemID, opts)
   list = ClassicDB.Loot("contained", itemID)
   for i, src in ipairs(list) do
     if i > limits.contained then break end
-    local name = ns.ItemProvider and ns.ItemProvider.GetName(src.id) or ("item " .. src.id)
+    local name = ns.ItemProvider.GetName(src.id)
     out[#out + 1] = { kind = "drop", classic = true, chance = src.chance, container = src.id,
       label = "Found in " .. name, short = "Open: " .. name, detail = string.format("%s (classic data)", ClassicDB.ChanceText(src.chance)) }
   end
