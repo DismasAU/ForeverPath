@@ -83,6 +83,17 @@ local function traceback(err)
   return tostring(err) .. "\n" .. stack
 end
 
+-- Runs fn(...) in protected mode for a caller that handles the failure
+-- itself (sets a failed state, reports it): returns true, results... or
+-- false, the error with its stack. Nothing is logged here.
+function Log.Capture(fn, ...)
+  local n = select("#", ...)
+  local args = { ... }
+  return xpcall(function()
+    return fn(unpack(args, 1, n))
+  end, traceback)
+end
+
 -- Runs fn(...) in protected mode. Errors are logged, never swallowed silently.
 function Log.Call(fn, ...)
   local n = select("#", ...)

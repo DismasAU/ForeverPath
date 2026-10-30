@@ -171,10 +171,9 @@ end
 
 -- The item id for a name the client has shown us (exact match only).
 function QuestFactsProvider.ItemIDByName(name)
-  local IP = ns.ItemProvider
-  if not IP or not IP.SearchByName or type(name) ~= "string" then return nil end
-  local ok, hits = pcall(IP.SearchByName, name, 3)
-  if not ok or type(hits) ~= "table" then return nil end
+  if type(name) ~= "string" then return nil end
+  local hits = Log.Try(ns.ItemProvider.SearchByName, name, 3)
+  if type(hits) ~= "table" then return nil end
   for _, hit in ipairs(hits) do
     if hit.rank == 0 then return hit.itemID end
   end

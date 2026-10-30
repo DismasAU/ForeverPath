@@ -132,14 +132,11 @@ function ItemProvider.GetItem(itemID)
     return info
   end
   if Compat.GetItemInfoInstant then
-    local ok, _, _, _, _, icon = pcall(Compat.GetItemInfoInstant, itemID)
-    if ok then
-      info.icon = icon
-    end
+    info.icon = select(5, Util.SafeCall(Compat.GetItemInfoInstant, itemID))
   end
   if Compat.GetItemInfo then
-    local ok, name, link, quality, _, _, _, _, _, _, texture = pcall(Compat.GetItemInfo, itemID)
-    if ok and name then
+    local name, link, quality, _, _, _, _, _, _, texture = Util.SafeCall(Compat.GetItemInfo, itemID)
+    if name then
       info.loaded = true
       info.name = name
       info.link = link
@@ -240,8 +237,8 @@ function ItemProvider.SearchByName(query, limit)
     end
   end
   for _, source in ipairs(ItemProvider.nameSources) do
-    local ok, names = pcall(source)
-    if ok and type(names) == "table" then
+    local names = Log.Try(source)
+    if type(names) == "table" then
       for itemID, name in pairs(names) do
         consider(itemID, name)
       end
@@ -296,8 +293,8 @@ function ItemProvider.OnItemDataLoadResult(itemID, success)
   if success == false then
     ItemProvider.failed[itemID] = true
   elseif Compat.GetItemInfo then
-    local ok, name = pcall(Compat.GetItemInfo, itemID)
-    if ok and name then
+    local name = Util.SafeCall(Compat.GetItemInfo, itemID)
+    if name then
       ItemProvider.RememberName(itemID, name)
     end
   end

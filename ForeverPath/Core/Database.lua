@@ -118,7 +118,7 @@ function Database.Migrate(db, migrations, targetVersion)
   local applied = {}
   for _, migration in ipairs(ordered) do
     if migration.version > from and migration.version <= targetVersion then
-      local ok, err = pcall(migration.up, db)
+      local ok, err = ns.Log.Capture(migration.up, db)
       if not ok then
         return false, string.format("migration %d failed: %s", migration.version, tostring(err))
       end

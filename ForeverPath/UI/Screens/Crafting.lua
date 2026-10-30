@@ -34,7 +34,7 @@ local function createMaterialRow(content, index)
   sourceFrame:SetSize(COLUMNS.source, ROW)
   sourceFrame:SetPoint("RIGHT", row, "RIGHT", -10, 0)
   sourceFrame.tags = {}
-  pcall(function() sourceFrame:SetClipsChildren(true) end)
+  Util.SafeCall(sourceFrame.SetClipsChildren, sourceFrame, true)
   local subtotal = Widgets.Text(row, "secondaryBright", "", { justify = "RIGHT", width = COLUMNS.subtotal })
   subtotal:SetPoint("RIGHT", sourceFrame, "LEFT", -10, 0)
   local price = Widgets.Text(row, "secondaryBright", "", { justify = "RIGHT", width = COLUMNS.price })
@@ -160,9 +160,7 @@ end
 local BIND_LABELS = { [1] = "Binds when picked up", [2] = "Binds when equipped", [3] = "Binds when used", [4] = "Quest item" }
 
 local function describeItem(itemID)
-  if not ns.Compat.GetItemInfo then return "" end
-  local ok, _, _, _, itemLevel, _, itemType, itemSubType, _, _, _, _, _, _, bindType = pcall(ns.Compat.GetItemInfo, itemID)
-  if not ok then return "" end
+  local _, _, _, itemLevel, _, itemType, itemSubType, _, _, _, _, _, _, bindType = Util.SafeCall(ns.Compat.GetItemInfo, itemID)
   local parts = {}
   if itemSubType and itemSubType ~= "" then parts[#parts + 1] = itemSubType elseif itemType then parts[#parts + 1] = itemType end
   if itemLevel and itemLevel > 1 then parts[#parts + 1] = "Item level " .. itemLevel end

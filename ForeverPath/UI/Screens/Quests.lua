@@ -6,6 +6,7 @@ local _, ns = ...
 
 local Widgets = ns.UI.Widgets
 local Theme = ns.UI.Theme
+local Util = ns.Util
 local C = Theme.Colors
 
 ns.UI.Screens = ns.UI.Screens or {}
@@ -239,9 +240,9 @@ local function Create(parent)
   function screen:LinkQuest(questID)
     local state = ns.QuestProvider.State(questID)
     local link
-    if state.logIndex and type(GetQuestLink) == "function" then
-      local ok, result = pcall(GetQuestLink, state.logIndex)
-      if ok and type(result) == "string" then link = result end
+    if state.logIndex then
+      local result = Util.SafeCall(GetQuestLink, state.logIndex)
+      if type(result) == "string" then link = result end
     end
     if not link then
       ns.UI.MainFrame.SetStatus("Only quests in your log can be linked.", "info")
@@ -264,7 +265,7 @@ local function Create(parent)
       return false
     end
     if type(C_QuestLog) == "table" and type(C_QuestLog.AddQuestWatch) == "function" then
-      pcall(C_QuestLog.AddQuestWatch, questID)
+      Util.SafeCall(C_QuestLog.AddQuestWatch, questID)
       ns.UI.MainFrame.SetStatus("Quest added to the objective tracker.", "ok")
       return true
     end

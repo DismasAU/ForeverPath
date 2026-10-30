@@ -19,6 +19,7 @@
 local _, ns = ...
 
 local Log = ns.Log
+local Util = ns.Util
 
 local QuestieBridge = { entries = {} }
 ns.QuestieBridge = QuestieBridge
@@ -29,8 +30,8 @@ local HORDE_BITS = { 2, 16, 32, 128, 512 }        -- Orc, Undead, Tauren, Troll,
 local function module(name)
   local loader = _G.QuestieLoader
   if type(loader) ~= "table" or type(loader.ImportModule) ~= "function" then return nil end
-  local ok, mod = pcall(loader.ImportModule, loader, name)
-  if ok and type(mod) == "table" then return mod end
+  local mod = Util.SafeCall(loader.ImportModule, loader, name)
+  if type(mod) == "table" then return mod end
   return nil
 end
 
@@ -66,13 +67,13 @@ end
 local function callQuestie(q, fn, ...)
   if type(q[fn]) ~= "function" then return nil end
   -- QuestieDB mixes "." and ":" methods; GetQuest takes the id first, GetNPC / GetObject / GetItem take self.
-  local ok, result
+  local result
   if fn == "GetQuest" then
-    ok, result = pcall(q[fn], ...)
+    result = Util.SafeCall(q[fn], ...)
   else
-    ok, result = pcall(q[fn], q, ...)
+    result = Util.SafeCall(q[fn], q, ...)
   end
-  if ok and type(result) == "table" then return result end
+  if type(result) == "table" then return result end
   return nil
 end
 
@@ -94,16 +95,15 @@ local function place(thing)
     if type(first) == "table" and tonumber(first[1]) and tonumber(first[2]) then
       local uiMapID
       if zoneDB and type(zoneDB.GetUiMapIdByAreaId) == "function" then
-        local ok, id = pcall(zoneDB.GetUiMapIdByAreaId, zoneDB, areaID)
-        uiMapID = ok and tonumber(id) or nil
+        uiMapID = tonumber((Util.SafeCall(zoneDB.GetUiMapIdByAreaId, zoneDB, areaID)))
       end
       if uiMapID then
         result.mapID, result.x, result.y = uiMapID, first[1] / 100, first[2] / 100
         local CDB = ns.ClassicDB
         result.zone = (CDB and CDB.ZoneName(uiMapID)) or result.zone
         if not result.zone and type(C_Map) == "table" and type(C_Map.GetMapInfo) == "function" then
-          local ok, info = pcall(C_Map.GetMapInfo, uiMapID)
-          result.zone = ok and type(info) == "table" and info.name or nil
+          local info = Util.SafeCall(C_Map.GetMapInfo, uiMapID)
+          result.zone = type(info) == "table" and info.name or nil
         end
         break
       end

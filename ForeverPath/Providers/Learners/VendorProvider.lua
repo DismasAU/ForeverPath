@@ -28,25 +28,15 @@ local function itemIDFromLink(link)
 end
 
 local function currentNPC()
-  local name
-  if type(UnitName) == "function" then
-    local ok, n = pcall(UnitName, "npc")
-    if ok then name = n end
-  end
+  local name = Util.SafeCall(UnitName, "npc")
   if not name or name == "" then return nil end
   return name
 end
 
 local function currentZone()
-  local zone, sub
-  if type(GetZoneText) == "function" then
-    local ok, z = pcall(GetZoneText)
-    if ok then zone = z end
-  end
-  if type(GetSubZoneText) == "function" then
-    local ok, s = pcall(GetSubZoneText)
-    if ok and s ~= "" then sub = s end
-  end
+  local zone, sub = Util.SafeCall(GetZoneText), nil
+  local s = Util.SafeCall(GetSubZoneText)
+  if s and s ~= "" then sub = s end
   return zone, sub
 end
 
@@ -60,18 +50,17 @@ function VendorProvider.ScanMerchant()
   if not npc then
     return 0
   end
-  local okCount, count = pcall(Compat.GetMerchantNumItems)
-  if not okCount or type(count) ~= "number" then
+  local count = Util.SafeCall(Compat.GetMerchantNumItems)
+  if type(count) ~= "number" then
     return 0
   end
   local zone, subzone = currentZone()
   local now = Util.Now()
   local recorded = 0
   for index = 1, count do
-    local okLink, link = pcall(Compat.GetMerchantItemLink, index)
-    local itemID = okLink and itemIDFromLink(link) or nil
-    local okInfo, info = pcall(Compat.GetMerchantItem, index)
-    if itemID and okInfo and type(info) == "table" then
+    local itemID = itemIDFromLink(Util.SafeCall(Compat.GetMerchantItemLink, index))
+    local info = Util.SafeCall(Compat.GetMerchantItem, index)
+    if itemID and type(info) == "table" then
       local stack = (tonumber(info.stack) and info.stack > 0) and info.stack or 1
       local entry = {
         price = (not info.hasExtendedCost and tonumber(info.price) and info.price > 0) and math.floor(info.price / stack) or nil,

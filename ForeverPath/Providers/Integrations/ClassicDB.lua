@@ -29,6 +29,7 @@ local _, ns = ...
 
 local Compat = ns.Compat
 local Log = ns.Log
+local Util = ns.Util
 
 local ClassicDB = { entries = {}, loadTried = false }
 ns.ClassicDB = ClassicDB
@@ -143,10 +144,8 @@ function ClassicDB.ZoneName(uiMapID)
   local name = d and d.zones and d.zones[uiMapID]
   if name then return name end
   local map = _G.C_Map
-  if type(map) == "table" and type(map.GetMapInfo) == "function" then
-    local ok, info = pcall(map.GetMapInfo, uiMapID)
-    if ok and type(info) == "table" then return info.name end
-  end
+  local info = type(map) == "table" and Util.SafeCall(map.GetMapInfo, uiMapID) or nil
+  if type(info) == "table" then return info.name end
   return nil
 end
 

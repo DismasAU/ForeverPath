@@ -27,20 +27,12 @@ ns.ProfessionProvider = ProfessionProvider
 local CHUNK_SIZE = 40
 local QUEUE_TIMEOUT = 8
 
+-- C_TradeSkillUI[name](...), or nil when the function is missing or fails.
 local function api(name, ...)
   if type(C_TradeSkillUI) ~= "table" then
     return nil
   end
-  local fn = C_TradeSkillUI[name]
-  if type(fn) ~= "function" then
-    return nil
-  end
-  local ok, a, b = pcall(fn, ...)
-  if not ok then
-    Log.Debug("C_TradeSkillUI.%s failed: %s", name, tostring(a))
-    return nil
-  end
-  return a, b
+  return Util.SafeCall(C_TradeSkillUI[name], ...)
 end
 
 function ProfessionProvider.IsAvailable()
@@ -125,16 +117,12 @@ function ProfessionProvider.GetCharacterProfessions()
   if not Compat.hasProfessionList then
     return list
   end
-  local ok, a, b, c, d, e, f = pcall(GetProfessions)
-  if not ok then
-    return list
-  end
-  local indices = { a, b, c, d, e, f }
+  local indices = { Util.SafeCall(GetProfessions) }
   for slot = 1, 6 do
     local index = indices[slot]
     if index then
-      local ok2, name, icon, skillLevel, maxSkillLevel, _, _, skillLine = pcall(GetProfessionInfo, index)
-      if ok2 and name then
+      local name, icon, skillLevel, maxSkillLevel, _, _, skillLine = Util.SafeCall(GetProfessionInfo, index)
+      if name then
         list[#list + 1] = {
           name = name, icon = icon, skillLevel = skillLevel, maxSkillLevel = maxSkillLevel,
           skillLine = skillLine, slot = slot,

@@ -47,7 +47,7 @@ local function createRow(content, index, screen)
   sourceFrame:SetSize(COLS.source, ROW)
   sourceFrame:SetPoint("RIGHT", row, "RIGHT", -10, 0)
   sourceFrame.tags = {}
-  pcall(function() sourceFrame:SetClipsChildren(true) end)
+  ns.Util.SafeCall(sourceFrame.SetClipsChildren, sourceFrame, true)
   row.sourceFrame = sourceFrame
   row.cost = Widgets.Text(row, "secondaryBright", "", { justify = "RIGHT", width = COLS.cost })
   row.cost:SetPoint("RIGHT", sourceFrame, "LEFT", -10, 0)

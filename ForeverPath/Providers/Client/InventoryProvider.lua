@@ -38,8 +38,8 @@ end
 
 function InventoryProvider.BankIDs()
   if Compat.hasBankTabs then
-    local ok, tabs = pcall(C_Bank.FetchPurchasedBankTabIDs, Compat.bankTypeCharacter)
-    if ok and type(tabs) == "table" then
+    local tabs = Util.SafeCall(C_Bank.FetchPurchasedBankTabIDs, Compat.bankTypeCharacter)
+    if type(tabs) == "table" then
       return tabs
     end
     return {}
@@ -56,11 +56,11 @@ end
 local function scanContainers(ids)
   local items, slots = {}, 0
   for _, bag in ipairs(ids) do
-    local ok, numSlots = pcall(Compat.GetContainerNumSlots, bag)
-    if ok and type(numSlots) == "number" then
+    local numSlots = Util.SafeCall(Compat.GetContainerNumSlots, bag)
+    if type(numSlots) == "number" then
       for slot = 1, numSlots do
-        local ok2, itemID, count = pcall(Compat.GetContainerSlot, bag, slot)
-        if ok2 and itemID then
+        local itemID, count = Util.SafeCall(Compat.GetContainerSlot, bag, slot)
+        if itemID then
           items[itemID] = (items[itemID] or 0) + (count or 1)
         end
         slots = slots + 1
@@ -114,8 +114,8 @@ function InventoryProvider.GetBagCount(itemID)
     return InventoryProvider.bags.items[itemID] or 0
   end
   if Compat.GetItemCount then
-    local ok, count = pcall(Compat.GetItemCount, itemID, false)
-    if ok and type(count) == "number" then
+    local count = Util.SafeCall(Compat.GetItemCount, itemID, false)
+    if type(count) == "number" then
       return count
     end
   end
@@ -137,9 +137,9 @@ function InventoryProvider.GetCounts(itemID)
     result.bankSource = InventoryProvider.bankOpen and "live" or "cached"
     result.bankScannedAt = cache.scannedAt
   elseif Compat.GetItemCount then
-    local ok1, withBank = pcall(Compat.GetItemCount, itemID, true)
-    local ok2, without = pcall(Compat.GetItemCount, itemID, false)
-    if ok1 and ok2 and type(withBank) == "number" and type(without) == "number" and withBank > without then
+    local withBank = Util.SafeCall(Compat.GetItemCount, itemID, true)
+    local without = Util.SafeCall(Compat.GetItemCount, itemID, false)
+    if type(withBank) == "number" and type(without) == "number" and withBank > without then
       result.bank = withBank - without
       result.bankSource = "client"
     end

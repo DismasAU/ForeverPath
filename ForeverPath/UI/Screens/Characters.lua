@@ -208,7 +208,7 @@ local function createCard(content, index, screen)
     end
     if entry.isCurrent and type(SetPortraitTexture) == "function" then
       portraitTexture:SetTexCoord(0, 1, 0, 1)
-      pcall(SetPortraitTexture, portraitTexture, "player")
+      Util.SafeCall(SetPortraitTexture, portraitTexture, "player")
     else
       portraitTexture:SetTexture(CLASS_ICONS)
       local coords = type(CLASS_ICON_TCOORDS) == "table" and record.classFile and CLASS_ICON_TCOORDS[record.classFile]

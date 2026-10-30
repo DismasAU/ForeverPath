@@ -113,7 +113,11 @@ compartment click handler the TOC requires.
 5. Event handlers run through `Log.Call` (xpcall). Errors are recorded in
    `Log.errors` and shown once, never swallowed. Calls into ForeverPath's own
    modules that may fail without breaking the caller go through `Log.Try`
-   (logged); `Util.SafeCall` and `pcall` are for client and third-party APIs.
+   (logged); client and third-party APIs go through `Util.SafeCall` (a
+   failure reads as no answer). Plain `pcall` is left only where the caller
+   must tell a failure from a nil answer (ItemProvider's existence check and
+   load request, ClassicDB's LoadAddOn reason), and `Log.Capture` where it
+   handles a failure of its own code itself (index and migration states).
 6. Refreshes are event driven and debounced; nothing runs OnUpdate. Lower
    layers announce changes with `FP_*` messages and never call into the UI.
 7. Names: accessors are bare nouns (`QuestProvider.Giver`, `GoalService.Views`),

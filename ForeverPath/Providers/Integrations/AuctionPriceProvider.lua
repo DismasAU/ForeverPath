@@ -50,13 +50,11 @@ end
 function AuctionPriceProvider.GetPrice(itemID)
   local v1 = api()
   if not v1 or type(itemID) ~= "number" then return nil end
-  local ok, copper = pcall(v1.GetAuctionPriceByItemID, AuctionPriceProvider.CALLER, itemID)
-  if not ok or type(copper) ~= "number" or copper <= 0 then return nil end
+  local copper = Util.SafeCall(v1.GetAuctionPriceByItemID, AuctionPriceProvider.CALLER, itemID)
+  if type(copper) ~= "number" or copper <= 0 then return nil end
   local info = { copper = copper, kind = "market", source = "auctionator" }
-  if type(v1.GetAuctionAgeByItemID) == "function" then
-    local okAge, days = pcall(v1.GetAuctionAgeByItemID, AuctionPriceProvider.CALLER, itemID)
-    if okAge and type(days) == "number" then info.ageDays = days end
-  end
+  local days = Util.SafeCall(v1.GetAuctionAgeByItemID, AuctionPriceProvider.CALLER, itemID)
+  if type(days) == "number" then info.ageDays = days end
   local now = Util.Now()
   local lastScan = AuctionPriceProvider.LastScan()
   if info.ageDays == 0 and lastScan then
@@ -68,15 +66,11 @@ function AuctionPriceProvider.GetPrice(itemID)
   end
   local db = database()
   if db then
-    if type(db.GetMeanPrice) == "function" then
-      local okMean, mean = pcall(db.GetMeanPrice, db, tostring(itemID), 7)
-      if okMean and type(mean) == "number" and mean > 0 then info.avg7 = mean end
-    end
-    if type(db.GetPriceHistory) == "function" then
-      local okHist, history = pcall(db.GetPriceHistory, db, tostring(itemID))
-      if okHist and type(history) == "table" and type(history[1]) == "table" then
-        info.listings = tonumber(history[1].available)
-      end
+    local mean = Util.SafeCall(db.GetMeanPrice, db, tostring(itemID), 7)
+    if type(mean) == "number" and mean > 0 then info.avg7 = mean end
+    local history = Util.SafeCall(db.GetPriceHistory, db, tostring(itemID))
+    if type(history) == "table" and type(history[1]) == "table" then
+      info.listings = tonumber(history[1].available)
     end
   end
   return info

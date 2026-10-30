@@ -123,10 +123,8 @@ end
 -- True when the open window belongs to a profession trainer (or the client
 -- cannot say, in which case every recipe with a profession requirement counts).
 local function isProfessionTrainer()
-  if type(_G.IsTradeskillTrainer) == "function" then
-    local ok, result = pcall(_G.IsTradeskillTrainer)
-    if ok and result ~= nil then return result and true or false end
-  end
+  local result = Util.SafeCall(_G.IsTradeskillTrainer)
+  if result ~= nil then return result and true or false end
   return nil
 end
 

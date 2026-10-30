@@ -15,6 +15,7 @@ local _, ns = ...
 
 local Compat = ns.Compat
 local Log = ns.Log
+local Util = ns.Util
 
 local AttuneProvider = { cache = {} }
 ns.AttuneProvider = AttuneProvider
@@ -40,8 +41,8 @@ local function lang(key, fallback)
   if type(l) == "table" then
     local value = rawget(l, key)
     if type(value) == "string" and value ~= key then return value end
-    local ok, v = pcall(function() return l[key] end)
-    if ok and type(v) == "string" and v ~= key then return v end
+    local v = Util.SafeCall(function() return l[key] end)
+    if type(v) == "string" and v ~= key then return v end
   end
   return fallback
 end
@@ -220,18 +221,10 @@ function AttuneProvider.DefaultContext()
   local survey = attuneSurvey()
   return {
     completedQuest = function(questID)
-      if Compat.IsQuestFlaggedCompleted then
-        local ok, done = pcall(Compat.IsQuestFlaggedCompleted, questID)
-        return ok and done == true
-      end
-      return false
+      return Util.SafeCall(Compat.IsQuestFlaggedCompleted, questID) == true
     end,
     onQuest = function(questID)
-      if Compat.IsOnQuest then
-        local ok, on = pcall(Compat.IsOnQuest, questID)
-        return ok and on == true
-      end
-      return false
+      return Util.SafeCall(Compat.IsOnQuest, questID) == true
     end,
     level = Compat.PlayerLevel(),
     itemCount = function(itemID)

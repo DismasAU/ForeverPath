@@ -400,7 +400,7 @@ function ReputationProvider.EnsureAtlas()
   if atlas.state ~= "idle" or not ReputationProvider.HasAtlasLoot() then return atlas.state end
   atlas.state = "loading"
   local function finish()
-    local ok, added = pcall(ReputationProvider.IndexAtlas)
+    local ok, added = Log.Capture(ReputationProvider.IndexAtlas)
     if ok then
       Log.Debug("Indexed AtlasLoot factions: %s", tostring(added))
     else
@@ -412,8 +412,7 @@ function ReputationProvider.EnsureAtlas()
   local loader = _G.AtlasLoot.Loader
   local result
   if type(loader) == "table" and type(loader.LoadModule) == "function" then
-    local ok, state = pcall(loader.LoadModule, loader, ReputationProvider.MODULE, finish, true)
-    result = ok and state or nil
+    result = Util.SafeCall(loader.LoadModule, loader, ReputationProvider.MODULE, finish, true)
   end
   if result ~= true and result ~= "InCombat" then
     if type(_G.AtlasLoot.ItemDB.Storage[ReputationProvider.MODULE]) == "table" then finish() else atlas.state = "missing" end

@@ -299,7 +299,7 @@ local function Create(parent)
     if info.class ~= "" then parts[#parts + 1] = info.class end
     strip.meta:SetText(table.concat(parts, " "))
     if type(SetPortraitTexture) == "function" then
-      pcall(SetPortraitTexture, strip.portrait, "player")
+      Util.SafeCall(SetPortraitTexture, strip.portrait, "player")
     end
 
     local professions = ns.ProfessionProvider.GetCharacterProfessions()

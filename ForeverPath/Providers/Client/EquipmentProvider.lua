@@ -108,11 +108,11 @@ function EquipmentProvider.Spec()
   local gq = gearQuest()
   if not gq or type(gq.Spec) ~= "table" then return nil end
   local classFile = Compat.PlayerClass()
-  local ok, spec = pcall(function() return gq.Spec:GetDisplaySpec(classFile) end)
-  if not ok or type(spec) ~= "string" then return nil end
+  local spec = Util.SafeCall(gq.Spec.GetDisplaySpec, gq.Spec, classFile)
+  if type(spec) ~= "string" then return nil end
   local label = spec
-  local ok2, text = pcall(function() return gq.Spec:GetSpecLabel(spec, classFile) end)
-  if ok2 and type(text) == "string" then label = text end
+  local text = Util.SafeCall(gq.Spec.GetSpecLabel, gq.Spec, spec, classFile)
+  if type(text) == "string" then label = text end
   return spec, label
 end
 
@@ -247,8 +247,7 @@ end
 
 local function ensureClass(gq, classFile)
   if not classFile or type(gq.Data.EnsureClassLoaded) ~= "function" then return type(gq.Data.entries) == "table" end
-  local ok, loaded = pcall(function() return gq.Data:EnsureClassLoaded(classFile) end)
-  if ok and loaded then EquipmentProvider.factsCache = {} end
+  if Util.SafeCall(gq.Data.EnsureClassLoaded, gq.Data, classFile) then EquipmentProvider.factsCache = {} end
   return type(gq.Data.entries) == "table"
 end
 

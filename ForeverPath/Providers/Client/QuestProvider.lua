@@ -72,8 +72,8 @@ local function attuneName(questID)
   local l = _G.AttuneLang
   if type(l) ~= "table" then return nil end
   local key = "Q1_" .. tostring(questID)
-  local ok, value = pcall(function() return l[key] end)
-  if ok and type(value) == "string" and value ~= key then return value end
+  local value = Util.SafeCall(function() return l[key] end)
+  if type(value) == "string" and value ~= key then return value end
   return nil
 end
 
@@ -341,10 +341,8 @@ end
 function QuestProvider.State(questID)
   local state = { completed = false, inLog = false, ready = false, objectives = {}, fraction = 0 }
   if not QuestProvider.IsAvailable() then return state end
-  local ok, done = pcall(Compat.IsQuestFlaggedCompleted, questID)
-  state.completed = ok and done == true
-  ok, done = pcall(Compat.IsOnQuest, questID)
-  state.inLog = ok and done == true
+  state.completed = Util.SafeCall(Compat.IsQuestFlaggedCompleted, questID) == true
+  state.inLog = Util.SafeCall(Compat.IsOnQuest, questID) == true
   local ql = questLog()
   if state.inLog and ql then
     state.ready = call(ql.IsComplete, questID) == true
@@ -404,7 +402,7 @@ function QuestProvider.Name(questID)
     end
     if not QuestProvider.requested[questID] and type(ql.RequestLoadQuestByID) == "function" then
       QuestProvider.requested[questID] = true
-      pcall(ql.RequestLoadQuestByID, questID)
+      Util.SafeCall(ql.RequestLoadQuestByID, questID)
     end
   end
   return "Quest " .. tostring(questID)

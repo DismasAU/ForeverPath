@@ -17,6 +17,7 @@ local _, ns = ...
 
 local Compat = ns.Compat
 local Log = ns.Log
+local Util = ns.Util
 local Events = ns.Events
 
 local SourceProvider = {
@@ -149,7 +150,7 @@ function SourceProvider.BuildJournalIndex()
   local journal = SourceProvider.journal
   if journal.state ~= "idle" then return journal.state end
   if not SourceProvider.HasDungeonJournal() then return journal.state end
-  local ok, added = pcall(SourceProvider.IndexDungeonJournal)
+  local ok, added = Log.Capture(SourceProvider.IndexDungeonJournal)
   if ok then
     journal.state = "ready"
     Log.Debug("Indexed DungeonJournal: %d loot and quest entries for %d items", added, journal.items)
@@ -194,8 +195,8 @@ end
 -- them for every item a recipe touches) when the client has not cached the item.
 function SourceProvider.ItemClass(itemID)
   if Compat.GetItemInfoInstant then
-    local ok, _, _, _, _, _, classID, subclassID = pcall(Compat.GetItemInfoInstant, itemID)
-    if ok and type(classID) == "number" then return classID, subclassID end
+    local classID, subclassID = select(6, Util.SafeCall(Compat.GetItemInfoInstant, itemID))
+    if type(classID) == "number" then return classID, subclassID end
   end
   local catalogue = ns.Data.Recipes
   if catalogue and catalogue.ItemClass then
@@ -288,10 +289,8 @@ function SourceProvider.HasAtlasLoot()
 end
 
 local function contentName(content)
-  if type(content.GetName) == "function" then
-    local ok, name = pcall(content.GetName, content, true)
-    if ok and type(name) == "string" then return name end
-  end
+  local name = Util.SafeCall(content.GetName, content, true)
+  if type(name) == "string" then return name end
   return type(content.name) == "string" and content.name or "?"
 end
 
@@ -344,7 +343,7 @@ function SourceProvider.BuildAtlasIndex()
   atlas.state = "loading"
   local pending = #atlas.modules
   local function finish(moduleName)
-    local ok, added = pcall(SourceProvider.IndexAtlasModule, moduleName)
+    local ok, added = Log.Capture(SourceProvider.IndexAtlasModule, moduleName)
     if ok then
       Log.Debug("Indexed AtlasLoot module %s: %d loot entries", moduleName, added)
     else
@@ -360,8 +359,7 @@ function SourceProvider.BuildAtlasIndex()
   for _, moduleName in ipairs(atlas.modules) do
     local result
     if type(loader) == "table" and type(loader.LoadModule) == "function" then
-      local ok, state = pcall(loader.LoadModule, loader, moduleName, finish, true)
-      result = ok and state or nil
+      result = Util.SafeCall(loader.LoadModule, loader, moduleName, finish, true)
     end
     if result ~= true and result ~= "InCombat" and type(_G.AtlasLoot.ItemDB.Storage[moduleName]) == "table" then
       -- Already loaded (LoadModule returned a state) or loader unavailable: index what is there.
