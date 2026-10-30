@@ -2,6 +2,7 @@
 return {
   "toc_spec",
   "util_spec",
+  "compat_spec",
   "database_spec",
   "goal_model_spec",
   "goal_store_spec",
