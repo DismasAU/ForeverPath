@@ -511,7 +511,7 @@ local function Create(parent)
         elseif view and view.plan then
           row.sub:SetText(view.plan.isComplete and "Ready to craft" or string.format("%d of %d materials missing - %s", view.plan.totals.materialsMissing, #view.plan.materials, view.recipe and view.recipe.professionName or ""))
         else
-          row.sub:SetText(view and (ns.ReadinessLabel[view.readiness] or "") or (goal.status == GoalModel.Statuses.COMPLETED and ("Completed " .. Util.FormatAgo(goal.completedAt)) or ""))
+          row.sub:SetText(view and (ns.Readiness.Label(view.readiness) or "") or (goal.status == GoalModel.Statuses.COMPLETED and ("Completed " .. Util.FormatAgo(goal.completedAt)) or ""))
         end
         local percent = ns.Overview.Percent(view)
         row.percent:SetText(percent and (percent .. "%") or (goal.status == GoalModel.Statuses.COMPLETED and "100%" or "-"))

@@ -312,7 +312,7 @@ function handlers.tree(rest)
   ns.GoalService.EvaluateViews()
   local view = ns.GoalService.View(goal.id)
   if not view.tree then
-    Log.Print("%s: %s", ns.GoalService.Title(goal), view.message or ns.ReadinessLabel[view.readiness] or "no plan")
+    Log.Print("%s: %s", ns.GoalService.Title(goal), view.message or ns.Readiness.Label(view.readiness) or "no plan")
     return
   end
   Log.Print("Dependency tree for %s:", ns.GoalService.Title(goal))

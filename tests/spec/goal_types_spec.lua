@@ -315,7 +315,7 @@ describe("Reach-skill goals", function()
     local view = ns.Planner.Evaluate(goal)
     assert_eq(view.readiness, ns.Readiness.PROFESSION_MISSING)
     assert_match(view.message, "Blacksmithing is not one of this character's professions")
-    assert_eq(ns.ReadinessLabel[view.readiness], "Profession not known")
+    assert_eq(ns.Readiness.Label(view.readiness), "Profession not known")
   end)
 
   it("plans the crafts from the current skill to the target and completes on the skill-up", function()

@@ -382,7 +382,7 @@ local function Create(parent)
       else
         row.detail:SetText(view and view.message or "")
         Widgets.SetTextColor(row.detail, C.missing)
-        row.meta:SetText(view and (ns.ReadinessLabel[view.readiness] or "") or "")
+        row.meta:SetText(view and (ns.Readiness.Label(view.readiness) or "") or "")
       end
     end
     goalsPanel.pool:HideFrom(#activeGoals + 1)

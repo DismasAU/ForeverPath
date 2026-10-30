@@ -36,7 +36,8 @@ function GoalCompletion.Baseline(goal, force)
   end
 end
 
--- Progress for one goal: { count, gained, peak, needed, done }
+-- Progress for one goal: { count, gained, peak, needed, done }. A query: the
+-- completion check stores the peak (see itemDone).
 function GoalCompletion.Progress(goal)
   if not itemGoal(goal) then return nil end
   local count = ns.InventoryProvider.OwnedCount(goal.target.itemID)
@@ -50,7 +51,6 @@ function GoalCompletion.Progress(goal)
   end
   local gained = math.max(0, count - baseline)
   local peak = math.max(tonumber(goal.target.peak) or 0, gained)
-  goal.target.peak = peak
   return { count = count, gained = gained, peak = peak, needed = quantity, done = peak >= quantity }
 end
 
@@ -70,6 +70,8 @@ local function itemDone(goal)
     return false
   end
   local progress = GoalCompletion.Progress(goal)
+  -- Keep the best gain seen, so items crafted and then used still count.
+  if progress and progress.peak then goal.target.peak = progress.peak end
   return progress ~= nil and progress.done
 end
 

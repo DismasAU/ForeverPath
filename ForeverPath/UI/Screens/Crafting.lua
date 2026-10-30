@@ -327,7 +327,7 @@ local function heroChips(goal, view)
   elseif view.obtain then
     obtainChips(goal, view, chips)
   else
-    chips[#chips + 1] = { ns.ReadinessLabel[view.readiness] or "Unknown", "missing" }
+    chips[#chips + 1] = { ns.Readiness.Label(view.readiness) or "Unknown", "missing" }
   end
   return chips
 end
@@ -486,7 +486,7 @@ local function renderRequirements(screen, view, sortKey)
     return
   end
   if not view.plan then
-    showTableMessage(screen, ns.ReadinessLabel[view.readiness] or "Unavailable", view.message or "")
+    showTableMessage(screen, ns.Readiness.Label(view.readiness) or "Unavailable", view.message or "")
     return
   end
   if #view.plan.materials == 0 and (view.learn or view.skill or view.enchant) then

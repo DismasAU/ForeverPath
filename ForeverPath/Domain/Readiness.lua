@@ -18,7 +18,7 @@ local Readiness = {
 ns.Readiness = Readiness
 
 -- Short labels for readiness indicators. Longer explanations come from the Planner.
-ns.ReadinessLabel = {
+local LABELS = {
   [Readiness.OK] = "Ready",
   [Readiness.UNSUPPORTED_GOAL] = "Unsupported goal",
   [Readiness.ITEM_INVALID] = "Invalid item",
@@ -31,14 +31,7 @@ ns.ReadinessLabel = {
   [Readiness.PROFESSION_MISSING] = "Profession not known",
 }
 
--- Colors as hex strings for chat / font colouring.
-ns.ReadinessColor = {
-  [Readiness.OK] = "|cff40ff40",
-  [Readiness.RECIPE_NOT_LEARNED] = "|cffffcc00",
-  [Readiness.RECIPES_NOT_SCANNED] = "|cffffcc00",
-}
-
-function ns.ColorReadiness(readiness, text)
-  local color = ns.ReadinessColor[readiness] or "|cffff6060"
-  return color .. tostring(text) .. "|r"
+-- The short label for a readiness value, or nil for an unknown one.
+function Readiness.Label(readiness)
+  return LABELS[readiness]
 end

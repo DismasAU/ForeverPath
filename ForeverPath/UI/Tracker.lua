@@ -312,7 +312,7 @@ function Tracker.Refresh()
       frame.nextText:SetText(top and (string.format("Obtain %d x %s", top.missing, ns.ItemProvider.GetName(top.itemID)) .. (hint and (" - " .. hint) or "")) or (view.nextStep or ""))
     end
   else
-    frame.sub:SetText(view and (ns.ReadinessLabel[view.readiness] or "") or "")
+    frame.sub:SetText(view and (ns.Readiness.Label(view.readiness) or "") or "")
     frame.bar:SetValue(0)
     frame.pool:HideFrom(1)
     frame.rows:SetHeight(1)

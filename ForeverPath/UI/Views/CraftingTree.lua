@@ -697,7 +697,7 @@ function CraftingTree.Create(screen)
     if not tree then
       self.pool:HideFrom(1)
       self.scroll:SetContentHeight(1)
-      self.message:Set(planView and (ns.ReadinessLabel[planView.readiness] or "Unavailable") or "No goal", planView and planView.message or "")
+      self.message:Set(planView and (ns.Readiness.Label(planView.readiness) or "Unavailable") or "No goal", planView and planView.message or "")
       self.message:Show()
       self.resolvedText:SetText("")
       self.bar:SetValue(0)

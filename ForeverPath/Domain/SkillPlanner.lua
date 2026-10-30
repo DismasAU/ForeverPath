@@ -38,14 +38,14 @@ end
 -- Ranks two choices for one skill point. Each is { candidate, chance, exp }.
 local function better(a, b)
   local ca, cb = a.candidate.cost, b.candidate.cost
+  -- Both priced: the cheaper expected cost wins.
   if ca and cb then
     local ea, eb = a.exp * ca, b.exp * cb
     if ea ~= eb then return ea < eb end
-  elseif (ca == nil) ~= (cb == nil) then
-    if a.exp ~= b.exp then return a.exp < b.exp end
-    return ca ~= nil
   end
+  -- Then fewer expected crafts, then the priced one over the unpriced.
   if a.exp ~= b.exp then return a.exp < b.exp end
+  if (ca == nil) ~= (cb == nil) then return ca ~= nil end
   local wa, wb = a.candidate.weight or 0, b.candidate.weight or 0
   if wa ~= wb then return wa < wb end
   return (a.candidate.spellID or 0) < (b.candidate.spellID or 0)
