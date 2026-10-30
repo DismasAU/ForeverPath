@@ -190,25 +190,6 @@ local function sortMaterials(materials, key)
   return copy
 end
 
-local function createTableHeader(body)
-  local header = Widgets.Frame(body, nil, { bg = C.sidebar })
-  header:SetHeight(26)
-  header:SetPoint("TOPLEFT", body, "TOPLEFT", 0, 0)
-  header:SetPoint("TOPRIGHT", body, "TOPRIGHT", 0, 0)
-  local headerLine = Widgets.HLine(header, C.black, 1)
-  headerLine:SetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", 0, 0)
-  headerLine:SetPoint("BOTTOMRIGHT", header, "BOTTOMRIGHT", 0, 0)
-  local anchor, point, offset = header, "RIGHT", -10
-  for _, column in ipairs(HEADER_COLUMNS) do
-    local label = Widgets.Text(header, "tableHeader", column[1], { caps = true, justify = column[3], width = column[2] })
-    label:SetPoint("RIGHT", anchor, point, offset, 0)
-    anchor, point = label, "LEFT"
-  end
-  local material = Widgets.Text(header, "tableHeader", "Material", { caps = true })
-  material:SetPoint("LEFT", header, "LEFT", 48, 0)
-  return header
-end
-
 -- "Tailoring recipe - needs 75 - taught by a trainer" and the like.
 local function heroMeta(goal, view)
   local learn, skill, enchant = view.learn, view.skill, view.enchant
@@ -589,15 +570,9 @@ local function Create(parent)
   table_:SetPoint("TOPLEFT", tabs, "BOTTOMLEFT", 0, -1)
   table_:SetPoint("BOTTOMRIGHT", screen, "BOTTOMRIGHT", 0, 0)
   local body = table_.body
-  local header = createTableHeader(body)
+  local header = Widgets.TableHeader(body, HEADER_COLUMNS, { "Material", 48 })
 
-  local footer = Widgets.Frame(body, nil, { bg = C.sidebar })
-  footer:SetHeight(40)
-  footer:SetPoint("BOTTOMLEFT", body, "BOTTOMLEFT", 0, 0)
-  footer:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", 0, 0)
-  local footerLine = Widgets.HLine(footer, C.black, 1)
-  footerLine:SetPoint("TOPLEFT", footer, "TOPLEFT", 0, 0)
-  footerLine:SetPoint("TOPRIGHT", footer, "TOPRIGHT", 0, 0)
+  local footer = Widgets.TableFooter(body, 40)
   local buyLabel = Widgets.Text(footer, "secondary", "Buy all missing:")
   buyLabel:SetPoint("LEFT", footer, "LEFT", 12, 0)
   local buyValue = Widgets.Text(footer, "secondary", "no price data", { color = C.text3 })
@@ -619,9 +594,7 @@ local function Create(parent)
   routeText:SetPoint("RIGHT", craftwise, "LEFT", -14, 0)
   screen.craftwiseButton, screen.routeText, screen.buyValue = craftwise, routeText, buyValue
 
-  local scroll = Widgets.ScrollArea(body)
-  scroll:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -1)
-  scroll:SetPoint("BOTTOMRIGHT", footer, "TOPRIGHT", 0, 1)
+  local scroll = Widgets.TableScroll(body, header, footer)
   screen.scroll = scroll
   screen.pool = Widgets.Pool(scroll.content, createMaterialRow)
   screen.tableMessage = Widgets.EmptyState(body, "", "")

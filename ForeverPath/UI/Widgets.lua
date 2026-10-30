@@ -160,6 +160,61 @@ function Widgets.ListRow(parent, opts)
   return row
 end
 
+-- Table panels: a header bar, rows in a scroll area, an optional footer bar.
+--
+-- TableHeader(body, columns, first): a 26 px bar across the top of body.
+-- columns are laid out right to left, each { label, width, justify, gap }
+-- (gap before the next column, default 10); first = { label, x } is the
+-- left-aligned name column. header.labels[label] holds each column's text.
+function Widgets.TableHeader(body, columns, first)
+  local header = Widgets.Frame(body, nil, { bg = C.sidebar })
+  header:SetHeight(26)
+  header:SetPoint("TOPLEFT", body, "TOPLEFT", 0, 0)
+  header:SetPoint("TOPRIGHT", body, "TOPRIGHT", 0, 0)
+  local line = Widgets.HLine(header, C.black, 1)
+  line:SetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", 0, 0)
+  line:SetPoint("BOTTOMRIGHT", header, "BOTTOMRIGHT", 0, 0)
+  header.labels = {}
+  local anchor, point, offset = header, "RIGHT", -10
+  for _, column in ipairs(columns) do
+    local label = Widgets.Text(header, "tableHeader", column[1], { caps = true, justify = column[3], width = column[2] })
+    label:SetPoint("RIGHT", anchor, point, offset, 0)
+    header.labels[column[1]] = label
+    anchor, point, offset = label, "LEFT", -(column[4] or 10)
+  end
+  if first then
+    local label = Widgets.Text(header, "tableHeader", first[1], { caps = true })
+    label:SetPoint("LEFT", header, "LEFT", first[2], 0)
+    header.labels[first[1]] = label
+  end
+  return header
+end
+
+-- A footer bar of `height` across the bottom of body, with a top line.
+function Widgets.TableFooter(body, height)
+  local footer = Widgets.Frame(body, nil, { bg = C.sidebar })
+  footer:SetHeight(height)
+  footer:SetPoint("BOTTOMLEFT", body, "BOTTOMLEFT", 0, 0)
+  footer:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", 0, 0)
+  local line = Widgets.HLine(footer, C.black, 1)
+  line:SetPoint("TOPLEFT", footer, "TOPLEFT", 0, 0)
+  line:SetPoint("TOPRIGHT", footer, "TOPRIGHT", 0, 0)
+  return footer
+end
+
+-- The scroll area between a table's header and its footer (or body's
+-- bottom, `bottomInset` above it, without one).
+function Widgets.TableScroll(body, header, footer, bottomInset)
+  local scroll = Widgets.ScrollArea(body)
+  scroll:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -1)
+  if footer then
+    scroll:SetPoint("BOTTOMRIGHT", footer, "TOPRIGHT", 0, 1)
+  else
+    scroll:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", 0, bottomInset or 0)
+  end
+  return scroll
+end
+
 -- Engraved divider: black line with a faint highlight beneath. Returns a 2 px frame.
 function Widgets.Engraved(parent, vertical)
   local frame = CreateFrame("Frame", nil, parent)

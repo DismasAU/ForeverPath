@@ -173,42 +173,19 @@ function CraftWiseView.Create(screen)
   table_:SetPoint("TOPLEFT", cards[1], "BOTTOMLEFT", 0, -10)
   table_:SetPoint("BOTTOMRIGHT", view, "BOTTOMRIGHT", 0, 0)
   local body = table_.body
-  local header = Widgets.Frame(body, nil, { bg = C.sidebar })
-  header:SetHeight(26)
-  header:SetPoint("TOPLEFT", body, "TOPLEFT", 0, 0)
-  header:SetPoint("TOPRIGHT", body, "TOPRIGHT", 0, 0)
-  local headerLine = Widgets.HLine(header, C.black, 1)
-  headerLine:SetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", 0, 0)
-  headerLine:SetPoint("BOTTOMRIGHT", header, "BOTTOMRIGHT", 0, 0)
-  local hPrice = Widgets.Text(header, "tableHeader", "Price data", { caps = true, width = COLS.price })
-  hPrice:SetPoint("RIGHT", header, "RIGHT", -10, 0)
-  local hChoice = Widgets.Text(header, "tableHeader", "Choice", { caps = true, width = COLS.choice })
-  hChoice:SetPoint("RIGHT", hPrice, "LEFT", -10, 0)
-  local hHybrid = Widgets.Text(header, "tableHeader", "Hybrid", { caps = true, justify = "RIGHT", width = COLS.hybrid })
-  hHybrid:SetPoint("RIGHT", hChoice, "LEFT", -10, 0)
-  local hCraft = Widgets.Text(header, "tableHeader", "Craft path", { caps = true, justify = "RIGHT", width = COLS.craft })
-  hCraft:SetPoint("RIGHT", hHybrid, "LEFT", -10, 0)
-  local hBuy = Widgets.Text(header, "tableHeader", "Buy (AH)", { caps = true, justify = "RIGHT", width = COLS.buy })
-  hBuy:SetPoint("RIGHT", hCraft, "LEFT", -10, 0)
-  local hComponent = Widgets.Text(header, "tableHeader", "Component", { caps = true })
-  hComponent:SetPoint("LEFT", header, "LEFT", 36, 0)
+  local header = Widgets.TableHeader(body, {
+    { "Price data", COLS.price }, { "Choice", COLS.choice }, { "Hybrid", COLS.hybrid, "RIGHT" },
+    { "Craft path", COLS.craft, "RIGHT" }, { "Buy (AH)", COLS.buy, "RIGHT" },
+  }, { "Component", 36 })
 
-  local footer = Widgets.Frame(body, nil, { bg = C.sidebar })
-  footer:SetHeight(30)
-  footer:SetPoint("BOTTOMLEFT", body, "BOTTOMLEFT", 0, 0)
-  footer:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", 0, 0)
-  local footerLine = Widgets.HLine(footer, C.black, 1)
-  footerLine:SetPoint("TOPLEFT", footer, "TOPLEFT", 0, 0)
-  footerLine:SetPoint("TOPRIGHT", footer, "TOPRIGHT", 0, 0)
+  local footer = Widgets.TableFooter(body, 30)
   local totals = Widgets.Text(footer, "secondary", "")
   totals:SetPoint("LEFT", footer, "LEFT", 12, 0)
   local note = Widgets.Text(footer, "small", "Prices from your own scans, not live listings.", { color = C.text3, justify = "RIGHT" })
   note:SetPoint("RIGHT", footer, "RIGHT", -12, 0)
   view.totals = totals
 
-  local scroll = Widgets.ScrollArea(body)
-  scroll:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -1)
-  scroll:SetPoint("BOTTOMRIGHT", footer, "TOPRIGHT", 0, 1)
+  local scroll = Widgets.TableScroll(body, header, footer)
   view.scroll = scroll
   view.pool = Widgets.Pool(scroll.content, createRow)
   view.table = table_

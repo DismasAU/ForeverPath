@@ -359,27 +359,17 @@ local function Create(parent)
   sort:SetPoint("TOPRIGHT", body, "TOPRIGHT", -10, -8)
   screen.sort = sort
 
-  local header = Widgets.Frame(body, nil, { bg = C.sidebar })
-  header:SetHeight(26)
+  local header = Widgets.TableHeader(body, {
+    { "Trk", nil, "RIGHT", 14 }, { "Est. cost", 58, "RIGHT", 12 }, { "Progress", 92, "RIGHT" },
+  }, { "Goal", 80 })
+  -- Below the status tabs rather than at the top of the panel.
+  header:ClearAllPoints()
   header:SetPoint("TOPLEFT", tabs, "BOTTOMLEFT", -10, -6)
   header:SetPoint("TOPRIGHT", body, "TOPRIGHT", 0, -42)
-  local headerLine = Widgets.HLine(header, C.black, 1)
-  headerLine:SetPoint("BOTTOMLEFT", header, "BOTTOMLEFT", 0, 0)
-  headerLine:SetPoint("BOTTOMRIGHT", header, "BOTTOMRIGHT", 0, 0)
   local hNumber = Widgets.Text(header, "tableHeader", "#", { caps = true })
   hNumber:SetPoint("LEFT", header, "LEFT", 16, 0)
-  local hGoal = Widgets.Text(header, "tableHeader", "Goal", { caps = true })
-  hGoal:SetPoint("LEFT", header, "LEFT", 80, 0)
-  local hTracked = Widgets.Text(header, "tableHeader", "Trk", { caps = true, justify = "RIGHT" })
-  hTracked:SetPoint("RIGHT", header, "RIGHT", -10, 0)
-  local hCost = Widgets.Text(header, "tableHeader", "Est. cost", { caps = true, justify = "RIGHT", width = 58 })
-  hCost:SetPoint("RIGHT", hTracked, "LEFT", -14, 0)
-  local hProgress = Widgets.Text(header, "tableHeader", "Progress", { caps = true, justify = "RIGHT", width = 92 })
-  hProgress:SetPoint("RIGHT", hCost, "LEFT", -12, 0)
 
-  local scroll = Widgets.ScrollArea(body)
-  scroll:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -1)
-  scroll:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", 0, 26)
+  local scroll = Widgets.TableScroll(body, header, nil, 26)
   screen.scroll = scroll
   screen.rowPool = Widgets.Pool(scroll.content, createGoalRow)
   screen.groupPool = Widgets.Pool(scroll.content, createGroupRow)
