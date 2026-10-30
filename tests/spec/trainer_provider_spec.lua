@@ -82,7 +82,7 @@ describe("TrainerProvider", function()
     Mock.AddItem(2592, { name = "Wool Cloth" })
     Mock.professionSlots = { 1 }
     Mock.professionInfo = { [1] = { name = "Tailoring", skillLevel = 50, maxSkillLevel = 150, skillLine = 197 } }
-    local goal = ns.GoalService.AddCraftGoal(woolen, 1)
+    local goal = ns.GoalService.AddItemGoal(woolen, 1, "CRAFT_ITEM")
     local view = ns.Planner.Evaluate(goal)
     assert_eq(view.tree.root.craftOption.reason, "needs Tailoring 75; Thandrel has 50")
     Mock.professionInfo[1].skillLevel = 100
@@ -102,7 +102,7 @@ describe("TrainerProvider", function()
     Mock.AddItem(2592, { name = "Wool Cloth" })
     Mock.professionSlots = { 1 }
     Mock.professionInfo = { [1] = { name = "Tailoring", skillLevel = 100, maxSkillLevel = 150, skillLine = 197 } }
-    local goal = ns.GoalService.AddCraftGoal(woolen, 1)
+    local goal = ns.GoalService.AddItemGoal(woolen, 1, "CRAFT_ITEM")
     -- Before any trainer visit the step is there, without a trainer.
     local view = ns.Planner.Evaluate(goal)
     local root = view.tree.root

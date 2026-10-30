@@ -176,70 +176,41 @@ function GoalStore:GetSelected()
   return self:Get(self.storage.selectedGoalId)
 end
 
-function GoalStore:SetQuantity(id, quantity)
+-- Applies change(goal, now) -> ok, err to a stored goal and announces it when
+-- it succeeds; opts.renumber re-sequences priorities first (status changes).
+function GoalStore:Update(id, change, opts)
   local goal = self.storage.goals[id]
   if not goal then
     return false, "no such goal"
   end
-  local ok, err = GoalModel.SetQuantity(goal, quantity, self.now())
+  local ok, err = change(goal, self.now())
   if not ok then
     return false, err
   end
+  if opts and opts.renumber then self:Renumber() end
   notify(self, "updated", goal)
   return true
+end
+
+-- Setters over the GoalModel rules: each returns true, or false, reason.
+function GoalStore:SetQuantity(id, quantity)
+  return self:Update(id, function(goal, now) return GoalModel.SetQuantity(goal, quantity, now) end)
 end
 
 function GoalStore:SetRank(id, rank)
-  local goal = self.storage.goals[id]
-  if not goal then
-    return false, "no such goal"
-  end
-  local ok, err = GoalModel.SetRank(goal, rank, self.now())
-  if not ok then
-    return false, err
-  end
-  notify(self, "updated", goal)
-  return true
+  return self:Update(id, function(goal, now) return GoalModel.SetRank(goal, rank, now) end)
 end
 
 function GoalStore:SetStanding(id, standing)
-  local goal = self.storage.goals[id]
-  if not goal then
-    return false, "no such goal"
-  end
-  local ok, err = GoalModel.SetStanding(goal, standing, self.now())
-  if not ok then
-    return false, err
-  end
-  notify(self, "updated", goal)
-  return true
+  return self:Update(id, function(goal, now) return GoalModel.SetStanding(goal, standing, now) end)
 end
 
 function GoalStore:SetCasts(id, casts)
-  local goal = self.storage.goals[id]
-  if not goal then
-    return false, "no such goal"
-  end
-  local ok, err = GoalModel.SetCasts(goal, casts, self.now())
-  if not ok then
-    return false, err
-  end
-  notify(self, "updated", goal)
-  return true
+  return self:Update(id, function(goal, now) return GoalModel.SetCasts(goal, casts, now) end)
 end
 
 function GoalStore:SetStatus(id, status)
-  local goal = self.storage.goals[id]
-  if not goal then
-    return false, "no such goal"
-  end
-  local ok, err = GoalModel.SetStatus(goal, status, self.now())
-  if not ok then
-    return false, err
-  end
-  self:Renumber()
-  notify(self, "updated", goal)
-  return true
+  return self:Update(id, function(goal, now) return GoalModel.SetStatus(goal, status, now) end, { renumber = true })
 end
 
 function GoalStore:SetTracked(id, tracked)
@@ -340,9 +311,4 @@ function GoalStore:FindByTarget(goalType, field, value, normalize)
     end
   end
   return nil
-end
-
--- Finds an existing goal with the same type and item target.
-function GoalStore:FindByItem(goalType, itemID)
-  return self:FindByTarget(goalType, "itemID", itemID)
 end

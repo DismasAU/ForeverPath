@@ -276,7 +276,7 @@ describe("Planning with the catalogue", function()
   end)
 
   it("explains a crafter who is missing or under-skilled", function()
-    local goal = ns.GoalService.AddCraftGoal(HAMMER, 1)
+    local goal = ns.GoalService.AddItemGoal(HAMMER, 1, "CRAFT_ITEM")
     local view = ns.Planner.Evaluate(goal)
     assert_eq(view.readiness, ns.Readiness.OK)
     assert_eq(view.recipeStatus, "unlearned")

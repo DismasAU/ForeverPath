@@ -53,6 +53,8 @@ describe("GoalModel", function()
   it("names every goal type in TypeIDs and refuses a misspelt one", function()
     for id in pairs(GoalModel.Types) do assert_eq(GoalModel.TypeIDs[id], id) end
     assert_error(function() return GoalModel.TypeIDs.CRAFT_ITEMS end, "unknown goal type CRAFT_ITEMS")
+    assert_eq(GoalModel.Statuses.PAUSED, "PAUSED")
+    assert_error(function() return GoalModel.Statuses.PAUSE end, "unknown goal status PAUSE")
   end)
 
   it("knows what each goal type counts", function()

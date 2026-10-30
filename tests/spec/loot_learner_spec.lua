@@ -87,7 +87,7 @@ describe("LootLearner", function()
     assert_eq(skin.label, "Skinned from Mangy Wolf")
     assert_true(skin.unavailable, "nobody skins")
     -- The planner routes the item to the observed drop.
-    local goal = ns.GoalService.AddObtainGoal(HIDE, 2)
+    local goal = ns.GoalService.AddItemGoal(HIDE, 2, "OBTAIN_ITEM")
     local view = ns.Planner.Evaluate(goal)
     assert_eq(view.tree.root.route, "drop")
     assert_eq(view.sourceText, "Dropped by Mangy Wolf - Durotar - seen 1 time in 3 loots on Forever")

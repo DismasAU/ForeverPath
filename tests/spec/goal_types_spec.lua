@@ -326,6 +326,12 @@ describe("Reach-skill goals", function()
     assert_eq(goal.target.rank, 150, "the current cap")
     assert_eq(goal.target.startRank, 100)
     assert_eq(ns.GoalService.Title(goal), "Reach Tailoring 150")
+    -- A rejected retarget says so and leaves the goal alone.
+    local same, refused = ns.GoalService.AddSkillGoal("Tailoring", ns.GoalModel.MAX_SKILL + 1)
+    assert_nil(same)
+    assert_match(refused, "rank")
+    assert_eq(goal.target.rank, 150)
+    assert_eq(ns.GoalService.AddByKind("skill", "150 Tailoring").id, goal.id, "AddByKind routes to the skill grammar")
     local view = ns.Planner.Evaluate(goal)
     assert_eq(view.readiness, ns.Readiness.OK)
     local skill = view.skill

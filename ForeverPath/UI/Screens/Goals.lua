@@ -434,22 +434,7 @@ local function Create(parent)
       ns.UI.MainFrame.SetStatus(kind == "attunement" and "Type an attunement name, or pick one on the Attunements screen." or "Enter an item ID, Shift-click an item link, or type an item name.", "info")
       return false
     end
-    local goal, message
-    if kind == "attunement" then
-      goal, message = ns.GoalService.AddAttunementFromInput(text)
-    elseif kind == "recipe" then
-      goal, message = ns.GoalService.AddRecipeFromInput(text)
-    elseif kind == "enchant" then
-      goal, message = ns.GoalService.AddEnchantFromInput(text, newGoal.stepper:GetValue())
-    elseif kind == "skill" then
-      goal, message = ns.GoalService.AddSkillFromInput(text)
-    elseif kind == "quest" then
-      goal, message = ns.GoalService.AddQuestFromInput(text)
-    elseif kind == "reputation" then
-      goal, message = ns.GoalService.AddReputationFromInput(text)
-    else
-      goal, message = ns.GoalService.AddFromInput(text, newGoal.stepper:GetValue())
-    end
+    local goal, message = ns.GoalService.AddByKind(kind, text, newGoal.stepper:GetValue())
     ns.UI.MainFrame.SetStatus(message, goal and "ok" or "error")
     if goal then
       newGoal.input:SetText("")

@@ -456,7 +456,6 @@ local function Create(parent)
   -- CraftWise panel: the selected goal when it is active, else the first
   -- active goal with a dependency tree.
   function screen:RefreshCraftWise(activeGoals)
-    local MainFrame = ns.UI.MainFrame
     local goal = ns.GoalService.GetSelected()
     local view = goal and ns.GoalService.Views()[goal.id]
     if not (goal and goal.status == ns.GoalModel.Statuses.ACTIVE and view and view.tree) then

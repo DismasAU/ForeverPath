@@ -181,7 +181,7 @@ describe("ReputationProvider", function()
     assert_eq(hints[1].name, "Argent Dawn quartermaster")
     local sources = ns.SourceProvider.Sources(DAWN_BOOTS_PATTERN)
     assert_eq(sources[#sources].label, "Reputation reward: Argent Dawn (Honored)")
-    local goal = ns.GoalService.AddObtainGoal(DAWN_BOOTS_PATTERN, 1)
+    local goal = ns.GoalService.AddItemGoal(DAWN_BOOTS_PATTERN, 1, "OBTAIN_ITEM")
     local view = ns.Planner.Evaluate(goal)
     assert_eq(view.tree.root.route, "vendor")
     assert_match(view.message, "Reputation reward: Argent Dawn %(Honored%)")
@@ -345,6 +345,17 @@ describe("Reputation goals", function()
     hits = GS.Suggest("skill", "tailor 225", 5)
     assert_eq(hits[1].text, "Tailoring 225")
     assert_eq(hits[1].meta, "Profession")
+    -- Every form Enter accepts is suggested: rank or standing first, enchants on the Recipe tab.
+    hits = GS.Suggest("skill", "225 tailor", 5)
+    assert_eq(hits[1].text, "Tailoring 225")
+    hits = GS.Suggest("reputation", "exalted cenarion", 5)
+    assert_eq(hits[1].text, "Cenarion Circle - Exalted")
+    local enchantRecipe
+    for _, hit in ipairs(GS.Suggest("recipe", "weapon - crusader", 5)) do
+      if hit.text == "Enchant Weapon - Crusader" then enchantRecipe = hit end
+    end
+    assert_not_nil(enchantRecipe, "the Recipe tab offers what AddRecipeFromInput finds, enchants included")
+    assert_eq(enchantRecipe.kind, "recipe")
     hits = GS.Suggest("quest", "ancient", 5)
     assert_eq(hits[1].text, "An Ancient Grudge")
     assert_eq(hits[1].kind, "quest")

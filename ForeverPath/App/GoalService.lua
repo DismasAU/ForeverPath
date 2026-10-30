@@ -52,11 +52,14 @@ end
 local LOADING = "ForeverPath is still loading."
 
 -- An Add* call for a goal that already exists: retarget it (update(goal,
--- reopening), when given), reopen it if it was completed, select it.
--- Returns goal, message, false.
+-- reopening) -> ok, err, when given), reopen it if it was completed, select
+-- it. Returns goal, message, false, or nil, err when the update is refused.
 local function reuseGoal(store, existing, update)
   local reopening = not GoalModel.IsOpen(existing)
-  if update then update(existing, reopening) end
+  if update then
+    local ok, err = update(existing, reopening)
+    if not ok then return nil, err end
+  end
   if reopening then store:SetStatus(existing.id, GoalModel.Statuses.ACTIVE) end
   store:Select(existing.id)
   return existing, string.format("%s: %s", update and "Updated goal" or "Already a goal", GoalService.Title(existing)), false
@@ -68,6 +71,36 @@ local function createGoal(store, goalType, target)
   if not goal then return nil, err end
   store:Select(goal.id)
   return goal, string.format("Added goal: %s", GoalService.Title(goal)), true
+end
+
+-- " (using <first>; also matched: <rest>)" when a name search hit several
+-- entries, else "". chosen and other describe a hit.
+local function matchNote(hits, chosen, other)
+  if #hits < 2 then return "" end
+  local others = {}
+  for i = 2, #hits do others[#others + 1] = other(hits[i]) end
+  return string.format(" (using %s; also matched: %s)", chosen(hits[1]), Util.Join(others))
+end
+local function hitName(hit) return hit.name end
+
+-- Goal input grammar shared by the *FromInput functions and Suggest, so a
+-- suggestion is offered for exactly what Enter accepts.
+
+-- "Tailoring 225", "225 Tailoring" or "Tailoring" -> name, rank or nil.
+local function parseSkillInput(text)
+  local name, rank = text:match("^(.-)%s+(%d+)$")
+  if not name then rank, name = text:match("^(%d+)%s+(.-)$") end
+  return Util.Trim(name or text), rank and tonumber(rank) or nil
+end
+
+-- "Argent Dawn Exalted", "Exalted Argent Dawn" or "Argent Dawn" -> name,
+-- standing or nil.
+local function parseReputationInput(text, RP)
+  local head, tail = text:match("^(.-)%s+(%a+)$")
+  if head and RP.StandingByName(tail) then return Util.Trim(head), RP.StandingByName(tail) end
+  local first, rest = text:match("^(%a+)%s+(.-)$")
+  if first and RP.StandingByName(first) then return Util.Trim(rest), RP.StandingByName(first) end
+  return text, nil
 end
 
 function GoalService.Title(goal)
@@ -109,16 +142,15 @@ function GoalService.AddItemGoal(itemID, quantity, goalType)
   local existing = GoalService.FindItemGoal(itemID)
   if existing then
     return reuseGoal(store, existing, function(goal)
-      if explicit and goal.type ~= explicit then store:SetType(goal.id, explicit) end
-      store:SetQuantity(goal.id, quantity)
+      if explicit and goal.type ~= explicit then
+        local ok, err = store:SetType(goal.id, explicit)
+        if not ok then return false, err end
+      end
+      return store:SetQuantity(goal.id, quantity)
     end)
   end
   ItemProvider.Prefetch(itemID)
   return createGoal(store, goalType, { itemID = itemID, quantity = quantity })
-end
-
-function GoalService.AddCraftGoal(itemID, quantity)
-  return GoalService.AddItemGoal(itemID, quantity, GoalModel.TypeIDs.CRAFT_ITEM)
 end
 
 -- Attune ids arrive as numbers or strings; compare them as strings.
@@ -148,11 +180,7 @@ function GoalService.AddAttunementFromInput(text)
   if not attune then
     return nil, string.format("No attunement called \"%s\" for your faction. /fp attunements lists them.", Util.Trim(text or ""))
   end
-  local goal, message, isNew = GoalService.AddAttunementGoal(attune.id)
-  if not goal then
-    return nil, message
-  end
-  return goal, message, isNew
+  return GoalService.AddAttunementGoal(attune.id)
 end
 
 ---------------------------------------------------------------------------
@@ -162,19 +190,12 @@ function GoalService.FindRecipeGoal(spellID)
   return findGoal(GoalModel.TypeIDs.LEARN_RECIPE, "spellID", spellID)
 end
 
-local function recipeByID(spellID)
-  local catalogue = ns.Data.Recipes
-  local recipe = catalogue and catalogue.Get and catalogue.Get(spellID) or nil
-  if not recipe and catalogue and catalogue.GetCombine then recipe = catalogue.GetCombine(spellID) end
-  if not recipe and ns.db and ns.db.recipes then recipe = ns.db.recipes[spellID] end
-  return recipe
-end
 
 -- Creates (or selects) a learn-recipe goal for a recipe spell id. Returns goal, message, isNew.
 function GoalService.AddRecipeGoal(spellID)
   local store = GoalService.Store()
   if not store then return nil, LOADING end
-  local recipe = recipeByID(spellID)
+  local recipe = ns.Planner.RecipeByID(spellID)
   if not recipe then
     return nil, string.format("No recipe with spell id %s is known (catalogue or recorded professions).", tostring(spellID))
   end
@@ -214,11 +235,8 @@ function GoalService.AddRecipeFromInput(text)
       return nil, string.format("No recipe called \"%s\" is in the catalogue.", text)
     end
     spellID = hits[1].spellID
-    if #hits > 1 then
-      local others = {}
-      for i = 2, #hits do others[#others + 1] = hits[i].name .. " (" .. (hits[i].professionName or "?") .. ")" end
-      note = string.format(" (using %s - %s; also matched: %s)", hits[1].name, hits[1].professionName or "?", Util.Join(others))
-    end
+    note = matchNote(hits, function(hit) return hit.name .. " - " .. (hit.professionName or "?") end,
+      function(hit) return hit.name .. " (" .. (hit.professionName or "?") .. ")" end)
   end
   local goal, message, isNew = GoalService.AddRecipeGoal(spellID)
   if not goal then
@@ -239,7 +257,7 @@ end
 function GoalService.AddEnchantGoal(spellID, quantity)
   local store = GoalService.Store()
   if not store then return nil, LOADING end
-  local recipe = recipeByID(spellID)
+  local recipe = ns.Planner.RecipeByID(spellID)
   if not recipe then
     return nil, string.format("No enchant with spell id %s is known (catalogue or recorded professions).", tostring(spellID))
   end
@@ -249,7 +267,7 @@ function GoalService.AddEnchantGoal(spellID, quantity)
   quantity = Util.IsPositiveInt(quantity) and quantity or 1
   local existing = GoalService.FindEnchantGoal(spellID)
   if existing then
-    return reuseGoal(store, existing, function(goal) store:SetQuantity(goal.id, quantity) end)
+    return reuseGoal(store, existing, function(goal) return store:SetQuantity(goal.id, quantity) end)
   end
   if recipe.teachItemID then ItemProvider.Prefetch(recipe.teachItemID) end
   return createGoal(store, GoalModel.TypeIDs.APPLY_ENCHANT, {
@@ -274,11 +292,7 @@ function GoalService.AddEnchantFromInput(text, quantity)
       return nil, string.format("No enchant called \"%s\" is in the catalogue.", text)
     end
     spellID = hits[1].spellID
-    if #hits > 1 then
-      local others = {}
-      for i = 2, #hits do others[#others + 1] = hits[i].name end
-      note = string.format(" (using %s; also matched: %s)", hits[1].name, Util.Join(others))
-    end
+    note = matchNote(hits, hitName, hitName)
   end
   local goal, message, isNew = GoalService.AddEnchantGoal(spellID, quantity)
   if not goal then
@@ -333,8 +347,9 @@ function GoalService.AddSkillGoal(professionName, rank)
   local existing = GoalService.FindSkillGoal(canonical)
   if existing then
     return reuseGoal(store, existing, function(goal, reopening)
-      store:SetRank(goal.id, rank)
-      if reopening then goal.target.startRank = standing and standing.skillLevel or goal.target.startRank end
+      local ok, err = store:SetRank(goal.id, rank)
+      if ok and reopening then goal.target.startRank = standing and standing.skillLevel or goal.target.startRank end
+      return ok, err
     end)
   end
   local goal, message, isNew = createGoal(store, GoalModel.TypeIDs.REACH_SKILL, {
@@ -353,16 +368,7 @@ function GoalService.AddSkillFromInput(text)
   if text == "" then
     return nil, "Type a profession, optionally with the skill to reach (Tailoring 225)."
   end
-  local name, rank = text:match("^(.-)%s+(%d+)$")
-  if not name then
-    rank, name = text:match("^(%d+)%s+(.-)$")
-  end
-  name = Util.Trim(name or text)
-  local goal, message, isNew = GoalService.AddSkillGoal(name, rank and tonumber(rank) or nil)
-  if not goal then
-    return nil, message
-  end
-  return goal, message, isNew
+  return GoalService.AddSkillGoal(parseSkillInput(text))
 end
 
 function GoalService.SetRank(id, rank)
@@ -414,11 +420,7 @@ function GoalService.AddQuestFromInput(text)
       return nil, string.format("No quest called \"%s\" is known (dungeon quests, attunement quests, your quest log).", text)
     end
     questID = hits[1].questID
-    if #hits > 1 then
-      local others = {}
-      for i = 2, #hits do others[#others + 1] = hits[i].name end
-      note = string.format(" (using %s - %s; also matched: %s)", hits[1].name, hits[1].where or "?", Util.Join(others))
-    end
+    note = matchNote(hits, function(hit) return hit.name .. " - " .. (hit.where or "?") end, hitName)
   end
   local goal, message, isNew = GoalService.AddQuestGoal(questID)
   if not goal then
@@ -454,8 +456,9 @@ function GoalService.AddReputationGoal(factionID, standing)
   local existing = GoalService.FindReputationGoal(record.factionID)
   if existing then
     return reuseGoal(store, existing, function(goal, reopening)
-      store:SetStanding(goal.id, standing)
-      if reopening then goal.target.startValue = record.value end
+      local ok, err = store:SetStanding(goal.id, standing)
+      if ok and reopening then goal.target.startValue = record.value end
+      return ok, err
     end)
   end
   local goal, message, isNew = createGoal(store, GoalModel.TypeIDs.REACH_REPUTATION, {
@@ -475,39 +478,17 @@ function GoalService.AddReputationFromInput(text)
   if not RP or not RP.IsAvailable() then
     return nil, "Reputation goals need the faction API, which this client lacks."
   end
-  local name, standing = text, nil
-  local head, tail = text:match("^(.-)%s+(%a+)$")
-  if head and RP.StandingByName(tail) then
-    name, standing = head, RP.StandingByName(tail)
-  else
-    local first, rest = text:match("^(%a+)%s+(.-)$")
-    if first and RP.StandingByName(first) then name, standing = rest, RP.StandingByName(first) end
-  end
-  local hits = RP.Search(Util.Trim(name), 5)
+  local name, standing = parseReputationInput(text, RP)
+  local hits = RP.Search(name, 5)
   if #hits == 0 then
-    return nil, string.format("No faction called \"%s\" in your reputation list.", Util.Trim(name))
+    return nil, string.format("No faction called \"%s\" in your reputation list.", name)
   end
-  local note = ""
-  if #hits > 1 then
-    local others = {}
-    for i = 2, #hits do others[#others + 1] = hits[i].name end
-    note = string.format(" (using %s; also matched: %s)", hits[1].name, Util.Join(others))
-  end
+  local note = matchNote(hits, hitName, hitName)
   local goal, message, isNew = GoalService.AddReputationGoal(hits[1].factionID, standing)
   if not goal then
     return nil, message
   end
   return goal, message .. note, isNew
-end
-
-function GoalService.SetStanding(id, standing)
-  local store = GoalService.Store()
-  if not store then return false, "not loaded" end
-  return store:SetStanding(id, standing)
-end
-
-function GoalService.AddObtainGoal(itemID, quantity)
-  return GoalService.AddItemGoal(itemID, quantity, GoalModel.TypeIDs.OBTAIN_ITEM)
 end
 
 -- Resolves free text (item ID, link or name) and adds an item goal (type
@@ -517,7 +498,7 @@ end
 function GoalService.AddFromInput(text, quantity, goalType)
   local spellID = GoalService.SpellIDFromText(text)
   if spellID then
-    local recipe = recipeByID(spellID)
+    local recipe = ns.Planner.RecipeByID(spellID)
     if not recipe then
       return nil, string.format("No recipe with spell id %d is in the catalogue or your recorded professions.", spellID)
     end
@@ -542,11 +523,7 @@ function GoalService.AddFromInput(text, quantity, goalType)
       return nil, string.format("No item named \"%s\" is known to ForeverPath (catalogue, recorded recipes and items seen). Use the item ID or Shift-click an item link.", parsed.name)
     end
     itemID = hits[1].itemID
-    if #hits > 1 then
-      local others = {}
-      for i = 2, #hits do others[#others + 1] = hits[i].name end
-      note = string.format(" (using %s; also matched: %s)", hits[1].name, Util.Join(others))
-    end
+    note = matchNote(hits, hitName, hitName)
   elseif parsed.name then
     ItemProvider.RememberName(itemID, parsed.name)
   end
@@ -558,6 +535,24 @@ function GoalService.AddFromInput(text, quantity, goalType)
     return nil, message
   end
   return goal, message .. note, isNew
+end
+
+-- Goal input for one kind ("item", "recipe", "enchant", "skill", "quest",
+-- "reputation", "attunement"); amount is the quantity or cast count for the
+-- kinds that count one (items, enchants) and ignored by the rest, whose
+-- target sits in the text. Returns goal, message, isNew.
+local FROM_INPUT = {
+  item = function(text, amount) return GoalService.AddFromInput(text, amount) end,
+  recipe = function(text) return GoalService.AddRecipeFromInput(text) end,
+  enchant = function(text, amount) return GoalService.AddEnchantFromInput(text, amount) end,
+  skill = function(text) return GoalService.AddSkillFromInput(text) end,
+  quest = function(text) return GoalService.AddQuestFromInput(text) end,
+  reputation = function(text) return GoalService.AddReputationFromInput(text) end,
+  attunement = function(text) return GoalService.AddAttunementFromInput(text) end,
+}
+
+function GoalService.AddByKind(kind, text, amount)
+  return (FROM_INPUT[kind] or FROM_INPUT.item)(text, amount)
 end
 
 ---------------------------------------------------------------------------
@@ -593,13 +588,12 @@ function GoalService.Suggest(kind, text, limit)
     end
   end
   local function skills(n)
-    local name, rank = text:match("^(.-)%s+(%d+)$")
-    local needle = string.lower(Util.Trim(name or text))
+    local name, target = parseSkillInput(text)
+    local needle = string.lower(name)
     local count = 0
     for _, p in ipairs(catalogue and catalogue.Professions and catalogue.Professions() or {}) do
       if count < n and needle ~= "" and string.find(string.lower(p.name or ""), needle, 1, true) then
         count = count + 1
-        local target = rank and tonumber(rank) or nil
         local standing = ns.Planner and ns.Planner.CurrentSkill and ns.Planner.CurrentSkill(p.name, p.id) or nil
         push({ kind = "skill", text = p.name .. (target and (" " .. target) or ""), meta = standing and string.format("You are at %d", standing.skillLevel or 0) or "Profession",
           professionName = p.name, add = function() return GoalService.AddSkillGoal(p.name, target) end })
@@ -617,10 +611,8 @@ function GoalService.Suggest(kind, text, limit)
   local function factions(n)
     local RP = ns.ReputationProvider
     if not RP or not RP.IsAvailable() then return end
-    local name, standing = text, nil
-    local head, tail = text:match("^(.-)%s+(%a+)$")
-    if head and RP.StandingByName(tail) then name, standing = head, RP.StandingByName(tail) end
-    for _, hit in ipairs(RP.Search(Util.Trim(name), n)) do
+    local name, standing = parseReputationInput(text, RP)
+    for _, hit in ipairs(RP.Search(name, n)) do
       local factionID = hit.factionID
       local record = hit.record or RP.Get(factionID)
       push({ kind = "reputation", text = hit.name .. (standing and (" - " .. RP.StandingLabel(standing)) or ""), factionID = factionID,
@@ -643,7 +635,7 @@ function GoalService.Suggest(kind, text, limit)
     end
   end
   if kind == "item" then items(limit)
-  elseif kind == "recipe" then recipes(limit, "item")
+  elseif kind == "recipe" then recipes(limit)
   elseif kind == "enchant" then recipes(limit, "enchant")
   elseif kind == "skill" then skills(limit)
   elseif kind == "quest" then quests(limit)
@@ -705,12 +697,6 @@ function GoalService.SetAmount(id, value)
   if not amount then return false, "nothing to count" end
   if amount.field == "rank" then return GoalService.SetRank(id, value) end
   return GoalService.SetQuantity(id, value)
-end
-
-function GoalService.SetType(id, goalType)
-  local store = GoalService.Store()
-  if not store then return false, "not loaded" end
-  return store:SetType(id, goalType)
 end
 
 function GoalService.SetRoute(id, itemID, route)

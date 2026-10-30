@@ -296,9 +296,10 @@ end
 
 -- A recipe by spell id: the catalogue first, then a recorded profession window.
 function Planner.RecipeByID(spellID, deps)
-  local data, profession = deps.catalogue or {}, deps.profession or {}
-  local recipe = Log.Try(data.Get, spellID)
-  if type(recipe) ~= "table" then recipe = Log.Try(data.GetCombine, spellID) end
+  deps = deps or Planner.DefaultDeps()
+  local catalogue, profession = deps.catalogue or {}, deps.profession or {}
+  local recipe = Log.Try(catalogue.Get, spellID)
+  if type(recipe) ~= "table" then recipe = Log.Try(catalogue.GetCombine, spellID) end
   if type(recipe) ~= "table" then recipe = Log.Try(profession.GetRecipe, spellID, false) end
   return type(recipe) == "table" and recipe or nil
 end

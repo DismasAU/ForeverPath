@@ -274,7 +274,7 @@ describe("Quest goals", function()
 
   it("links quests to the item goals their rewards feed, in chat and on the screen", function()
     local MainFrame = ns.UI.MainFrame
-    local itemGoal = ns.GoalService.AddObtainGoal(LEGGINGS, 1)
+    local itemGoal = ns.GoalService.AddItemGoal(LEGGINGS, 1, "OBTAIN_ITEM")
     local views = ns.Planner.EvaluateAll({ itemGoal })
     local feeds = QP.FeedsGoals({ itemGoal }, views, ns.GoalService.Name)
     assert_not_nil(feeds[HIDES])

@@ -61,13 +61,18 @@ GoalModel.Types = {
     reopen = function(t) t.casts = 0 end },
 }
 
+-- A name table (t.X == "X") whose unknown names raise, so a misspelt name
+-- fails where it is written instead of comparing false.
+local function strictNames(names, what)
+  local t = setmetatable({}, {
+    __index = function(_, name) error("unknown " .. what .. " " .. tostring(name), 2) end,
+  })
+  for name in pairs(names) do rawset(t, name, name) end
+  return t
+end
+
 -- GoalModel.TypeIDs.CRAFT_ITEM == "CRAFT_ITEM", one per registered type.
--- Reading a name that is not a type raises, so a misspelt type fails where
--- it is written instead of comparing false.
-GoalModel.TypeIDs = setmetatable({}, {
-  __index = function(_, name) error("unknown goal type " .. tostring(name), 2) end,
-})
-for id in pairs(GoalModel.Types) do rawset(GoalModel.TypeIDs, id, id) end
+GoalModel.TypeIDs = strictNames(GoalModel.Types, "goal type")
 
 GoalModel.MAX_SKILL = 1000
 
@@ -79,8 +84,9 @@ function GoalModel.IsRouteOverride(route)
   return GoalModel.ROUTE_OVERRIDES[route] == true
 end
 
-GoalModel.Statuses = { ACTIVE = "ACTIVE", QUEUED = "QUEUED", PAUSED = "PAUSED", COMPLETED = "COMPLETED" }
+-- Goal lifecycle: StatusOrder is the set (and List order); Statuses names it strictly.
 GoalModel.StatusOrder = { ACTIVE = 1, QUEUED = 2, PAUSED = 3, COMPLETED = 4 }
+GoalModel.Statuses = strictNames(GoalModel.StatusOrder, "goal status")
 GoalModel.StatusLabel = { ACTIVE = "Active", QUEUED = "Queued", PAUSED = "Paused", COMPLETED = "Completed" }
 
 local counter = 0
@@ -260,7 +266,7 @@ function GoalModel.Validate(goal)
   if not ok then
     return false, err
   end
-  if goal.status ~= nil and not GoalModel.Statuses[goal.status] then
+  if goal.status ~= nil and not GoalModel.StatusOrder[goal.status] then
     return false, "unknown status"
   end
   if goal.createdAt ~= nil and type(goal.createdAt) ~= "number" then
@@ -324,7 +330,7 @@ function GoalModel.SetCasts(goal, casts, now)
 end
 
 function GoalModel.SetStatus(goal, status, now)
-  if not GoalModel.Statuses[status] then
+  if not GoalModel.StatusOrder[status] then
     return false, "unknown status"
   end
   local def = GoalModel.Types[goal.type]

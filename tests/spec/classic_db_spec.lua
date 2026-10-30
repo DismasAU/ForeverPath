@@ -348,7 +348,7 @@ describe("Classic quests in ForeverPath", function()
     local rare = SP.Sources(SHIELD)[1]
     assert_eq(rare.label, "Dropped by Wolf")
     assert_true(rare.unavailable, "0.2% is information, not a route")
-    local shieldGoal = ns.GoalService.AddObtainGoal(SHIELD, 1)
+    local shieldGoal = ns.GoalService.AddItemGoal(SHIELD, 1, "OBTAIN_ITEM")
     assert_eq(ns.Planner.Evaluate(shieldGoal).tree.root.route, "buy", "the Auction House, not a 0.2% farm")
     ns.GoalService.Remove(shieldGoal.id)
     ns.ClassicData.drops[SHIELD] = nil
@@ -400,7 +400,7 @@ describe("Classic quests in ForeverPath", function()
     assert_true(labels["Buy from Tharynn Bouden"])
     assert_nil(labels["Buy from Ranger Bob"], "classic vendors hide behind a recorded one")
     -- Planner: an item with only a classic drop is routed to it.
-    local goal = ns.GoalService.AddObtainGoal(LEATHER, 4)
+    local goal = ns.GoalService.AddItemGoal(LEATHER, 4, "OBTAIN_ITEM")
     local view = ns.Planner.Evaluate(goal)
     assert_eq(view.tree.root.route, "drop")
     assert_eq(view.sourceText, "Dropped by Wolf - Elwynn Forest - 25%, level 5-6, elite, 12 mobs drop it (classic data)")

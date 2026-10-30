@@ -274,7 +274,6 @@ local function Create(parent)
   -- Builds { groups = { { key, label, rows = { { questID, name, level, label, kind, feeds } } } }, feeds, total }
   function screen:Collect()
     local QP = ns.QuestProvider
-    local MainFrame = ns.UI.MainFrame
     local goals = ns.GoalService.List({ open = true })
     local feeds = QP.FeedsGoals(goals, ns.GoalService.Views(), ns.GoalService.Name)
     local questGoals = {}
