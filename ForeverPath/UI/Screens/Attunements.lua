@@ -14,6 +14,14 @@ local SIDE = 262
 
 local STATE_BADGE = { done = { "Done", "ok" }, current = { "Current", "gold" }, locked = { "Locked", "text" } }
 
+-- The quest a step is about (a Quest, Pick Up or Turn In step whose Wowhead
+-- id is a quest id), or nil. Read wherever the step is shown, never stored.
+local function stepQuestID(step)
+  if step.type ~= "Quest" and step.type ~= "Pick Up" and step.type ~= "Turn In" then return nil end
+  if not ns.QuestProvider.IsAvailable() then return nil end
+  return tonumber(string.match(tostring(step.wowheadID or ""), "^(%d+)"))
+end
+
 local function createStepRow(content, index, screen)
   local row = Widgets.ListRow(content, { height = ROW, index = index, divider = false })
   row.selected = Widgets.Texture(row, C.gold, 0, "BACKGROUND")
@@ -353,7 +361,7 @@ local function Create(parent)
     }
     local summary = screen:StepSummary(step)
     side.text:SetText(#summary > 0 and table.concat(summary, "\n") or (explain[step.type] or ""))
-    local questID = step.questID
+    local questID = stepQuestID(step)
     side.questID = questID
     if questID then side.openQuest:Show() else side.openQuest:Hide() end
     if questID and ns.QuestProvider.Waypoint(questID) then side.waypoint:Show() else side.waypoint:Hide() end
@@ -373,9 +381,8 @@ local function Create(parent)
       lines[#lines + 1] = Theme.Hex.text2 .. label .. ":|r " .. value
     end
     local QP = ns.QuestProvider
-    local questID = tonumber(string.match(tostring(step.wowheadID or ""), "^(%d+)"))
-    if (step.type == "Quest" or step.type == "Pick Up" or step.type == "Turn In") and questID and QP and QP.IsAvailable() then
-      step.questID = questID
+    local questID = stepQuestID(step)
+    if questID then
       local detail = QP.Detail(questID)
       local entry, state = detail.entry, detail.state
       local label, kind = QP.StateLabel(state, entry)
@@ -406,7 +413,8 @@ local function Create(parent)
         local counts = ns.InventoryProvider.GetCounts(itemID)
         add("In bags", string.format("%d of %d", counts.bags or 0, step.count or 1))
         for _, hint in ipairs(ns.SourceProvider.Sources(itemID)) do
-          if hint.kind ~= "buy" and hint.label then
+          -- The first source that is not a merchant (the AH and vendors show prices elsewhere).
+          if hint.kind ~= ns.DependencyResolver.Routes.VENDOR and hint.label then
             add("Source", hint.label .. (hint.detail and (" - " .. hint.detail) or ""))
             break
           end

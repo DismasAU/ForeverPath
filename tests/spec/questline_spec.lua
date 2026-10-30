@@ -511,6 +511,7 @@ describe("Questlines", function()
     end
     assert_eq(earth.have, 2, "owned count for a quest that is not in the log")
     assert_true(att.side.waypoint:IsShown())
+    assert_nil(rows[6].step.questID, "summarising a step leaves it unchanged; the panel reads the quest id itself")
     att.side.waypoint:Click()
     assert_eq(Mock.waypoint.uiMapID, 1441)
     assert_eq(Mock.waypoint.position.x, 0.536)
