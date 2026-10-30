@@ -16,7 +16,7 @@ local MAX_STATS = 8
 local MAX_OPTIONS = 4
 local LEFT_COLUMN = 9
 
-local STATUS = { bis = { "Best in slot", "ok" }, upgrade = { "Upgrade found", "info" }, empty = { "Empty", "missing" } }
+local UPGRADE_BADGE = { bis = { "Best in slot", "ok" }, upgrade = { "Upgrade found", "info" }, empty = { "Empty", "missing" } }
 
 local function createSlotRow(parent, screen)
   local row = Widgets.Frame(parent, nil, { frameType = "Button" })
@@ -252,7 +252,7 @@ local function Create(parent)
 
   function screen:AddGoalFor(itemID)
     local goal, message = ns.GoalService.AddItemGoal(itemID, 1)
-    ns.UI.MainFrame.SetStatus(message, goal and "ok" or "error")
+    ns.UI.MainFrame.SetAlert(message, goal and "ok" or "error")
     ns.UI.MainFrame.RequestRefresh()
     return goal
   end
@@ -409,7 +409,7 @@ local function Create(parent)
     for _, entry in ipairs(analysis.slots) do
       local row = self.slotRows[entry.slot.key]
       local worn = entry.equipped
-      local hide = filter == "upgrades" and entry.status ~= "upgrade" and not entry.goal
+      local hide = filter == "upgrades" and entry.upgrade ~= "upgrade" and not entry.goal
       row.itemID = worn.itemID
       row.icon:SetItem(worn.icon, worn.quality)
       row.slotLabel:SetText(Theme.Upper(entry.slot.label))
@@ -420,8 +420,8 @@ local function Create(parent)
         row.badge:Hide()
       else
         row.goalLine:SetText("")
-        local badge = STATUS[entry.status]
-        if badge and (entry.status ~= "empty" or analysis.hasGearQuest) then
+        local badge = UPGRADE_BADGE[entry.upgrade]
+        if badge and (entry.upgrade ~= "empty" or analysis.hasGearQuest) then
           row.badge:SetBadge(badge[1], badge[2])
           row.badge:Show()
         else
@@ -436,7 +436,7 @@ local function Create(parent)
       selected = analysis.slots[1]
       slotKey = selected and selected.slot.key or nil
       for _, entry in ipairs(analysis.slots) do
-        if entry.status == "upgrade" or entry.goal then selected = entry slotKey = entry.slot.key break end
+        if entry.upgrade == "upgrade" or entry.goal then selected = entry slotKey = entry.slot.key break end
       end
       if slotKey then self.slotRows[slotKey]:SetSelected(true) end
     end

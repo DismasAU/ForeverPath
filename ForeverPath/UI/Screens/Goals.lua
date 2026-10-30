@@ -242,7 +242,7 @@ local function createSettings(screen)
       ns.GoalService.SetRoute(goalID, itemID, value == "buy" and "buy" or nil)
     end
     local labels = { default = "Default routes restored.", hybrid = "CraftWise hybrid plan applied.", buyall = "Buying every material." }
-    ns.UI.MainFrame.SetStatus(labels[mode] or "Routes updated.", "ok")
+    ns.UI.MainFrame.SetAlert(labels[mode] or "Routes updated.", "ok")
     ns.UI.MainFrame.RequestRefresh()
   end
 
@@ -260,7 +260,7 @@ local function createSettings(screen)
   local delete = Widgets.Button(body, "Delete", { width = 70, onClick = function()
     if panel.goalID then
       ns.GoalService.Remove(panel.goalID)
-      ns.UI.MainFrame.SetStatus("Goal deleted.", "info")
+      ns.UI.MainFrame.SetAlert("Goal deleted.", "info")
     end
   end })
   delete:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", -12, 12)
@@ -270,10 +270,10 @@ local function createSettings(screen)
     if not panel.goalID or not panel.goal then return end
     if GoalModel.IsOpen(panel.goal) then
       ns.GoalService.SetStatus(panel.goalID, GoalModel.Statuses.COMPLETED)
-      ns.UI.MainFrame.SetStatus("Goal marked complete.", "ok")
+      ns.UI.MainFrame.SetAlert("Goal marked complete.", "ok")
     else
       ns.GoalService.SetStatus(panel.goalID, GoalModel.Statuses.ACTIVE)
-      ns.UI.MainFrame.SetStatus("Goal reopened.", "ok")
+      ns.UI.MainFrame.SetAlert("Goal reopened.", "ok")
     end
   end })
   complete:SetPoint("BOTTOMLEFT", body, "BOTTOMLEFT", 12, 12)
@@ -431,11 +431,11 @@ local function Create(parent)
     local text = newGoal.input:GetText() or ""
     local kind = newGoal.segment and newGoal.segment.selected or "item"
     if Util.Trim(text) == "" then
-      ns.UI.MainFrame.SetStatus(kind == "attunement" and "Type an attunement name, or pick one on the Attunements screen." or "Enter an item ID, Shift-click an item link, or type an item name.", "info")
+      ns.UI.MainFrame.SetAlert(kind == "attunement" and "Type an attunement name, or pick one on the Attunements screen." or "Enter an item ID, Shift-click an item link, or type an item name.", "info")
       return false
     end
     local goal, message = ns.GoalService.AddByKind(kind, text, newGoal.stepper:GetValue())
-    ns.UI.MainFrame.SetStatus(message, goal and "ok" or "error")
+    ns.UI.MainFrame.SetAlert(message, goal and "ok" or "error")
     if goal then
       newGoal.input:SetText("")
       newGoal.input:ClearFocus()

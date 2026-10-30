@@ -136,7 +136,7 @@ local function createSide(screen)
       return
     end
     local goal, message = ns.GoalService.AddQuestGoal(side.questID)
-    ns.UI.MainFrame.SetStatus(message, goal and "ok" or "error")
+    ns.UI.MainFrame.SetAlert(message, goal and "ok" or "error")
     ns.UI.MainFrame.RequestRefresh()
   end })
   addGoal:SetPoint("BOTTOMLEFT", body, "BOTTOMLEFT", 12, 10)
@@ -151,7 +151,7 @@ local function createSide(screen)
   local waypoint = Widgets.Button(body, "Waypoint", { onClick = function()
     if not side.questID then return end
     local ok, message = ns.QuestProvider.SetWaypoint(ns.QuestProvider.Waypoint(side.questID))
-    ns.UI.MainFrame.SetStatus(message, ok and "ok" or "error")
+    ns.UI.MainFrame.SetAlert(message, ok and "ok" or "error")
   end })
   waypoint:SetPoint("RIGHT", watch, "LEFT", -6, 0)
   Widgets.SetTooltip(waypoint, "Set a map waypoint", { "Pins the quest giver (or the turn-in once the quest is ready) on your map.", "Only when a position has been recorded for it." })
@@ -245,7 +245,7 @@ local function Create(parent)
       if type(result) == "string" then link = result end
     end
     if not link then
-      ns.UI.MainFrame.SetStatus("Only quests in your log can be linked.", "info")
+      ns.UI.MainFrame.SetAlert("Only quests in your log can be linked.", "info")
       return false
     end
     local inserted = false
@@ -261,12 +261,12 @@ local function Create(parent)
   function screen:WatchQuest(questID)
     local state = ns.QuestProvider.State(questID)
     if not state.inLog then
-      ns.UI.MainFrame.SetStatus("Only quests in your log can be tracked.", "info")
+      ns.UI.MainFrame.SetAlert("Only quests in your log can be tracked.", "info")
       return false
     end
     if type(C_QuestLog) == "table" and type(C_QuestLog.AddQuestWatch) == "function" then
       Util.SafeCall(C_QuestLog.AddQuestWatch, questID)
-      ns.UI.MainFrame.SetStatus("Quest added to the objective tracker.", "ok")
+      ns.UI.MainFrame.SetAlert("Quest added to the objective tracker.", "ok")
       return true
     end
     return false

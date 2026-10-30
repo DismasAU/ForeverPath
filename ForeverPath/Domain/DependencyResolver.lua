@@ -24,7 +24,7 @@ DependencyResolver.RouteRank = { vendor = 1, alt = 2, altcraft = 3, combine = 3,
 -- real route exists, never recommended over one.
 DependencyResolver.UNAVAILABLE_RANK = 10
 
-local function statusFor(node)
+local function coverageFor(node)
   if node.depth == 0 and not node.claims then return "root" end
   if node.missing <= 0 then return "have" end
   if node.owned > 0 then return "partial" end
@@ -172,11 +172,11 @@ end
 
 -- A node that claims nothing (a root the goal makes, a step, a craft done
 -- for skill points): no inventory, everything still to do.
-local function resetNonClaiming(node, status)
+local function resetNonClaiming(node, coverage)
   node.claims = false
   node.owned, node.ownedBags, node.reserved, node.available = 0, 0, 0, 0
   node.missing = node.quantity
-  node.status = status
+  node.coverage = coverage
 end
 
 local function expand(node, opts, path, tree)
@@ -428,7 +428,7 @@ function DependencyResolver.ResolveNode(node, opts, path, tree)
   if node.step then return resolveStepNode(node, opts, path, tree) end
 
   claimInventory(node, opts, tree)
-  node.status = statusFor(node)
+  node.coverage = coverageFor(node)
   node.options, node.soulbound = buildOptions(node.itemID, opts, path)
   local craftOption = bestCraft(node.options)
   local override = opts.routes and opts.routes[node.itemID] or nil

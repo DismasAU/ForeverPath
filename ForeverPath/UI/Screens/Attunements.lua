@@ -81,7 +81,7 @@ local function Create(parent)
   local addGoal = Widgets.Button(top, "+ Add goal", { primary = true, width = 110, onClick = function()
     if screen.attuneID then
       local goal, message = ns.GoalService.AddAttunementGoal(screen.attuneID)
-      ns.UI.MainFrame.SetStatus(message, goal and "ok" or "error")
+      ns.UI.MainFrame.SetAlert(message, goal and "ok" or "error")
       ns.UI.MainFrame.RequestRefresh()
     end
   end })
@@ -176,7 +176,7 @@ local function Create(parent)
   local waypoint = Widgets.Button(sb, "Waypoint", { onClick = function()
     if not side.questID then return end
     local ok, message = ns.QuestProvider.SetWaypoint(ns.QuestProvider.Waypoint(side.questID))
-    ns.UI.MainFrame.SetStatus(message, ok and "ok" or "error")
+    ns.UI.MainFrame.SetAlert(message, ok and "ok" or "error")
   end })
   waypoint:SetPoint("RIGHT", openQuest, "LEFT", -6, 0)
   waypoint:Hide()

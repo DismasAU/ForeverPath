@@ -338,7 +338,7 @@ end
 -- The whole picture
 ---------------------------------------------------------------------------
 -- opts.source (filter), opts.goals (open goals), opts.views (goalID -> view)
--- Returns { slots = { { slot, equipped, candidates, best, status, goal, goalView, goalItemID } },
+-- Returns { slots = { { slot, equipped, candidates, best, upgrade, goal, goalView, goalItemID } },
 --           averageIlvl, upgradesPlanned, trackedGoals, hasGearQuest, spec, specLabel }
 function EquipmentProvider.Analyze(opts)
   opts = opts or {}
@@ -372,18 +372,18 @@ function EquipmentProvider.Analyze(opts)
     for _, candidate in ipairs(candidates) do
       if not best and candidate.itemID ~= worn.itemID then best = candidate end
     end
-    local status = "none"
+    local upgrade = "none"
     local goal = goalSlots[slot.key]
     if worn.itemID and candidates[1] and candidates[1].itemID == worn.itemID then
-      status = "bis"
+      upgrade = "bis"
     elseif best and (not worn.itemID or (best.ilvl or 0) >= (worn.ilvl or 0)) then
-      status = "upgrade"
+      upgrade = "upgrade"
     elseif not worn.itemID then
-      status = "empty"
+      upgrade = "empty"
     end
     if goal then result.upgradesPlanned = result.upgradesPlanned + 1 end
     result.slots[#result.slots + 1] = {
-      slot = slot, equipped = worn, candidates = candidates, best = best, status = status,
+      slot = slot, equipped = worn, candidates = candidates, best = best, upgrade = upgrade,
       goal = goal, goalView = goal and opts.views and opts.views[goal.id] or nil, goalItemID = goal and goal.target.itemID or nil,
     }
   end

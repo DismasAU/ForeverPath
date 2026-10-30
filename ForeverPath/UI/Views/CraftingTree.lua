@@ -18,7 +18,7 @@ local COLS = { have = 44, status = 70, via = 104, cost = 62 }
 local MAX_OPTIONS = 3
 local CARD_WIDTH = SIDE - 24 -- the side panel less its 12 px insets
 
-local STATUS_BADGE = { have = { "Have", "ok" }, partial = { "Partial", "partial" }, missing = { "Missing", "missing" } }
+local COVERAGE_BADGE = { have = { "Have", "ok" }, partial = { "Partial", "partial" }, missing = { "Missing", "missing" } }
 
 local function nameOf(itemID)
   return ns.ItemProvider.GetName(itemID)
@@ -389,7 +389,7 @@ local function createSide(view, tree)
   local reset = Widgets.Button(body, "Default route", { onClick = function()
     if side.node and side.node.itemID and tree.goal then
       ns.GoalService.SetRoute(tree.goal.id, side.node.itemID, nil)
-      ns.UI.MainFrame.SetStatus("Route reset to default.", "info")
+      ns.UI.MainFrame.SetAlert("Route reset to default.", "info")
     end
   end })
   reset:SetPoint("RIGHT", link, "LEFT", -6, 0)
@@ -697,14 +697,14 @@ function CraftingTree.Create(screen)
   function view:ApplyRoute(node, option)
     if not self.goal or not node or isCraftOnly(node) or node.step then return end
     if not ns.GoalModel.IsRouteOverride(option.kind) then
-      ns.UI.MainFrame.SetStatus("That source is informational; routes can only be craft or buy.", "info")
+      ns.UI.MainFrame.SetAlert("That source is informational; routes can only be craft or buy.", "info")
       return
     end
     local ok, err = ns.GoalService.SetRoute(self.goal.id, node.itemID, option.kind)
     if ok then
-      ns.UI.MainFrame.SetStatus(string.format("%s: %s route selected.", nameOf(node.itemID), option.kind == "craft" and "crafting" or "buying"), "ok")
+      ns.UI.MainFrame.SetAlert(string.format("%s: %s route selected.", nameOf(node.itemID), option.kind == "craft" and "crafting" or "buying"), "ok")
     else
-      ns.UI.MainFrame.SetStatus(tostring(err), "error")
+      ns.UI.MainFrame.SetAlert(tostring(err), "error")
     end
   end
 
@@ -763,8 +763,8 @@ function CraftingTree.Create(screen)
         row.badge:SetBadge((goalPercent or 0) .. "%", "gold")
         row.cost:SetText(Theme.ColorText("text3", "?"))
       else
-        row.have:SetText(string.format("%s%d|r%s/%d", Theme.Hex[node.status == "have" and "ok" or (node.status == "partial" and "partial" or "missing")], node.available or 0, Theme.Hex.text3, node.quantity))
-        local badge = STATUS_BADGE[node.status] or STATUS_BADGE.missing
+        row.have:SetText(string.format("%s%d|r%s/%d", Theme.Hex[node.coverage == "have" and "ok" or (node.coverage == "partial" and "partial" or "missing")], node.available or 0, Theme.Hex.text3, node.quantity))
+        local badge = COVERAGE_BADGE[node.coverage] or COVERAGE_BADGE.missing
         row.badge:SetBadge(badge[1], badge[2])
         local price = node.missing > 0 and node.route ~= "craft" and ns.PriceProvider.GetPrice(node.itemID) or nil
         if price then

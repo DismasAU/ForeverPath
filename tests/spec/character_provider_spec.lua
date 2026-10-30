@@ -122,7 +122,7 @@ describe("CharacterProvider", function()
     assert_eq(view.plan.materials[1].missing, 0)
     assert_eq(view.plan.materials[1].ownedAlts, 12)
     assert_eq(view.tree.root.children[1].ownedAlts, 4)
-    assert_eq(view.tree.root.children[1].status, "have")
+    assert_eq(view.tree.root.children[1].coverage, "have")
     assert_match(view.inventoryNote, "Alts")
 
     local best = CP2.BestCoverage({ [2589] = 4, [2320] = 10 })

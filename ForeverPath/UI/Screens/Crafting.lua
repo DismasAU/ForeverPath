@@ -147,7 +147,7 @@ local function createHero(screen)
     local view = screen.view
     if not (view and view.waypoint) then return end
     local ok, message = ns.QuestProvider.SetWaypoint(view.waypoint)
-    ns.UI.MainFrame.SetStatus(message, ok and "ok" or "error")
+    ns.UI.MainFrame.SetAlert(message, ok and "ok" or "error")
   end })
   waypoint:SetPoint("BOTTOMLEFT", body, "BOTTOMLEFT", 16, 10)
   waypoint:Hide()
@@ -548,7 +548,7 @@ local function Create(parent)
   local remove = Widgets.Button(crumbs, "Remove goal", { onClick = function()
     if screen.goal then
       ns.GoalService.Remove(screen.goal.id)
-      ns.UI.MainFrame.SetStatus("Goal removed.", "info")
+      ns.UI.MainFrame.SetAlert("Goal removed.", "info")
     end
   end })
   remove:SetPoint("RIGHT", crumbs, "RIGHT", 0, 0)
@@ -588,7 +588,7 @@ local function Create(parent)
   sort:SetPoint("BOTTOMRIGHT", hero, "BOTTOMRIGHT", 0, -36)
   local alts = Widgets.Checkbox(screen, "Include alts' bags", function(checked)
     local message = ns.GoalService.SetIncludeAlts(checked)
-    if message then ns.UI.MainFrame.SetStatus(message, "info") end
+    if message then ns.UI.MainFrame.SetAlert(message, "info") end
   end)
   alts:SetPoint("RIGHT", sort, "LEFT", -14, 0)
   Widgets.SetTooltip(alts, "Include alts' bags", { "Counts the snapshotted bags and bank of your other characters as owned.", "Snapshots are taken whenever you log in or out on a character." })

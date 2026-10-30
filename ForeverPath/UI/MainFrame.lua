@@ -106,7 +106,7 @@ end
 ---------------------------------------------------------------------------
 local STATUS_KIND = { info = C.text2, ok = C.ok, error = C.missing, warn = C.partial }
 
-function MainFrame.SetStatus(text, kind)
+function MainFrame.SetAlert(text, kind)
   local frame = MainFrame.frame
   if not frame then return end
   frame.alertText:SetText(text or "")
@@ -590,7 +590,7 @@ end
 function MainFrame.OpenGoalSwitcher(anchor)
   local goals = ns.GoalService.List({ open = true })
   if #goals == 0 then
-    MainFrame.SetStatus("Add a goal from My Goals or the search box.", "info")
+    MainFrame.SetAlert("Add a goal from My Goals or the search box.", "info")
     return
   end
   local selected = ns.GoalService.GetSelected()
@@ -626,10 +626,10 @@ function MainFrame.OpenSettingsMenu(anchor)
       ns.ProfessionProvider.RequestScan(false)
     elseif value == "debug" then
       ns.Log.SetDebug(not ns.Log.debugEnabled)
-      MainFrame.SetStatus("Debug logging " .. (ns.Log.debugEnabled and "enabled" or "disabled"), "info")
+      MainFrame.SetAlert("Debug logging " .. (ns.Log.debugEnabled and "enabled" or "disabled"), "info")
     elseif value == "reset" then
       MainFrame.ResetWindow()
-      MainFrame.SetStatus("Window positions reset.", "info")
+      MainFrame.SetAlert("Window positions reset.", "info")
     end
   end, 260)
 end
@@ -641,7 +641,7 @@ function MainFrame.SubmitSearch(box)
   end
   MainFrame.HideSuggestions()
   local goal, message = ns.GoalService.AddFromInput(text, 1)
-  MainFrame.SetStatus(message, goal and "ok" or "error")
+  MainFrame.SetAlert(message, goal and "ok" or "error")
   if goal then
     box:SetText("")
     box:ClearFocus()
@@ -657,7 +657,7 @@ function MainFrame.LinkItem(itemID)
   local item = ns.ItemProvider.GetItem(itemID)
   local link = item and item.link
   if not link then
-    MainFrame.SetStatus("Item data not loaded yet.", "info")
+    MainFrame.SetAlert("Item data not loaded yet.", "info")
     return false
   end
   local inserted = false
@@ -667,7 +667,7 @@ function MainFrame.LinkItem(itemID)
     inserted = ChatEdit_InsertLink(link)
   end
   if inserted then
-    MainFrame.SetStatus(string.format("%s linked.", item.name or "Item"), "ok")
+    MainFrame.SetAlert(string.format("%s linked.", item.name or "Item"), "ok")
   else
     ns.Log.Print("%s", link)
   end
@@ -718,7 +718,7 @@ function MainFrame.ShowSuggestions(box, hits, opts)
       MainFrame.HideSuggestions()
       local quantity = opts.quantity and opts.quantity() or 1
       local goal, message, isNew = self.hit.add(quantity)
-      MainFrame.SetStatus(message, goal and "ok" or "error")
+      MainFrame.SetAlert(message, goal and "ok" or "error")
       if opts.onAdd then ns.Log.Call(opts.onAdd, goal, message, isNew) end
     end)
     row:Show()
@@ -777,7 +777,7 @@ local function onInsertLink(link)
     target = MainFrame.frame.search
   end
   target:SetText(link)
-  MainFrame.SetStatus(isItem and "Item link received. Press Enter or Add goal." or "Recipe link received. Press Enter or Add goal.", "info")
+  MainFrame.SetAlert(isItem and "Item link received. Press Enter or Add goal." or "Recipe link received. Press Enter or Add goal.", "info")
 end
 
 function MainFrame.InstallLinkHook()

@@ -264,7 +264,7 @@ local function Create(parent)
     end)) do
       ns.Log.output(line)
     end
-    ns.UI.MainFrame.SetStatus("Shopping list printed to your chat frame.", "ok")
+    ns.UI.MainFrame.SetAlert("Shopping list printed to your chat frame.", "ok")
   end
 
   function screen:Refresh()

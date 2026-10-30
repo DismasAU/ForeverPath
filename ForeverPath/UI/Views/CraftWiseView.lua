@@ -228,7 +228,7 @@ function CraftWiseView.Create(screen)
     local changed = ns.CraftWise.ApplyPlan(self.result, function(itemID, route)
       return ns.GoalService.SetRoute(goalID, itemID, route)
     end)
-    ns.UI.MainFrame.SetStatus(string.format("CraftWise hybrid plan applied: %d component route%s set.", changed, changed == 1 and "" or "s"), "ok")
+    ns.UI.MainFrame.SetAlert(string.format("CraftWise hybrid plan applied: %d component route%s set.", changed, changed == 1 and "" or "s"), "ok")
     ns.UI.MainFrame.RequestRefresh()
   end
 

@@ -140,7 +140,7 @@ local function addGoal(rest, goalType)
   local goal, message = ns.GoalService.AddFromInput(itemText, quantity, goalType)
   Log.Print("%s", message)
   if goal and ns.UI.MainFrame.IsShown() then
-    ns.UI.MainFrame.SetStatus(message, "ok")
+    ns.UI.MainFrame.SetAlert(message, "ok")
   end
 end
 
@@ -155,7 +155,7 @@ end
 local function addTypedGoal(goal, message)
   Log.Print("%s", message)
   if goal and ns.UI.MainFrame.IsShown() then
-    ns.UI.MainFrame.SetStatus(message, "ok")
+    ns.UI.MainFrame.SetAlert(message, "ok")
     ns.UI.MainFrame.ShowScreen("crafting")
   end
 end
@@ -187,7 +187,7 @@ function handlers.quest(rest)
   local goal, message = ns.GoalService.AddQuestFromInput(rest)
   Log.Print("%s", message)
   if goal and ns.UI.MainFrame.IsShown() then
-    ns.UI.MainFrame.SetStatus(message, "ok")
+    ns.UI.MainFrame.SetAlert(message, "ok")
     ns.UI.MainFrame.ShowScreen("quests")
   end
 end
@@ -197,7 +197,7 @@ function handlers.rep(rest)
   local goal, message = ns.GoalService.AddReputationFromInput(rest)
   Log.Print("%s", message)
   if goal and ns.UI.MainFrame.IsShown() then
-    ns.UI.MainFrame.SetStatus(message, "ok")
+    ns.UI.MainFrame.SetAlert(message, "ok")
     ns.UI.MainFrame.ShowScreen("reputations")
   end
 end
@@ -223,7 +223,7 @@ function handlers.equipment()
     local worn = entry.equipped
     local parts = { worn.itemID and (ns.ItemProvider.GetName(worn.itemID) .. (worn.ilvl and (" (" .. worn.ilvl .. ")") or "")) or "empty" }
     if entry.goal then parts[#parts + 1] = "goal: " .. ns.GoalService.Name(entry.goal) end
-    if entry.status == "bis" then parts[#parts + 1] = "best in slot"
+    if entry.upgrade == "bis" then parts[#parts + 1] = "best in slot"
     elseif entry.best then parts[#parts + 1] = string.format("pick: %s (%s%s)", entry.best.name, entry.best.sourceLabel, entry.best.ilvl and (", ilvl " .. entry.best.ilvl) or "") end
     Log.output(string.format("  %s: %s", entry.slot.label, table.concat(parts, " - ")))
   end
@@ -533,7 +533,7 @@ function handlers.attune(rest)
   local goal, message = ns.GoalService.AddAttunementFromInput(rest)
   Log.Print("%s", message)
   if goal and ns.UI.MainFrame.IsShown() then
-    ns.UI.MainFrame.SetStatus(message, "ok")
+    ns.UI.MainFrame.SetAlert(message, "ok")
     ns.UI.MainFrame.ShowScreen("attunements")
   end
 end

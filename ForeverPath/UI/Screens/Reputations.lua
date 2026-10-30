@@ -134,7 +134,7 @@ local function createSide(screen)
       return
     end
     local goal, message = ns.GoalService.AddReputationGoal(side.factionID, side.targetStanding)
-    ns.UI.MainFrame.SetStatus(message, goal and "ok" or "error")
+    ns.UI.MainFrame.SetAlert(message, goal and "ok" or "error")
     ns.UI.MainFrame.RequestRefresh()
   end })
   addGoal:SetPoint("BOTTOMLEFT", body, "BOTTOMLEFT", 12, 10)

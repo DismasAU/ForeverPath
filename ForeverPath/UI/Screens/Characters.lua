@@ -173,7 +173,7 @@ local function createCard(content, index, screen)
   local forget = Widgets.Button(body, "Forget", { onClick = function()
     if card.key then
       local ok, err = Characters.Remove(card.key)
-      ns.UI.MainFrame.SetStatus(ok and "Character forgotten." or tostring(err), ok and "info" or "error")
+      ns.UI.MainFrame.SetAlert(ok and "Character forgotten." or tostring(err), ok and "info" or "error")
       if ok then screen:Refresh() end
     end
   end })
@@ -353,7 +353,7 @@ local function Create(parent)
   scopeLabel:SetPoint("LEFT", scopeRow, "LEFT", 2, 0)
   local scope = Widgets.Segment(scopeRow, { { key = "character", label = "This character" }, { key = "account", label = "Account-wide" } }, function(key)
     local message = ns.GoalService.SetIncludeAlts(key == "account")
-    if message then ns.UI.MainFrame.SetStatus(message, "info") end
+    if message then ns.UI.MainFrame.SetAlert(message, "info") end
   end)
   scope:SetPoint("LEFT", scopeLabel, "RIGHT", 10, 0)
   local scopeHint = Widgets.Text(scopeRow, "small", "", { color = C.text3 })

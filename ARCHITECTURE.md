@@ -127,7 +127,10 @@ compartment click handler the TOC requires.
    one-line diagnostics string (every data module `/fp status` lists has
    one), `StatusInfo` the same state as a table for the UI, `ItemHints(itemID)`
    resolver hints. "Status" alone means a goal's lifecycle (`goal.status`);
-   whether the Planner could plan a goal is `view.readiness`.
+   whether the Planner could plan a goal is `view.readiness`, what the
+   inventory covers of a tree node is `node.coverage`, an equipment slot's
+   upgrade state is `entry.upgrade`, and the window's message line is
+   `MainFrame.SetAlert`.
 
 ## Data flow
 
