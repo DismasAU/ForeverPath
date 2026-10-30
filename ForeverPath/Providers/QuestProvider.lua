@@ -483,7 +483,7 @@ end
 
 function QuestProvider.Count()
   local n = 0
-  for _ in pairs(QuestProvider.Index()) do n = n + 1 end
+  n = n + Util.Count(QuestProvider.Index())
   return n
 end
 

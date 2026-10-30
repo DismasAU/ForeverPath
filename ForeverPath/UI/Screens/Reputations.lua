@@ -365,8 +365,7 @@ local function Create(parent)
     self.groupPool:HideFrom(groupIndex + 1)
     scroll:SetContentHeight(y)
     if total == 0 then self.listEmpty:Show() else self.listEmpty:Hide() end
-    local goalCount = 0
-    for _ in pairs(goals) do goalCount = goalCount + 1 end
+    local goalCount = ns.Util.Count(goals)
     footerText:SetText(string.format("%d faction%s - %d reputation goal%s", total, total == 1 and "" or "s", goalCount, goalCount == 1 and "" or "s"))
     if not factionID or not RP.Get(factionID) then factionID = first end
     self.factionID = factionID

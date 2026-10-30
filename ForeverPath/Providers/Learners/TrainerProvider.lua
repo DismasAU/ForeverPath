@@ -233,8 +233,8 @@ end
 
 function TrainerProvider.Count()
   local recipes, trainers = 0, 0
-  for _ in pairs(TrainerProvider.Store() or {}) do recipes = recipes + 1 end
-  for _ in pairs(TrainerProvider.Trainers() or {}) do trainers = trainers + 1 end
+  recipes = recipes + Util.Count(TrainerProvider.Store())
+  trainers = trainers + Util.Count(TrainerProvider.Trainers())
   return recipes, trainers
 end
 

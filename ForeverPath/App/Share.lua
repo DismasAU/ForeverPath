@@ -45,11 +45,7 @@ local function label()
   return name or "someone"
 end
 
-local function count(t)
-  local n = 0
-  for _ in pairs(type(t) == "table" and t or {}) do n = n + 1 end
-  return n
-end
+local count = ns.Util.Count
 
 -- { lootSeen = n, questFacts = n, vendors = n (items), trainers = n (recipes) }
 function Share.Counts(data)

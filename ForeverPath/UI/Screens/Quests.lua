@@ -248,13 +248,7 @@ local function Create(parent)
       ns.UI.MainFrame.SetAlert("Only quests in your log can be linked.", "info")
       return false
     end
-    local inserted = false
-    if type(ChatFrameUtil) == "table" and type(ChatFrameUtil.InsertLink) == "function" then
-      inserted = ChatFrameUtil.InsertLink(link)
-    elseif type(ChatEdit_InsertLink) == "function" then
-      inserted = ChatEdit_InsertLink(link)
-    end
-    if not inserted then ns.Log.Print("%s", link) end
+    if not ns.Compat.InsertLink(link) then ns.Log.Print("%s", link) end
     return true
   end
 

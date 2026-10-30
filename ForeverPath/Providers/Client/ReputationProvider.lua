@@ -178,7 +178,7 @@ end
 
 function ReputationProvider.CatalogueCount()
   local count = 0
-  for _ in pairs(catalogueFactions() or {}) do count = count + 1 end
+  count = count + Util.Count(catalogueFactions())
   return count
 end
 

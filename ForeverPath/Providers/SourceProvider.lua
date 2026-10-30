@@ -118,7 +118,7 @@ function SourceProvider.IndexDungeonJournal()
     end
   end
   local items = 0
-  for _ in pairs(index) do items = items + 1 end
+  items = items + Util.Count(index)
   SourceProvider.journal.index = index
   SourceProvider.journal.items = items
   return added

@@ -317,14 +317,14 @@ end
 
 function QuestFactsProvider.Count()
   local n = 0
-  for _ in pairs(QuestFactsProvider.Store() or {}) do n = n + 1 end
+  n = n + ns.Util.Count(QuestFactsProvider.Store())
   return n
 end
 
 function QuestFactsProvider.ShippedCount()
   local catalogue = ns.Data.QuestCatalogue
   local n = 0
-  for _ in pairs(type(catalogue) == "table" and catalogue or {}) do n = n + 1 end
+  n = n + ns.Util.Count(catalogue)
   return n
 end
 

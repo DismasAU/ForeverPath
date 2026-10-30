@@ -641,11 +641,7 @@ end
 
 function ClassicDB.Counts()
   local d = data()
-  local function count(t)
-    local n = 0
-    for _ in pairs(t or {}) do n = n + 1 end
-    return n
-  end
+  local count = Util.Count
   return d and count(d.quests) or 0, d and count(d.npcs) or 0, d and count(d.objects) or 0
 end
 

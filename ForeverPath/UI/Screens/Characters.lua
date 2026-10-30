@@ -284,7 +284,13 @@ local function createCard(content, index, screen)
       if #crafts >= LINES then break end
       for _, candidate in ipairs(ns.ProfessionProvider.FindRecipesForItem(itemID)) do
         local recipe = candidate.recipe
-        local known = entry.isCurrent and candidate.learned or (record.knownRecipes and record.knownRecipes[recipe.recipeID])
+        -- The live flag for this character, the snapshot for an alt.
+        local known
+        if entry.isCurrent then
+          known = candidate.learned
+        else
+          known = record.knownRecipes and record.knownRecipes[recipe.recipeID]
+        end
         if known then
           crafts[#crafts + 1] = string.format("%s %s- %s|r", ns.ItemProvider.GetName(itemID), Theme.Hex.text2, recipe.professionName or "?")
           break

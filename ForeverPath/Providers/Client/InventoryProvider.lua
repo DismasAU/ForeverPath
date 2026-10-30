@@ -95,6 +95,15 @@ function InventoryProvider.ReadBags()
   return items, Util.Now()
 end
 
+-- How fresh the counts are, for the status bar: { bagsScannedAt,
+-- bankScannedAt } (nil when never scanned). Rescans the bags first when an
+-- update is pending, so the answer is current.
+function InventoryProvider.StatusInfo()
+  if InventoryProvider.bags.dirty then InventoryProvider.ScanBags() end
+  local cache = ns.chardb and ns.chardb.bankCache
+  return { bagsScannedAt = InventoryProvider.bags.scannedAt, bankScannedAt = cache and cache.scannedAt or nil }
+end
+
 function InventoryProvider.ScanBank()
   if not InventoryProvider.bankOpen or not ns.chardb or not canScanContainers() then
     return false

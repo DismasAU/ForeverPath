@@ -525,16 +525,12 @@ local function refreshChrome(frame)
     frame.pill.percent:SetText("")
   end
 
-  local bags = ns.InventoryProvider.bags
-  if bags.dirty then
-    ns.InventoryProvider.ScanBags()
-  end
-  local bankCache = ns.chardb.bankCache
-  if bags.scannedAt then
+  local inventory = ns.InventoryProvider.StatusInfo()
+  if inventory.bagsScannedAt then
     frame.bagsDot:SetKind("ok")
-    local text = "Bags synced - " .. Util.FormatAgo(bags.scannedAt)
-    if bankCache and bankCache.scannedAt then
-      text = "Bags & bank synced - " .. Util.FormatAgo(math.min(bags.scannedAt, bankCache.scannedAt))
+    local text = "Bags synced - " .. Util.FormatAgo(inventory.bagsScannedAt)
+    if inventory.bankScannedAt then
+      text = "Bags & bank synced - " .. Util.FormatAgo(math.min(inventory.bagsScannedAt, inventory.bankScannedAt))
     end
     frame.bagsText:SetText(text)
   else
@@ -660,13 +656,7 @@ function MainFrame.LinkItem(itemID)
     MainFrame.SetAlert("Item data not loaded yet.", "info")
     return false
   end
-  local inserted = false
-  if type(ChatFrameUtil) == "table" and type(ChatFrameUtil.InsertLink) == "function" then
-    inserted = ChatFrameUtil.InsertLink(link)
-  elseif type(ChatEdit_InsertLink) == "function" then
-    inserted = ChatEdit_InsertLink(link)
-  end
-  if inserted then
+  if ns.Compat.InsertLink(link) then
     MainFrame.SetAlert(string.format("%s linked.", item.name or "Item"), "ok")
   else
     ns.Log.Print("%s", link)
@@ -781,17 +771,10 @@ local function onInsertLink(link)
 end
 
 function MainFrame.InstallLinkHook()
-  if MainFrame.hooked or type(hooksecurefunc) ~= "function" then
+  if MainFrame.hooked then
     return false
   end
-  local function callback(link) ns.Log.Call(onInsertLink, link) end
-  if type(ChatFrameUtil) == "table" and type(ChatFrameUtil.InsertLink) == "function" then
-    hooksecurefunc(ChatFrameUtil, "InsertLink", callback)
-    MainFrame.hooked = true
-  elseif type(ChatEdit_InsertLink) == "function" then
-    hooksecurefunc("ChatEdit_InsertLink", callback)
-    MainFrame.hooked = true
-  end
+  MainFrame.hooked = ns.Compat.HookInsertLink(function(link) ns.Log.Call(onInsertLink, link) end)
   return MainFrame.hooked
 end
 

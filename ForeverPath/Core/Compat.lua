@@ -209,6 +209,32 @@ function Compat.HasTrainerWindow()
   return type(_G.GetNumTrainerServices) == "function" and type(_G.GetTrainerServiceInfo) == "function"
 end
 
+-- Chat link insertion: ChatFrameUtil.InsertLink on this engine, the legacy
+-- ChatEdit_InsertLink otherwise. Resolved at call time (the chat UI loads
+-- after the addon files).
+local function insertLinkTarget()
+  if type(_G.ChatFrameUtil) == "table" and type(_G.ChatFrameUtil.InsertLink) == "function" then return _G.ChatFrameUtil, "InsertLink" end
+  if type(_G.ChatEdit_InsertLink) == "function" then return nil, "ChatEdit_InsertLink" end
+  return nil, nil
+end
+
+-- Puts a link into the open chat box. Returns whether something took it.
+function Compat.InsertLink(link)
+  local owner, name = insertLinkTarget()
+  if not name then return false end
+  local fn = owner and owner[name] or _G[name]
+  return ns.Util.SafeCall(fn, link) and true or false
+end
+
+-- Runs callback(link) after every chat link insertion (Shift-click). Returns
+-- whether a hook was installed.
+function Compat.HookInsertLink(callback)
+  local owner, name = insertLinkTarget()
+  if not name or type(_G.hooksecurefunc) ~= "function" then return false end
+  if owner then _G.hooksecurefunc(owner, name, callback) else _G.hooksecurefunc(name, callback) end
+  return true
+end
+
 -- An item's stats as { [ITEM_MOD_* token] = value }: C_Item.GetItemStats, else
 -- the legacy GetItemStats(link, outTable); nil when neither answers.
 function Compat.GetItemStats(linkOrID)
