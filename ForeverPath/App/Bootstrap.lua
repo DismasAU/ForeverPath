@@ -21,6 +21,9 @@ function Bootstrap.OnAddonLoaded(addonName)
     end
   end
 
+  -- Providers first, then the services that install hooks into them
+  -- (TrainerProvider -> Recipes.SetTrainerLookup, GoalService ->
+  -- CharacterProvider.SetGoalSource, the UI -> Util.SetMoneyRenderer at load).
   ns.ItemProvider.Init()
   ns.ProfessionProvider.Init()
   ns.InventoryProvider.Init()

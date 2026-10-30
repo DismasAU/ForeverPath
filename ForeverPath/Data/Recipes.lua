@@ -180,13 +180,17 @@ end
 
 -- The client's tables do not carry the skill a trainer requires (it is
 -- server data), so the trainer recorder (Providers/Learners/TrainerProvider.lua)
--- supplies it through Recipes.trainerLookup(spellID) -> { skill, rank, cost,
--- trainer, zone, subzone }. The recorded rank replaces a lower catalogue
--- value and the recipe remembers where it is taught.
-Recipes.trainerLookup = nil
+-- supplies it through Recipes.SetTrainerLookup(fn), fn(spellID) -> { skill,
+-- rank, cost, trainer, zone, subzone }. The recorded rank replaces a lower
+-- catalogue value and the recipe remembers where it is taught.
+local trainerLookup
+
+function Recipes.SetTrainerLookup(fn)
+  trainerLookup = fn
+end
 
 function Recipes.ApplyTrainer(recipe)
-  local lookup = Recipes.trainerLookup
+  local lookup = trainerLookup
   if type(lookup) ~= "function" then return recipe end
   local record = ns.Log.Try(lookup, recipe.recipeID)
   if type(record) ~= "table" then return recipe end

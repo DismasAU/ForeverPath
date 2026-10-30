@@ -21,7 +21,7 @@ function GoalService.OpenGoalSummaries()
 end
 
 function GoalService.Init()
-  ns.CharacterProvider.openGoals = GoalService.OpenGoalSummaries
+  ns.CharacterProvider.SetGoalSource(GoalService.OpenGoalSummaries)
   if not ns.chardb then
     return nil
   end

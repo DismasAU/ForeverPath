@@ -121,6 +121,11 @@ compartment click handler the TOC requires.
    handles a failure of its own code itself (index and migration states).
 6. Refreshes are event driven and debounced; nothing runs OnUpdate. Lower
    layers announce changes with `FP_*` messages and never call into the UI.
+   When a lower layer needs something only a higher one knows, the higher one
+   installs it through a setter during Init (`Util.SetMoneyRenderer`,
+   `Recipes.SetTrainerLookup`, `CharacterProvider.SetGoalSource`,
+   `ItemProvider.RegisterNameSource`, `PriceProvider.RegisterSource`), never
+   by assigning another module's field.
 7. Names: accessors are bare nouns (`QuestProvider.Giver`, `GoalService.Views`),
    not `Get*`; the older `Get*` accessors (`ItemProvider.GetItem`, the
    Planner's provider interface) are renamed when their module is next

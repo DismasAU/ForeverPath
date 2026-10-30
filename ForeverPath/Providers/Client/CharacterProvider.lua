@@ -21,6 +21,15 @@ CharacterProvider.Levels = { LIVE = "live", SNAPSHOT = "snapshot", CACHED = "cac
 local call = Util.SafeCall
 
 -- Who the logged-in character is. Pure data; the UI adds colours.
+-- The open goals a snapshot records, from the source GoalService installs
+-- at Init (so this provider never reaches up into goals itself):
+-- fn() -> { { id, title, status, itemID } }.
+local goalSource = function() return {} end
+
+function CharacterProvider.SetGoalSource(fn)
+  goalSource = fn
+end
+
 function CharacterProvider.Identity()
   local info = { name = "Adventurer", realm = "", level = 0, class = "", classFile = nil, race = "", gold = nil }
   info.name = call(UnitName, "player") or info.name
@@ -100,7 +109,7 @@ function CharacterProvider.Snapshot()
   for recipeID, learned in pairs(ns.chardb.knownRecipes or {}) do
     if learned == true then knownRecipes[recipeID] = true end
   end
-  local goals = CharacterProvider.openGoals()
+  local goals = goalSource()
   local record = {
     key = key, name = id.name, realm = id.realm, level = id.level, class = id.class, classFile = id.classFile, race = id.race,
     gold = id.gold, lastSeen = Util.Now(), bags = bags, bank = bank, professions = professions, professionSource = professionSource,
@@ -364,12 +373,6 @@ function CharacterProvider.BestCoverage(needs)
   return best
 end
 
--- The open goals a snapshot records: { { id, title, status, itemID } }.
--- GoalService installs the real list at Init, so this provider never
--- reaches up into goals itself.
-function CharacterProvider.openGoals()
-  return {}
-end
 
 local function scheduleSnapshot()
   Events.Debounce("character-snapshot", 3, CharacterProvider.Snapshot)
