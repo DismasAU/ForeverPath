@@ -217,6 +217,22 @@ describe("Sharing learned data", function()
     assert_deep_eq(entry.trainerNPCs, { Georgio = { zone = "Stormwind", recipes = 4 } })
   end)
 
+  it("imports strings as plain text: no chat codes, capped length", function()
+    local ns = H.fresh()
+    H.login(ns)
+    local text = ns.Codec.Pack({ v = 1, author = "prankster", label = "|cffff0000Blizzard|r", addon = { "not", "a", "string" },
+      trainerNPCs = { ["|Hitem:19019|h[Thunderfury]|h"] = { zone = "|TInterface\Icons\x:0|tGoldshire" .. string.rep("x", 300), recipes = 1 } },
+    })
+    assert_true((ns.Share.Import(text)))
+    local entry = ns.db.imported.prankster
+    assert_eq(entry.label, "Blizzard")
+    assert_nil(entry.addon, "the header's addon field is type-checked")
+    local name, npc = next(entry.trainerNPCs)
+    assert_eq(name, "[Thunderfury]", "a link becomes its text")
+    assert_eq(npc.zone:sub(1, 9), "Goldshire")
+    assert_eq(#npc.zone, ns.Share.MAX_STRING)
+  end)
+
   it("rebuilds imported trainer records from typed fields only", function()
     local ns = H.fresh()
     H.login(ns)

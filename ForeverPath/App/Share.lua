@@ -56,7 +56,8 @@ function Share.CountsLabel(counts)
   return string.format("%d loot sources, %d quests, %d vendor items, %d trainer recipes", counts.lootSeen or 0, counts.questFacts or 0, counts.vendors or 0, counts.trainers or 0)
 end
 
--- The export string, or nil, error.
+-- The export string and Share.Counts of what it carries (shown by the
+-- share window), or nil, error.
 function Share.Export()
   local d = db()
   if not d then return nil, "ForeverPath is still loading." end
@@ -94,15 +95,29 @@ Share.SCHEMAS = {
   trainerNPCs = { keys = ".", each = { zone = "string", subzone = "string", recipes = "number", seenAt = "number" } },
 }
 
+-- Longest imported string kept (names, zones, labels).
+Share.MAX_STRING = 120
+
+-- An imported string as plain text: WoW chat codes (colours, links,
+-- textures, atlases) are removed so a crafted export cannot show fake links
+-- or icons wherever its text is printed, and the length is capped.
+function Share.CleanString(text)
+  if type(text) ~= "string" then return nil end
+  text = text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""):gsub("|H.-|h(.-)|h", "%1"):gsub("|T.-|t", ""):gsub("|A.-|a", ""):gsub("|", "")
+  return text:sub(1, Share.MAX_STRING)
+end
+
 local function sanitize(value, spec)
   if spec == "number" then return tonumber(value) end
+  if spec == "string" then return Share.CleanString(value) end
   if type(spec) == "string" then return type(value) == spec and value or nil end
   if type(value) ~= "table" then return nil end
   local out = {}
   if spec.each then
     for key, item in pairs(value) do
       if spec.keys == "number" then key = tonumber(key)
-      elseif type(key) ~= "string" or not key:match(spec.keys) then key = nil end
+      elseif type(key) ~= "string" or not key:match(spec.keys) then key = nil
+      else key = Share.CleanString(key) end
       if key ~= nil then out[key] = sanitize(item, spec.each) end
     end
   elseif spec.list then
@@ -130,7 +145,8 @@ function Share.Import(text)
   end
   d.imported = d.imported or {}
   local replaced = d.imported[payload.author] ~= nil
-  local entry = { label = type(payload.label) == "string" and payload.label or "someone", at = tonumber(payload.at), importedAt = Util.Now(), addon = payload.addon }
+  local label = Share.CleanString(payload.label)
+  local entry = { label = (label and label ~= "") and label or "someone", at = tonumber(payload.at), importedAt = Util.Now(), addon = Share.CleanString(payload.addon) }
   for _, kind in ipairs(Share.KINDS) do entry[kind] = sanitize(payload[kind] or {}, Share.SCHEMAS[kind]) end
   d.imported[payload.author] = entry
   Share.Changed()
