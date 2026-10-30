@@ -443,7 +443,6 @@ function MainFrame.ShowScreen(key, silent)
       Widgets.SetColor(button.glyph, C.gold)
     else
       Widgets.SetBackdrop(button, nil, nil)
-      if button.SetBackdrop then button:SetBackdrop(nil) end
       button.gradient:Hide()
       Widgets.SetTextColor(button.label, button.entry.preview and C.text2 or Theme.RGB("#D2C9B4"))
       Widgets.SetColor(button.glyph, C.text3)

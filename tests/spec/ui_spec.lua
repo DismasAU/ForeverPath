@@ -107,6 +107,23 @@ describe("UI shell and screens (mock widgets)", function()
     ns.UI.Widgets.CloseMenu()
   end)
 
+  it("gives every screen's list rows the same hover, under their text", function()
+    ns.GoalService.AddItemGoal(4238, 1, "CRAFT_ITEM")
+    local pools = {
+      dashboard = function(s) return s.missingPanel.pool end,
+      goals = function(s) return s.rowPool end,
+      crafting = function(s) return s.pool end,
+      shopping = function(s) return s.pool end,
+    }
+    for key, pool in pairs(pools) do
+      MainFrame.ShowScreen(key)
+      Mock.RunTimers()
+      local row = pool(screen(key)).rows[1]
+      assert_not_nil(row, key .. " has a list row")
+      assert_eq(row.hoverFill.layer, "BACKGROUND", key .. " row hover sits under the text")
+    end
+  end)
+
   it("fills header search suggestions on hover, under their text", function()
     frame.search:SetText("lin")
     frame.search:Fire("OnTextChanged", true)

@@ -20,16 +20,7 @@ local function settings()
 end
 
 local function createRow(content, index, screen)
-  local row = Widgets.Frame(content, nil, { frameType = "Button" })
-  row:SetHeight(ROW)
-  row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(index - 1) * ROW)
-  row:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -(index - 1) * ROW)
-  local line = Widgets.HLine(row, C.black, 0.5)
-  line:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
-  line:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, 0)
-  local highlight = row:CreateTexture(nil, "HIGHLIGHT")
-  highlight:SetAllPoints(row)
-  Widgets.SetColor(highlight, C.white, 0.03)
+  local row = Widgets.ListRow(content, { height = ROW, index = index })
 
   row.bought = Widgets.Checkbox(row, "", function(checked)
     if row.key then

@@ -128,6 +128,38 @@ function Widgets.HoverFill(frame, color, alpha)
   return fill
 end
 
+-- A clickable list row: a Button of opts.height, stacked at opts.index below
+-- the previous rows when given, with a bottom divider (opts.divider alpha,
+-- default 0.5; false for none; opts.dividerInset from the left) and a hover
+-- fill under its text (opts.hover alpha, default 0.03). opts.bg / opts.border
+-- give it a backdrop. row:SetSelected(on) shows the selected backdrop.
+function Widgets.ListRow(parent, opts)
+  opts = opts or {}
+  local row = Widgets.Frame(parent, nil, { frameType = "Button", bg = opts.bg, border = opts.border })
+  local height = opts.height
+  row:SetHeight(height)
+  if opts.index then
+    local step = opts.step or height
+    row:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -(opts.index - 1) * step)
+    row:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, -(opts.index - 1) * step)
+  end
+  if opts.divider ~= false then
+    local line = Widgets.HLine(row, C.black, opts.divider or 0.5)
+    line:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", opts.dividerInset or 0, 0)
+    line:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, 0)
+    row.divider = line
+  end
+  Widgets.HoverFill(row, C.white, opts.hover or 0.03)
+  function row:SetSelected(selected)
+    if selected then
+      Widgets.SetBackdrop(self, C.raised, C.bronzeDim)
+    else
+      Widgets.SetBackdrop(self, opts.bg, opts.border)
+    end
+  end
+  return row
+end
+
 -- Engraved divider: black line with a faint highlight beneath. Returns a 2 px frame.
 function Widgets.Engraved(parent, vertical)
   local frame = CreateFrame("Frame", nil, parent)

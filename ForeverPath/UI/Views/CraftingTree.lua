@@ -182,9 +182,7 @@ local function createRow(content, index, tree)
   local line = Widgets.HLine(row, C.black, 0.45)
   line:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
   line:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, 0)
-  local highlight = row:CreateTexture(nil, "HIGHLIGHT")
-  highlight:SetAllPoints(row)
-  Widgets.SetColor(highlight, C.white, 0.03)
+  Widgets.HoverFill(row, C.white, 0.03)
 
   row.guides = {}
   row.elbow = Widgets.Texture(row, C.guide, 1, "ARTWORK")

@@ -19,12 +19,7 @@ local LEFT_COLUMN = 9
 local UPGRADE_BADGE = { bis = { "Best in slot", "ok" }, upgrade = { "Upgrade found", "info" }, empty = { "Empty", "missing" } }
 
 local function createSlotRow(parent, screen)
-  local row = Widgets.Frame(parent, nil, { frameType = "Button" })
-  row:SetHeight(SLOT_ROW)
-  local line = Widgets.HLine(row, C.black, 0.45)
-  line:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
-  line:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, 0)
-  Widgets.HoverFill(row, C.white, 0.03)
+  local row = Widgets.ListRow(parent, { height = SLOT_ROW, divider = 0.45 })
   local icon = Widgets.ItemIcon(row, 30)
   icon:SetPoint("LEFT", row, "LEFT", 8, 0)
   local slotLabel = Widgets.Text(row, "label", "", { caps = true })
@@ -43,13 +38,6 @@ local function createSlotRow(parent, screen)
   end)
   Widgets.ShiftClickLinks(row, function(self) return self.itemID end)
   Widgets.SetItemTooltip(row, function(self) return self.itemID end)
-  function row:SetSelected(selected)
-    if selected then
-      Widgets.SetBackdrop(self, C.raised, C.bronzeDim)
-    elseif self.SetBackdrop then
-      self:SetBackdrop(nil)
-    end
-  end
   return row
 end
 

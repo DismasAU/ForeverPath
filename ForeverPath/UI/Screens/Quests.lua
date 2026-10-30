@@ -34,12 +34,7 @@ local function createGroupRow(content)
 end
 
 local function createQuestRow(content, index, screen)
-  local row = Widgets.Frame(content, nil, { frameType = "Button" })
-  row:SetHeight(ROW)
-  local line = Widgets.HLine(row, C.black, 0.55)
-  line:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 22, 0)
-  line:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, 0)
-  Widgets.HoverFill(row, C.white, 0.03)
+  local row = Widgets.ListRow(content, { height = ROW, divider = 0.55, dividerInset = 22 })
   local marker = Widgets.Text(row, "goalName", "!", { justify = "CENTER", width = 16 })
   marker:SetPoint("LEFT", row, "LEFT", 22, 0)
   local level = Widgets.Text(row, "secondary", "", { justify = "RIGHT", width = 34 })
@@ -56,13 +51,6 @@ local function createQuestRow(content, index, screen)
   row:SetScript("OnClick", function(self)
     if self.questID then screen:Select(self.questID) end
   end)
-  function row:SetSelected(selected)
-    if selected then
-      Widgets.SetBackdrop(self, C.raised, C.bronzeDim)
-    elseif self.SetBackdrop then
-      self:SetBackdrop(nil)
-    end
-  end
   return row
 end
 

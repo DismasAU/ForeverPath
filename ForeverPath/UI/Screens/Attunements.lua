@@ -15,11 +15,7 @@ local SIDE = 262
 local STATE_BADGE = { done = { "Done", "ok" }, current = { "Current", "gold" }, locked = { "Locked", "text" } }
 
 local function createStepRow(content, index, screen)
-  local row = Widgets.Frame(content, nil, { frameType = "Button" })
-  row:SetHeight(ROW)
-  row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(index - 1) * ROW)
-  row:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -(index - 1) * ROW)
-  Widgets.HoverFill(row, C.white, 0.03)
+  local row = Widgets.ListRow(content, { height = ROW, index = index, divider = false })
   row.selected = Widgets.Texture(row, C.gold, 0, "BACKGROUND")
   row.selected:SetAllPoints(row)
   row:SetScript("OnClick", function(self)

@@ -15,18 +15,9 @@ local SORTS = { { key = "missing", label = "Sort: Missing" }, { key = "name", la
 local CHECK = "Interface\\Buttons\\UI-CheckBox-Check"
 
 local function createMaterialRow(content, index)
-  local row = Widgets.Frame(content, nil, { frameType = "Button" })
-  row:SetHeight(ROW)
-  row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(index - 1) * ROW)
-  row:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -(index - 1) * ROW)
+  local row = Widgets.ListRow(content, { height = ROW, index = index, divider = 0.55 })
   local tint = Widgets.Texture(row, C.missing, 0, "BACKGROUND")
   tint:SetAllPoints(row)
-  local line = Widgets.HLine(row, C.black, 0.55)
-  line:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
-  line:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, 0)
-  local highlight = row:CreateTexture(nil, "HIGHLIGHT")
-  highlight:SetAllPoints(row)
-  Widgets.SetColor(highlight, C.white, 0.03)
 
   local icon = Widgets.ItemIcon(row, 28)
   icon:SetPoint("LEFT", row, "LEFT", 10, 0)

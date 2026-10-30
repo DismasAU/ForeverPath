@@ -21,12 +21,7 @@ local function createGroupRow(content)
 end
 
 local function createFactionRow(content, index, screen)
-  local row = Widgets.Frame(content, nil, { frameType = "Button" })
-  row:SetHeight(ROW)
-  local line = Widgets.HLine(row, C.black, 0.55)
-  line:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 10, 0)
-  line:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, 0)
-  Widgets.HoverFill(row, C.white, 0.03)
+  local row = Widgets.ListRow(content, { height = ROW, divider = 0.55, dividerInset = 10 })
   local standing = Widgets.Text(row, "secondaryBright", "", { justify = "RIGHT", width = 70 })
   standing:SetPoint("RIGHT", row, "RIGHT", -10, 0)
   local name = Widgets.Text(row, "body", "")
@@ -41,13 +36,6 @@ local function createFactionRow(content, index, screen)
   row:SetScript("OnClick", function(self)
     if self.factionID then screen:Select(self.factionID) end
   end)
-  function row:SetSelected(selected)
-    if selected then
-      Widgets.SetBackdrop(self, C.raised, C.bronzeDim)
-    elseif self.SetBackdrop then
-      self:SetBackdrop(nil)
-    end
-  end
   return row
 end
 
