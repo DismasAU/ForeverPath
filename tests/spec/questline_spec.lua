@@ -249,7 +249,7 @@ describe("Questlines", function()
     assert_eq(leafIDs[FIRE], 5)
     assert_eq(leafIDs[EARTH], 3)
     assert_nil(leafIDs[AIR])
-    local feeds = QP.FeedsGoals({ goal }, { [goal.id] = view }, ns.GoalService.Name)
+    local feeds = ns.GoalService.QuestFeeds({ goal }, { [goal.id] = view })
     assert_not_nil(feeds[TEMPEST])
     assert_eq(feeds[TEMPEST].goals[1].itemID, RAGE)
     -- Shopping list rows.

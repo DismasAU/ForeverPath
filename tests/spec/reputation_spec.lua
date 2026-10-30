@@ -234,7 +234,7 @@ describe("Reputation goals", function()
     assert_eq(overview.nextSteps[1].badge, "Neutral")
     assert_match(overview.nextSteps[1].detail, "^Neutral now %- 6500 to go")
     -- Every open quest that gives Ironforge reputation feeds the goal on the Quests screen.
-    local feeds = ns.QuestProvider.FeedsGoals({ goal }, { [goal.id] = view }, ns.GoalService.Name)
+    local feeds = ns.GoalService.QuestFeeds({ goal }, { [goal.id] = view })
     assert_not_nil(feeds[GRUDGE])
     assert_eq(feeds[GRUDGE].goals[1].reputation, 250)
     assert_eq(feeds[GRUDGE].goals[1].faction, "Ironforge")
@@ -242,7 +242,7 @@ describe("Reputation goals", function()
     local fed = 0
     for _ in pairs(feeds) do fed = fed + 1 end
     assert_eq(fed, 2, "both Ironforge quests")
-    assert_eq(#ns.QuestProvider.FeedsGoals({ goal }, {}, ns.GoalService.Name)[GRUDGE].goals, 1, "without a view the provider is asked directly")
+    assert_eq(#ns.GoalService.QuestFeeds({ goal }, {})[GRUDGE].goals, 1, "without a view the provider is asked directly")
     ns.Commands.Dispatch("quests")
     assert_output("An Ancient Grudge %[Available%] %- .* %- feeds Ironforge %- Honored")
     local MainFrame = ns.UI.MainFrame

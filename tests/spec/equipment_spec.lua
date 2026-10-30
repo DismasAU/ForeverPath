@@ -73,7 +73,7 @@ describe("EquipmentProvider", function()
     -- Without GearQuest the analysis still maps goals to slots.
     local goal = ns.GoalService.AddItemGoal(BETTER_HELM, 1, "OBTAIN_ITEM")
     local ringGoal = ns.GoalService.AddItemGoal(RING, 1, "OBTAIN_ITEM")
-    local analysis = EP.Analyze({ goals = ns.GoalService.List({ open = true }) })
+    local analysis = ns.GoalService.Equipment(nil, nil, {})
     assert_false(analysis.hasGearQuest)
     assert_eq(analysis.trackedGoals, 2)
     assert_eq(analysis.upgradesPlanned, 2)
@@ -136,7 +136,7 @@ describe("EquipmentProvider", function()
     assert_eq(view.tree.root.route, "quest")
     assert_match(view.message, "Quest reward: Sweet Amber")
     -- The analysis.
-    local analysis = EP.Analyze({ goals = ns.GoalService.List({ open = true }), views = { [goal.id] = view } })
+    local analysis = ns.GoalService.Equipment(nil, nil, { [goal.id] = view })
     assert_true(analysis.hasGearQuest)
     assert_eq(analysis.specLabel, "Arms")
     local head, chest, neck = analysis.slots[1], analysis.slots[5], analysis.slots[2]

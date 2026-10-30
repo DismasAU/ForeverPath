@@ -272,87 +272,13 @@ local function Create(parent)
     return false
   end
 
-  -- Builds { groups = { { key, label, rows = { { questID, name, level, label, kind, feeds } } } }, feeds, total }
+  -- GoalService.QuestBoard for the selected tab, with each row's badge colour.
   function screen:Collect()
-    local QP = ns.QuestProvider
-    local goals = ns.GoalService.List({ open = true })
-    local feeds = QP.FeedsGoals(goals, ns.GoalService.Views(), ns.GoalService.Name)
-    local questGoals = {}
-    for _, goal in ipairs(ns.GoalService.List()) do
-      if goal.type == ns.GoalModel.TypeIDs.COMPLETE_QUEST and goal.target then questGoals[goal.target.questID] = goal end
+    local board = ns.GoalService.QuestBoard(self.tab, self.feedOnly:GetChecked())
+    for _, g in ipairs(board.groups) do
+      for _, row in ipairs(g.rows) do row.kind = BADGE_KIND[row.label] or row.kind end
     end
-    local feedOnly = self.feedOnly:GetChecked()
-    local playerLevel = ns.Compat.PlayerLevel()
-    local groups, byKey = {}, {}
-    local seen = {}
-    local function group(key, label)
-      local g = byKey[key]
-      if not g then
-        g = { key = key, label = label, rows = {} }
-        byKey[key] = g
-        groups[#groups + 1] = g
-      end
-      return g
-    end
-    local function add(groupKey, groupLabel, questID, name, level, state, entry)
-      if seen[questID] then return end
-      seen[questID] = true
-      local label, kind = QP.StateLabel(state, entry, playerLevel)
-      local feed = feeds[questID]
-      local goal = questGoals[questID]
-      local feedParts = {}
-      for _, f in ipairs(feed and feed.goals or {}) do feedParts[#feedParts + 1] = f.name end
-      if goal then table.insert(feedParts, 1, "goal: " .. ns.GoalService.Name(goal)) end
-      group(groupKey, groupLabel).rows[#group(groupKey, groupLabel).rows + 1] = {
-        questID = questID, name = name, level = level, label = label, kind = BADGE_KIND[label] or kind, state = state, entry = entry,
-        feeds = feedParts, feed = feed, goal = goal,
-      }
-    end
-    local tab = self.tab
-    for _, entry in ipairs(QP.List()) do
-      local state = QP.State(entry.id)
-      local feeding = feeds[entry.id] ~= nil or questGoals[entry.id] ~= nil
-      local include
-      if tab == "completed" then include = state.completed
-      elseif tab == "goal" then include = feeding and not state.completed
-      else include = not state.completed and (not feedOnly or feeding) end
-      if include then
-        if tab == "goal" then
-          local names = {}
-          for _, f in ipairs(feeds[entry.id] and feeds[entry.id].goals or {}) do names[#names + 1] = f.name end
-          if questGoals[entry.id] then table.insert(names, 1, ns.GoalService.Name(questGoals[entry.id])) end
-          local label = table.concat(names, ", ")
-          add(label, label, entry.id, entry.name, entry.level, state, entry)
-        else
-          add(entry.instance or "?", entry.instance or "?", entry.id, entry.name, entry.level, state, entry)
-        end
-      end
-    end
-    if tab ~= "completed" then
-      for _, log in ipairs(QP.LogEntries()) do
-        if not seen[log.questID] then
-          local state = QP.State(log.questID)
-          local feeding = feeds[log.questID] ~= nil or questGoals[log.questID] ~= nil
-          if (tab == "goal" and feeding) or (tab == "zone" and (not feedOnly or feeding)) then
-            local key = tab == "goal" and (questGoals[log.questID] and ns.GoalService.Name(questGoals[log.questID]) or "Goals") or (log.zone or "Quest log")
-            add(key, key, log.questID, log.title or QP.Name(log.questID), log.level, state, QP.Get(log.questID))
-          end
-        end
-      end
-    end
-    table.sort(groups, function(a, b) return tostring(a.label) < tostring(b.label) end)
-    local total = 0
-    for _, g in ipairs(groups) do
-      table.sort(g.rows, function(a, b)
-        if (a.level or 0) ~= (b.level or 0) then return (a.level or 0) < (b.level or 0) end
-        if a.name ~= b.name then return tostring(a.name) < tostring(b.name) end
-        return a.questID < b.questID
-      end)
-      total = total + #g.rows
-    end
-    local feedCount = 0
-    for _ in pairs(feeds) do feedCount = feedCount + 1 end
-    return { groups = groups, feeds = feeds, feedCount = feedCount, total = total, questGoals = questGoals }
+    return board
   end
 
   local function renderSide(self, questID, collected)

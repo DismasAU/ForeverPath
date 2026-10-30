@@ -217,8 +217,8 @@ function handlers.equipment()
   if not requireLoaded() then return end
   local EP = ns.EquipmentProvider
   Log.Print("%s", EP.StatusLine())
-  local goals = ns.GoalService.List({ open = true })
-  local analysis = EP.Analyze({ goals = goals, views = ns.GoalService.EvaluateViews() })
+  ns.GoalService.EvaluateViews()
+  local analysis = ns.GoalService.Equipment()
   for _, entry in ipairs(analysis.slots) do
     local worn = entry.equipped
     local parts = { worn.itemID and (ns.ItemProvider.GetName(worn.itemID) .. (worn.ilvl and (" (" .. worn.ilvl .. ")") or "")) or "empty" }
@@ -234,7 +234,8 @@ function handlers.quests()
   local QP = ns.QuestProvider
   Log.Print("%s", QP.StatusLine())
   local goals = ns.GoalService.List({ open = true })
-  local feeds = QP.FeedsGoals(goals, ns.GoalService.EvaluateViews(), ns.GoalService.Name)
+  ns.GoalService.EvaluateViews()
+  local feeds = ns.GoalService.QuestFeeds()
   local ids = {}
   for questID in pairs(feeds) do ids[#ids + 1] = questID end
   table.sort(ids)

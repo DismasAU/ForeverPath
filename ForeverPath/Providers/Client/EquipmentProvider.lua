@@ -337,34 +337,16 @@ end
 ---------------------------------------------------------------------------
 -- The whole picture
 ---------------------------------------------------------------------------
--- opts.source (filter), opts.goals (open goals), opts.views (goalID -> view)
--- Returns { slots = { { slot, equipped, candidates, best, upgrade, goal, goalView, goalItemID } },
---           averageIlvl, upgradesPlanned, trackedGoals, hasGearQuest, spec, specLabel }
+-- What is worn and what GearQuest would hunt, per slot. Which goal serves a
+-- slot is GoalService.Equipment's business. opts.source filters candidates.
+-- Returns { slots = { { slot, equipped, candidates, best, upgrade } },
+--           averageIlvl, hasGearQuest, spec, specLabel }
 function EquipmentProvider.Analyze(opts)
   opts = opts or {}
   local byKey, list = EquipmentProvider.Equipped()
-  local goals = opts.goals or {}
-  local goalSlots = {}
-  local tracked = 0
-  for _, goal in ipairs(goals) do
-    if goal.target and goal.target.itemID and (goal.type == ns.GoalModel.TypeIDs.CRAFT_ITEM or goal.type == ns.GoalModel.TypeIDs.OBTAIN_ITEM) then
-      local keys = EquipmentProvider.SlotKeysFor(goal.target.itemID)
-      if #keys > 0 then
-        tracked = tracked + 1
-        local placed = false
-        for _, key in ipairs(keys) do
-          if not placed and not goalSlots[key] then
-            goalSlots[key] = goal
-            placed = true
-          end
-        end
-        if not placed then goalSlots[keys[1]] = goalSlots[keys[1]] or goal end
-      end
-    end
-  end
   local hasGQ = EquipmentProvider.HasGearQuest()
   local spec, specLabel = EquipmentProvider.Spec()
-  local result = { slots = {}, averageIlvl = EquipmentProvider.AverageItemLevel(list), trackedGoals = tracked, upgradesPlanned = 0, hasGearQuest = hasGQ, spec = spec, specLabel = specLabel }
+  local result = { slots = {}, averageIlvl = EquipmentProvider.AverageItemLevel(list), hasGearQuest = hasGQ, spec = spec, specLabel = specLabel }
   for _, slot in ipairs(EquipmentProvider.SLOTS) do
     local worn = byKey[slot.key]
     local candidates = hasGQ and EquipmentProvider.Candidates(slot.key, { source = opts.source }) or {}
@@ -373,7 +355,6 @@ function EquipmentProvider.Analyze(opts)
       if not best and candidate.itemID ~= worn.itemID then best = candidate end
     end
     local upgrade = "none"
-    local goal = goalSlots[slot.key]
     if worn.itemID and candidates[1] and candidates[1].itemID == worn.itemID then
       upgrade = "bis"
     elseif best and (not worn.itemID or (best.ilvl or 0) >= (worn.ilvl or 0)) then
@@ -381,11 +362,7 @@ function EquipmentProvider.Analyze(opts)
     elseif not worn.itemID then
       upgrade = "empty"
     end
-    if goal then result.upgradesPlanned = result.upgradesPlanned + 1 end
-    result.slots[#result.slots + 1] = {
-      slot = slot, equipped = worn, candidates = candidates, best = best, upgrade = upgrade,
-      goal = goal, goalView = goal and opts.views and opts.views[goal.id] or nil, goalItemID = goal and goal.target.itemID or nil,
-    }
+    result.slots[#result.slots + 1] = { slot = slot, equipped = worn, candidates = candidates, best = best, upgrade = upgrade }
   end
   return result
 end

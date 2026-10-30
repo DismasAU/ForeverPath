@@ -147,6 +147,13 @@ describe("QuestProvider", function()
     assert_eq(numQuests, 2)
     assert_eq(max, 20)
     assert_eq(QP.Name(77777), "Some Other Quest", "log titles name quests the addons do not know")
+    -- On the By goal board a log-only quest groups under its goal, like journal quests.
+    assert_not_nil((ns.GoalService.AddQuestGoal(77777)))
+    local logGroup
+    for _, g in ipairs(ns.GoalService.QuestBoard("goal").groups) do
+      for _, row in ipairs(g.rows) do if row.questID == 77777 then logGroup = g end end
+    end
+    assert_eq(logGroup.label, "Some Other Quest")
     Mock.SetQuestObjective(HIDES, 1, 20)
     state = QP.State(HIDES)
     assert_true(state.ready)
@@ -276,7 +283,7 @@ describe("Quest goals", function()
     local MainFrame = ns.UI.MainFrame
     local itemGoal = ns.GoalService.AddItemGoal(LEGGINGS, 1, "OBTAIN_ITEM")
     local views = ns.Planner.EvaluateAll({ itemGoal })
-    local feeds = QP.FeedsGoals({ itemGoal }, views, ns.GoalService.Name)
+    local feeds = ns.GoalService.QuestFeeds({ itemGoal }, views)
     assert_not_nil(feeds[HIDES])
     assert_eq(feeds[HIDES].goals[1].name, "Slick Deviate Leggings")
     assert_eq(feeds[HIDES].goals[1].count, 1)
