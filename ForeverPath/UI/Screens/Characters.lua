@@ -352,9 +352,8 @@ local function Create(parent)
   local scopeLabel = Widgets.Text(scopeRow, "label", "Scope", { caps = true })
   scopeLabel:SetPoint("LEFT", scopeRow, "LEFT", 2, 0)
   local scope = Widgets.Segment(scopeRow, { { key = "character", label = "This character" }, { key = "account", label = "Account-wide" } }, function(key)
-    if ns.db then ns.db.settings.includeAlts = key == "account" end
-    ns.UI.MainFrame.SetStatus(key == "account" and "Alts' bags and banks now count as owned." or "Only this character's bags and bank count as owned.", "info")
-    ns.UI.MainFrame.RequestRefresh()
+    local message = ns.GoalService.SetIncludeAlts(key == "account")
+    if message then ns.UI.MainFrame.SetStatus(message, "info") end
   end)
   scope:SetPoint("LEFT", scopeLabel, "RIGHT", 10, 0)
   local scopeHint = Widgets.Text(scopeRow, "small", "", { color = C.text3 })
@@ -401,7 +400,7 @@ local function Create(parent)
   scroll:HookScript("OnSizeChanged", function() screen:LayoutCards(screen.cardCount or 0) end)
 
   function screen:Refresh()
-    local includeAlts = ns.db and ns.db.settings.includeAlts == true
+    local includeAlts = ns.GoalService.IncludesAlts()
     scope:Select(includeAlts and "account" or "character")
     scopeHint:SetText(includeAlts and "Alts' snapshots count as owned in every goal" or "Alts are shown for information only")
 

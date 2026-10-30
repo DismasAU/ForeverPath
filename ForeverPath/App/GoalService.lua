@@ -747,6 +747,22 @@ function GoalService.FindItemGoal(itemID)
 end
 
 ---------------------------------------------------------------------------
+-- Planning settings
+---------------------------------------------------------------------------
+-- Whether alts' snapshotted bags and banks count as owned in every goal.
+function GoalService.IncludesAlts()
+  return ns.db ~= nil and ns.db.settings.includeAlts == true
+end
+
+-- Sets includeAlts and announces it. Returns the message to show, or nil, reason.
+function GoalService.SetIncludeAlts(on)
+  if not ns.db then return nil, "not loaded" end
+  ns.db.settings.includeAlts = on and true or false
+  Events.Fire("FP_SETTINGS_CHANGED", "includeAlts")
+  return on and "Alts' bags and banks now count as owned." or "Only this character's bags and bank count as owned."
+end
+
+---------------------------------------------------------------------------
 -- Shopping list state: ns.chardb.shopping, shaped by Database.DEFAULTS
 ---------------------------------------------------------------------------
 -- { bought, included, sort, filter } for this character, or nil before load.
@@ -793,6 +809,24 @@ function GoalService.View(goalID)
   if view then return view end
   local goal = GoalService.Get(goalID)
   return goal and ns.Planner.Evaluate(goal) or nil
+end
+
+-- The shopping list over every open goal's last evaluated view, with this
+-- character's ticks, inclusion choices, prices and gold (Domain/ShoppingList).
+function GoalService.ShoppingList()
+  local state = GoalService.ShoppingState()
+  local entries = {}
+  for _, goal in ipairs(GoalService.List({ open = true })) do
+    entries[#entries + 1] = { goal = goal, view = GoalService.View(goal.id) }
+  end
+  return ns.ShoppingList.Build(entries, {
+    included = GoalService.InShopping, bought = state and state.bought or {}, nameOf = ItemProvider.GetName, sort = state and state.sort,
+    priceOf = function(itemID)
+      local info = ns.PriceProvider.GetPrice(itemID)
+      return info and info.copper or nil
+    end,
+    gold = ns.CharacterProvider.AccountGold(),
+  })
 end
 
 -- Tracked, open goals in priority order (drives the tracker and header pill).

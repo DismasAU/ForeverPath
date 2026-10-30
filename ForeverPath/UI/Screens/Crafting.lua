@@ -72,7 +72,7 @@ local function createMaterialRow(content, index)
       lines[#lines + 1] = string.format("Bank: %d (%s)", m.ownedBank, m.bankSource == "live" and "live" or (m.bankSource == "cached" and "snapshot" or "client reported"))
     end
     for _, alt in ipairs(m.altSources or {}) do
-      lines[#lines + 1] = string.format("%s has %d (%s%s)", alt.name, alt.count, alt.freshness, ns.db and ns.db.settings.includeAlts and ", counted" or ", not counted")
+      lines[#lines + 1] = string.format("%s has %d (%s%s)", alt.name, alt.count, alt.freshness, ns.GoalService.IncludesAlts() and ", counted" or ", not counted")
     end
     if (m.reserved or 0) > 0 then
       lines[#lines + 1] = string.format("Reserved by higher-priority goals: %d", m.reserved)
@@ -589,9 +589,8 @@ local function Create(parent)
   end)
   sort:SetPoint("BOTTOMRIGHT", hero, "BOTTOMRIGHT", 0, -36)
   local alts = Widgets.Checkbox(screen, "Include alts' bags", function(checked)
-    if ns.db then ns.db.settings.includeAlts = checked and true or false end
-    ns.UI.MainFrame.SetStatus(checked and "Alts' bags and banks now count as owned." or "Only this character's bags and bank count as owned.", "info")
-    ns.UI.MainFrame.RequestRefresh()
+    local message = ns.GoalService.SetIncludeAlts(checked)
+    if message then ns.UI.MainFrame.SetStatus(message, "info") end
   end)
   alts:SetPoint("RIGHT", sort, "LEFT", -14, 0)
   Widgets.SetTooltip(alts, "Include alts' bags", { "Counts the snapshotted bags and bank of your other characters as owned.", "Snapshots are taken whenever you log in or out on a character." })
@@ -692,7 +691,7 @@ local function Create(parent)
     if view.skill then itemName = ns.GoalService.Name(goal) end
     crumbRest:SetText(string.format("  >  Crafting  >  %s%s|r", Theme.Hex.text, itemName))
     tracked:SetChecked(goal.tracked)
-    alts:SetChecked(ns.db and ns.db.settings.includeAlts == true)
+    alts:SetChecked(ns.GoalService.IncludesAlts())
     renderHero(self, goal, view, itemName)
 
     local sortKey = ns.chardb and ns.chardb.ui.materialSort or "missing"

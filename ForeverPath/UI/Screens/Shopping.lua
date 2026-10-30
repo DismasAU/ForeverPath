@@ -252,22 +252,8 @@ local function Create(parent)
   screen.empty:SetHeight(100)
   screen.empty:Hide()
 
-  function screen:Entries()
-    local entries = {}
-    for _, goal in ipairs(ns.GoalService.List({ open = true })) do
-      entries[#entries + 1] = { goal = goal, view = ns.GoalService.Views()[goal.id] }
-    end
-    return entries
-  end
-
   function screen:Build()
-    local s = settings()
-    return ShoppingList.Build(self:Entries(), { included = ns.GoalService.InShopping, bought = s.bought, nameOf = ns.ItemProvider.GetName, sort = s.sort,
-      priceOf = function(itemID)
-        local info = ns.PriceProvider.GetPrice(itemID)
-        return info and info.copper or nil
-      end,
-      gold = ns.CharacterProvider.AccountGold() })
+    return ns.GoalService.ShoppingList()
   end
 
   function screen:SendToChat()

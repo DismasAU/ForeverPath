@@ -220,7 +220,7 @@ function handlers.equipment()
   local EP = ns.EquipmentProvider
   Log.Print("%s", EP.StatusLine())
   local goals = ns.GoalService.List({ open = true })
-  local analysis = EP.Analyze({ goals = goals, views = ns.Planner.EvaluateAll(goals) })
+  local analysis = EP.Analyze({ goals = goals, views = ns.GoalService.EvaluateViews() })
   for _, entry in ipairs(analysis.slots) do
     local worn = entry.equipped
     local parts = { worn.itemID and (ns.ItemProvider.GetName(worn.itemID) .. (worn.ilvl and (" (" .. worn.ilvl .. ")") or "")) or "empty" }
@@ -236,8 +236,7 @@ function handlers.quests()
   local QP = ns.QuestProvider
   Log.Print("%s", QP.StatusLine())
   local goals = ns.GoalService.List({ open = true })
-  local views = ns.Planner.EvaluateAll(goals)
-  local feeds = QP.FeedsGoals(goals, views, ns.GoalService.Name)
+  local feeds = QP.FeedsGoals(goals, ns.GoalService.EvaluateViews(), ns.GoalService.Name)
   local ids = {}
   for questID in pairs(feeds) do ids[#ids + 1] = questID end
   table.sort(ids)
@@ -311,7 +310,8 @@ function handlers.tree(rest)
     Log.Print("No goal selected. Use /fp goals to list them.")
     return
   end
-  local view = ns.Planner.Evaluate(goal)
+  ns.GoalService.EvaluateViews()
+  local view = ns.GoalService.View(goal.id)
   if not view.tree then
     Log.Print("%s: %s", ns.GoalService.Title(goal), view.message or ns.ReadinessLabel[view.readiness] or "no plan")
     return
@@ -334,7 +334,7 @@ function handlers.characters()
       #profs > 0 and table.concat(profs, ", ") or "no professions", Util.Count(r.bags and r.bags.items or {}), r.bank and " + bank" or "",
       entry.isCurrent and "live" or (entry.freshness .. " " .. Util.FormatAgo(r.lastSeen))))
   end
-  Log.Print("Alts' bags are %s as owned (/fp alts to toggle).", ns.db.settings.includeAlts and "counted" or "not counted")
+  Log.Print("Alts' bags are %s as owned (/fp alts to toggle).", ns.GoalService.IncludesAlts() and "counted" or "not counted")
 end
 
 function handlers.sources(rest)
@@ -562,15 +562,8 @@ end
 
 function handlers.shopping()
   if not requireLoaded() then return end
-  local goals = ns.GoalService.List({ open = true })
-  local views = ns.Planner.EvaluateAll(goals)
-  local entries = {}
-  for _, goal in ipairs(goals) do entries[#entries + 1] = { goal = goal, view = views[goal.id] } end
-  local s = ns.GoalService.ShoppingState()
-  local list = ns.ShoppingList.Build(entries, {
-    included = ns.GoalService.InShopping,
-    bought = s.bought, nameOf = ns.ItemProvider.GetName, sort = s.sort,
-  })
+  ns.GoalService.EvaluateViews()
+  local list = ns.GoalService.ShoppingList()
   for _, line in ipairs(ns.ShoppingList.Lines(list, ns.ItemProvider.GetName)) do
     Log.output(line)
   end
@@ -595,9 +588,7 @@ end
 
 function handlers.alts()
   if not requireLoaded() then return end
-  ns.db.settings.includeAlts = not ns.db.settings.includeAlts
-  Log.Print("Alts' bags are now %s as owned.", ns.db.settings.includeAlts and "counted" or "not counted")
-  ns.UI.MainFrame.RequestRefresh()
+  Log.Print("%s", ns.GoalService.SetIncludeAlts(not ns.GoalService.IncludesAlts()))
 end
 
 function handlers.tracker()
