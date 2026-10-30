@@ -30,6 +30,13 @@ describe("DependencyResolver", function()
     end
   end
 
+  it("names routes and step kinds strictly", function()
+    assert_eq(R.Routes.ALTCRAFT, "altcraft")
+    assert_eq(R.Steps.TRAIN, "train")
+    for kind in pairs(R.RouteLabels) do assert_eq(R.Routes[string.upper(kind)], kind, "every labelled route is named") end
+    assert_error(function() return R.Routes.CRAFTS end, "unknown route CRAFTS")
+  end)
+
   it("lists direct reagents with owned and missing when nothing is craftable", function()
     local tree = R.Resolve({ recipe = bagRecipe, quantity = 1 }, opts({ [BOLT] = 1 }, {}))
     assert_eq(tree.root.itemID, BAG)

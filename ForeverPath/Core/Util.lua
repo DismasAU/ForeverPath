@@ -48,6 +48,21 @@ function Util.SafeCall(fn, ...)
   return passResults(pcall(fn, ...))
 end
 
+-- A name table whose unknown names raise, so a misspelt name fails where it
+-- is written instead of comparing false. names: a list (t.UPPER == "value")
+-- or a set keyed by the names themselves (t.NAME == "NAME").
+function Util.StrictNames(names, what)
+  local t = setmetatable({}, {
+    __index = function(_, name) error("unknown " .. what .. " " .. tostring(name), 2) end,
+  })
+  if names[1] ~= nil then
+    for _, value in ipairs(names) do rawset(t, string.upper(value), value) end
+  else
+    for name in pairs(names) do rawset(t, name, name) end
+  end
+  return t
+end
+
 function Util.IsPositiveInt(value)
   return type(value) == "number" and value > 0 and value == math.floor(value)
 end

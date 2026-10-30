@@ -15,6 +15,8 @@
 -- holds cost nothing; gathering, drops and quests are priced at their AH
 -- price when one is known (what you would pay instead of farming).
 local _, ns = ...
+local Routes = ns.DependencyResolver.Routes
+local Steps = ns.DependencyResolver.Steps
 
 local CraftWise = {}
 ns.CraftWise = CraftWise
@@ -35,7 +37,7 @@ local function evaluate(node, ctx, rows, depth)
     return row
   end
   -- A train step costs what the trainer charges, in every strategy.
-  if node.step and node.step.kind ~= "skill" then
+  if node.step and node.step.kind ~= Steps.SKILL then
     local cost = node.step.trainer and tonumber(node.step.trainer.cost) or nil
     row.buy = nil
     row.craft, row.craftPath, row.hybrid = cost, cost, cost
@@ -69,7 +71,7 @@ local function evaluate(node, ctx, rows, depth)
   end
 
   local route = node.route
-  if route == "alt" or route == "altcraft" then
+  if route == Routes.ALT or route == Routes.ALTCRAFT then
     row.choice = route
     row.hybrid = 0
     row.unknown = 0
@@ -82,7 +84,7 @@ local function evaluate(node, ctx, rows, depth)
     row.hybrid = row.craft
     row.unknown = 0
   elseif row.buy then
-    row.choice = (route == "buy" or route == "vendor" or #node.children > 0) and (route == "vendor" and "vendor" or "buy") or route
+    row.choice = (route == Routes.BUY or route == Routes.VENDOR or #node.children > 0) and (route == Routes.VENDOR and "vendor" or "buy") or route
     row.hybrid = row.buy
     row.unknown = 0
   elseif #node.children > 0 then
@@ -229,7 +231,7 @@ CraftWise.ChoiceLabels = { buy = "Buy", vendor = "Vendor", craft = "Craft", owne
 function CraftWise.ApplyPlan(result, setRoute)
   local changed = 0
   for itemID, route in pairs(result and result.plan or {}) do
-    local value = route == "buy" and "buy" or nil
+    local value = route == Routes.BUY and "buy" or nil
     if setRoute(itemID, value) then changed = changed + 1 end
   end
   return changed
@@ -247,7 +249,7 @@ function CraftWise.Mode(result, routes)
   routes = routes or {}
   local function matches(plan)
     for itemID, route in pairs(plan) do
-      if (routes[itemID] or nil) ~= (route == "buy" and "buy" or nil) then return false end
+      if (routes[itemID] or nil) ~= (route == Routes.BUY and "buy" or nil) then return false end
     end
     for itemID in pairs(routes) do
       if plan[itemID] == nil and routes[itemID] ~= nil then return false end

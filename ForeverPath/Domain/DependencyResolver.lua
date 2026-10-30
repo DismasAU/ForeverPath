@@ -15,6 +15,11 @@ local DependencyResolver = {}
 ns.DependencyResolver = DependencyResolver
 
 DependencyResolver.MAX_DEPTH = 6
+-- How a node is obtained (node.route, option.kind, source hint kinds):
+-- Routes.CRAFT == "craft". Step kinds (node.step.kind): Steps.TRAIN.
+DependencyResolver.Routes = ns.Util.StrictNames({ "craft", "buy", "vendor", "gather", "drop", "quest", "alt", "altcraft", "learn", "combine", "train" }, "route")
+DependencyResolver.Steps = ns.Util.StrictNames({ "train", "quest", "skill" }, "step kind")
+local Routes, Steps = DependencyResolver.Routes, DependencyResolver.Steps
 DependencyResolver.RouteLabels = { craft = "Craft", buy = "Buy", vendor = "Vendor", gather = "Gather", drop = "Drop", quest = "Quest", alt = "Alt", altcraft = "Alt crafts", learn = "Learn recipe", combine = "Combine", train = "Train" }
 -- Preferred default route when no learned recipe exists: certain and cheap
 -- first. "combine" is an item-use recipe anyone can do; "learn" is a catalogue
@@ -37,7 +42,7 @@ end
 local function bestCraft(options)
   local combine, learnable, fallback
   for _, option in ipairs(options) do
-    if option.kind == "craft" and not option.cycle then
+    if option.kind == Routes.CRAFT and not option.cycle then
       if option.learned then return option end
       if option.combine then combine = combine or option
       elseif not option.unavailable then learnable = learnable or option
@@ -90,7 +95,7 @@ local function buildOptions(itemID, opts, path)
         if path[reagent.itemID] then cycle = true end
       end
       local option = {
-        kind = "craft",
+        kind = Routes.CRAFT,
         recipe = recipe,
         name = recipe.name,
         learned = candidate.learned and true or false,
@@ -111,7 +116,7 @@ local function buildOptions(itemID, opts, path)
   local hints = opts.sources and opts.sources(itemID) or nil
   if type(hints) == "table" then
     for _, hint in ipairs(hints) do
-      if type(hint) == "table" and hint.kind and hint.kind ~= "craft" then
+      if type(hint) == "table" and hint.kind and hint.kind ~= Routes.CRAFT then
         options[#options + 1] = { kind = hint.kind, label = hint.label, short = hint.short, detail = hint.detail, name = hint.name, count = hint.count,
           skill = hint.skill, gatherer = hint.gatherer, unavailable = hint.unavailable and true or nil,
           chance = hint.chance, perLoot = hint.perLoot, target = hint.target or hint.boss or hint.object, object = hint.object, zone = hint.zone,
@@ -119,12 +124,12 @@ local function buildOptions(itemID, opts, path)
       end
     end
   end
-  options[#options + 1] = { kind = "buy" }
+  options[#options + 1] = { kind = Routes.BUY }
   -- An item that binds when picked up cannot be bought, mailed or crafted by an alt for you.
   local soulbound = opts.soulbound and opts.soulbound(itemID) or false
   if soulbound then
     for _, option in ipairs(options) do
-      if option.kind == "buy" or option.kind == "alt" or option.kind == "altcraft" then
+      if option.kind == Routes.BUY or option.kind == Routes.ALT or option.kind == Routes.ALTCRAFT then
         option.unavailable = true
         option.reason = "soulbound"
       end
@@ -198,7 +203,7 @@ local function expand(node, opts, path, tree)
   local craft = node.craft
   if (craft.static or craft.enchant) and not craft.learned and not craft.combine and not craft.teachItemID then
     addChild("train:" .. tostring(recipe.recipeID), { quantity = 1, step = {
-      kind = "train", spellID = recipe.recipeID, name = recipe.name, professionName = craft.professionName,
+      kind = Steps.TRAIN, spellID = recipe.recipeID, name = recipe.name, professionName = craft.professionName,
       icon = recipe.icon, rank = recipe.skill and recipe.skill.min or nil, trainer = recipe.trainer, who = craft.crafter,
     } })
   end
@@ -216,7 +221,7 @@ local function resolveEnchantRoot(node, opts, path, tree)
   local recipe = spec.recipe
   resetNonClaiming(node, "root")
   node.options, node.soulbound = {}, nil
-  node.route, node.routeSource = "craft", "root"
+  node.route, node.routeSource = Routes.CRAFT, "root"
   local learned = spec.learned and true or false
   node.craft = {
     recipe = recipe,
@@ -247,7 +252,7 @@ local function resolveSkillCraft(node, opts, path, tree)
   local recipe = spec.recipe
   resetNonClaiming(node, "missing")
   node.options, node.soulbound = {}, nil
-  node.route, node.routeSource = "craft", "skill"
+  node.route, node.routeSource = Routes.CRAFT, "skill"
   local yield = recipe.quantityMin or 1
   node.craft = {
     recipe = recipe,
@@ -281,15 +286,15 @@ local function resolveStepNode(node, opts, path, tree)
   resetNonClaiming(node, "missing")
   node.options = {}
   local children = {}
-  if node.step.kind == "quest" then
-    node.route, node.routeSource = "quest", "quest"
+  if node.step.kind == Steps.QUEST then
+    node.route, node.routeSource = Routes.QUEST, "quest"
     for index, spec in ipairs(node.step.items or {}) do
       children[#children + 1] = childOf(node, index, tostring(spec.itemID), {
         itemID = spec.itemID, quantity = spec.quantity or spec.count or 1, questItem = true, questName = spec.questName,
       })
     end
-  elseif node.step.kind == "skill" then
-    node.route, node.routeSource = "craft", "skill"
+  elseif node.step.kind == Steps.SKILL then
+    node.route, node.routeSource = Routes.CRAFT, "skill"
     for index, spec in ipairs(node.step.crafts or {}) do
       local recipe = spec.recipe
       children[#children + 1] = childOf(node, index, tostring(recipe.recipeID), {
@@ -302,7 +307,7 @@ local function resolveStepNode(node, opts, path, tree)
       })
     end
   else
-    node.route, node.routeSource = "train", "default"
+    node.route, node.routeSource = Routes.TRAIN, "default"
   end
   for _, child in ipairs(children) do
     DependencyResolver.ResolveNode(child, opts, path, tree)
@@ -341,19 +346,19 @@ end
 -- When nothing forces a route: the best ranked source that is not a craft,
 -- unless a recipe nobody has learned (or a combine) ranks above it.
 local function rankRoutes(node, craftOption)
-  node.route, node.routeSource = "buy", "default"
+  node.route, node.routeSource = Routes.BUY, "default"
   local bestRank = DependencyResolver.RouteRank.buy
   local buyOption
   for _, option in ipairs(node.options) do
-    if option.kind == "buy" then buyOption = option end
+    if option.kind == Routes.BUY then buyOption = option end
     local rank = DependencyResolver.RouteRank[option.kind]
-    if option.kind ~= "craft" and not option.unavailable and rank and rank < bestRank then
+    if option.kind ~= Routes.CRAFT and not option.unavailable and rank and rank < bestRank then
       bestRank = rank
       node.route = option.kind
       node.hint = option
     end
   end
-  if node.route == "buy" and buyOption and buyOption.unavailable then
+  if node.route == Routes.BUY and buyOption and buyOption.unavailable then
     -- Soulbound and nothing else known: no real route yet.
     bestRank = DependencyResolver.UNAVAILABLE_RANK + 1
     node.noRoute = true
@@ -365,7 +370,7 @@ local function rankRoutes(node, craftOption)
     local rank = craftOption.combine and DependencyResolver.RouteRank.combine
       or (craftOption.unavailable and DependencyResolver.UNAVAILABLE_RANK or DependencyResolver.RouteRank.learn)
     if rank < bestRank then
-      node.route, node.routeSource = "craft", craftOption.combine and "combine" or "learn"
+      node.route, node.routeSource = Routes.CRAFT, craftOption.combine and "combine" or "learn"
       node.hint, node.noRoute = nil, nil
     end
   end
@@ -376,13 +381,13 @@ end
 -- ranked sources.
 local function chooseRoute(node, craftOption, override, tree)
   if node.depth == 0 and tree.rootRecipe then
-    node.route, node.routeSource = "craft", "root"
-  elseif override == "craft" and craftOption then
-    node.route, node.routeSource = "craft", "override"
-  elseif override == "buy" then
-    node.route, node.routeSource = "buy", "override"
+    node.route, node.routeSource = Routes.CRAFT, "root"
+  elseif override == Routes.CRAFT and craftOption then
+    node.route, node.routeSource = Routes.CRAFT, "override"
+  elseif override == Routes.BUY then
+    node.route, node.routeSource = Routes.BUY, "override"
   elseif craftOption and craftOption.learned and not node.raw then
-    node.route, node.routeSource = "craft", "default"
+    node.route, node.routeSource = Routes.CRAFT, "default"
   else
     rankRoutes(node, craftOption)
   end
@@ -439,18 +444,18 @@ function DependencyResolver.ResolveNode(node, opts, path, tree)
   chooseRoute(node, craftOption, override, tree)
   node.craftOption = craftOption
 
-  if node.route == "craft" and node.missing > 0 then
+  if node.route == Routes.CRAFT and node.missing > 0 then
     local option = craftOption
     if node.depth == 0 and tree.rootRecipe then
       -- The root always crafts with the goal's own recipe.
-      option = { kind = "craft", recipe = tree.rootRecipe, learned = true, professionName = tree.rootRecipe.professionName, yield = tree.rootRecipe.quantityMin or 1 }
+      option = { kind = Routes.CRAFT, recipe = tree.rootRecipe, learned = true, professionName = tree.rootRecipe.professionName, yield = tree.rootRecipe.quantityMin or 1 }
     end
     buildCraft(node, option, opts, path, tree)
-  elseif craftOption == nil and override == "craft" then
+  elseif craftOption == nil and override == Routes.CRAFT then
     node.blocked = "no-recipe"
   end
   for _, option in ipairs(node.options) do
-    if option.kind == "craft" and option.cycle and not node.craft then
+    if option.kind == Routes.CRAFT and option.cycle and not node.craft then
       node.blocked = node.blocked or "cycle"
     end
   end
@@ -714,7 +719,7 @@ function DependencyResolver.Describe(tree, nameOf)
     local node = row.node
     local indent = string.rep("  ", node.depth)
     local text
-    if node.step and node.step.kind == "skill" then
+    if node.step and node.step.kind == Steps.SKILL then
       text = string.format("%s%s: %d craft%s over %d recipe%s", indent, node.step.name or "skill plan", node.quantity, node.quantity == 1 and "" or "s",
         #node.children, #node.children == 1 and "" or "s")
     elseif node.step then
@@ -730,7 +735,7 @@ function DependencyResolver.Describe(tree, nameOf)
     elseif node.depth == 0 and not node.claims then
       text = string.format("%s%s x%d (%d craft%s)", indent, nameOf(node.itemID), node.quantity, node.craft and node.craft.crafts or 0, node.craft and node.craft.crafts == 1 and "" or "s")
     else
-      local via = node.route == "craft" and ("craft" .. (node.craft and node.craft.professionName and (" - " .. node.craft.professionName) or "")
+      local via = node.route == Routes.CRAFT and ("craft" .. (node.craft and node.craft.professionName and (" - " .. node.craft.professionName) or "")
         .. (node.craft and node.craft.unavailable and (" [" .. node.craft.unavailable .. "]") or "")) or node.route
       if node.noRoute then via = "no known route (soulbound)" end
       local prefix = node.learn and "learn: " or (node.tool and "using: " or "")

@@ -1,6 +1,7 @@
 -- Dashboard aggregation: missing materials across active goals and the
 -- recommended next steps. Pure Lua over Planner views.
 local _, ns = ...
+local Routes = ns.DependencyResolver.Routes
 
 local Readiness = ns.Readiness
 local GoalModel = ns.GoalModel
@@ -13,12 +14,12 @@ local function routeLabel(leaf)
   if leaf.step then return "Train" end
   if leaf.learn then return "Recipe" end
   if leaf.tool then return "Tool" end
-  if leaf.route == "craft" then
+  if leaf.route == Routes.CRAFT then
     return leaf.professionName and ("Craft - " .. leaf.professionName) or "Craft"
   end
   if leaf.noRoute then return "Soulbound" end
-  if leaf.route == "buy" then return "Buy" end
-  if leaf.route == "gather" and leaf.gatherer then return "Gather - " .. leaf.gatherer end
+  if leaf.route == Routes.BUY then return "Buy" end
+  if leaf.route == Routes.GATHER and leaf.gatherer then return "Gather - " .. leaf.gatherer end
   local labels = ns.DependencyResolver.RouteLabels
   return labels[leaf.route] or "Obtain"
 end
@@ -176,9 +177,9 @@ function Overview.Build(entries, opts)
                   hint = trainer and trainer.name and (trainer.name .. (trainer.zone and (", " .. trainer.zone) or "")) or ((top.step.professionName or "profession") .. " trainer") }
               elseif top.learn then
                 title = string.format("Get %s", nameOf(top.itemID))
-              elseif top.route == "alt" and top.altName then
+              elseif top.route == Routes.ALT and top.altName then
                 title = string.format("Get %d x %s from %s", top.count, nameOf(top.itemID), top.altName)
-              elseif top.route == "altcraft" and top.altName then
+              elseif top.route == Routes.ALTCRAFT and top.altName then
                 title = string.format("Have %s craft %d x %s", top.altName, top.count, nameOf(top.itemID))
               else
                 title = string.format("Obtain %d x %s", top.count, nameOf(top.itemID))

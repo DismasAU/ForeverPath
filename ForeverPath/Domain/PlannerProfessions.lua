@@ -1,6 +1,7 @@
 -- Planner part: learn-recipe, enchant and reach-skill goals, and what each
 -- profession can train. Extends ns.Planner (Domain/Planner.lua).
 local _, ns = ...
+local Steps = ns.DependencyResolver.Steps
 
 local Readiness = ns.Readiness
 local Util = ns.Util
@@ -170,7 +171,7 @@ function Planner.EvaluateLearn(view, goal, deps)
     view.sourceText = Planner.SourceText(view.hint)
     view.plan = Planner.ObtainPlan(tree.root)
   else
-    local step = { kind = "train", spellID = target.spellID, name = recipe.name, professionName = recipe.professionName, icon = recipe.icon,
+    local step = { kind = Steps.TRAIN, spellID = target.spellID, name = recipe.name, professionName = recipe.professionName, icon = recipe.icon,
       rank = need > 1 and need or nil, trainer = recipe.trainer }
     tree = DependencyResolver.Resolve({ step = step }, ctx.resolverOpts(goal.routes))
     view.plan = Planner.StepPlan(false)

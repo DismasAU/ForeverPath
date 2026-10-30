@@ -61,15 +61,7 @@ GoalModel.Types = {
     reopen = function(t) t.casts = 0 end },
 }
 
--- A name table (t.X == "X") whose unknown names raise, so a misspelt name
--- fails where it is written instead of comparing false.
-local function strictNames(names, what)
-  local t = setmetatable({}, {
-    __index = function(_, name) error("unknown " .. what .. " " .. tostring(name), 2) end,
-  })
-  for name in pairs(names) do rawset(t, name, name) end
-  return t
-end
+local strictNames = Util.StrictNames
 
 -- GoalModel.TypeIDs.CRAFT_ITEM == "CRAFT_ITEM", one per registered type.
 GoalModel.TypeIDs = strictNames(GoalModel.Types, "goal type")

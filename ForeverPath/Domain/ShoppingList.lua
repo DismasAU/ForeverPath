@@ -6,6 +6,8 @@
 -- how many are still missing. Rows are classified by how the player is
 -- expected to get the item (Auction House, vendor, gathering, craft, alt).
 local _, ns = ...
+local Routes = ns.DependencyResolver.Routes
+local Steps = ns.DependencyResolver.Steps
 
 local GoalModel = ns.GoalModel
 
@@ -35,7 +37,7 @@ local function sourceLabels(node)
   elseif node.tool then
     add("Tool" .. (node.toolFor and (" for " .. node.toolFor) or ""))
   end
-  if node.route == "craft" and node.craft then
+  if node.route == Routes.CRAFT and node.craft then
     if node.craft.combine then
       add("Combine")
     else
@@ -43,20 +45,20 @@ local function sourceLabels(node)
         or (node.craft.crafter and not node.craft.crafter.isCurrent and (" on " .. node.craft.crafter.name)) or ""
       add("Craft - " .. (node.craft.professionName or "?") .. who)
     end
-  elseif node.route == "alt" and node.hint then
+  elseif node.route == Routes.ALT and node.hint then
     add("Alt: " .. (node.hint.name or "?"))
-  elseif node.route == "altcraft" and node.hint then
+  elseif node.route == Routes.ALTCRAFT and node.hint then
     add("Craft - Alt: " .. (node.hint.name or "?"))
   end
   if node.soulbound then add("Soulbound") end
   for _, option in ipairs(node.options or {}) do
-    if option.kind == "buy" and not option.unavailable then
+    if option.kind == Routes.BUY and not option.unavailable then
       add("AH")
-    elseif option.kind == "vendor" then
+    elseif option.kind == Routes.VENDOR then
       add("Vendor: " .. (option.name or "?"))
-    elseif (option.kind == "gather" or option.kind == "drop" or option.kind == "quest") and not option.unavailable then
+    elseif (option.kind == Routes.GATHER or option.kind == Routes.DROP or option.kind == Routes.QUEST) and not option.unavailable then
       add(option.short or option.label or ns.DependencyResolver.RouteLabels[option.kind] or option.kind)
-    elseif option.kind == "craft" and node.route ~= "craft" then
+    elseif option.kind == Routes.CRAFT and node.route ~= Routes.CRAFT then
       if option.learned then
         add("Craft - " .. (option.professionName or "?"))
       elseif option.combine then
@@ -140,7 +142,7 @@ function ShoppingList.Build(entries, opts)
     if tree and tree.byKey then
       for _, node in pairs(tree.byKey) do
         -- A craft done for skill points is not something to get; its reagents are.
-        if (node.claims or node.depth > 0 or (node.step and node.step.kind == "train")) and not node.forSkill then
+        if (node.claims or node.depth > 0 or (node.step and node.step.kind == Steps.TRAIN)) and not node.forSkill then
           local key = node.itemID or ("train:" .. tostring(node.step and node.step.spellID or node.key))
           if node.itemID then
             local full = (node.available or 0) + (node.reserved or 0)
@@ -173,7 +175,7 @@ function ShoppingList.Build(entries, opts)
                 r.altHolders[alt.name] = math.max(r.altHolders[alt.name] or 0, alt.count)
               end
               for _, option in ipairs(node.options or {}) do
-                if option.kind == "alt" and option.name then
+                if option.kind == Routes.ALT and option.name then
                   r.altHolders[option.name] = math.max(r.altHolders[option.name] or 0, option.count or 0)
                 end
               end

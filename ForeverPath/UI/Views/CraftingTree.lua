@@ -2,6 +2,8 @@
 -- Crafting screen). A sub-view, not a registered screen: Crafting embeds it. Renders Planner views (view.tree) and lets the player pick
 -- a route per reagent. No calculations happen here.
 local _, ns = ...
+local Routes = ns.DependencyResolver.Routes
+local Steps = ns.DependencyResolver.Steps
 
 local Theme = ns.UI.Theme
 local Widgets = ns.UI.Widgets
@@ -39,11 +41,11 @@ local function isCraftOnly(node)
 end
 
 local function isSkillRoot(node)
-  return node.step ~= nil and node.step.kind == "skill"
+  return node.step ~= nil and node.step.kind == Steps.SKILL
 end
 
 local function isQuestRoot(node)
-  return node.step ~= nil and node.step.kind == "quest"
+  return node.step ~= nil and node.step.kind == Steps.QUEST
 end
 
 local STEP_ICON = "Interface\\Icons\\INV_Misc_Book_09"
@@ -70,7 +72,7 @@ local function labelOf(node)
 end
 
 local function stepVia(step)
-  if step.kind == "quest" then return "Quest" end
+  if step.kind == Steps.QUEST then return "Quest" end
   local trainer = step.trainer
   if trainer and trainer.name then
     return "Train - " .. trainer.name .. (trainer.zone and (" (" .. trainer.zone .. ")") or "")
@@ -100,13 +102,13 @@ local function viaText(node)
     if (node.ownedBank or 0) > 0 then return "Bags + bank" end
     return "In bags"
   end
-  if node.route == "alt" and node.hint then
+  if node.route == Routes.ALT and node.hint then
     return "Alt: " .. (node.hint.name or "?")
   end
-  if node.route == "altcraft" and node.hint then
+  if node.route == Routes.ALTCRAFT and node.hint then
     return "Craft on " .. (node.hint.name or "alt")
   end
-  if node.route == "craft" and node.craft then
+  if node.route == Routes.CRAFT and node.craft then
     local craft = node.craft
     local text
     if craft.combine then
@@ -125,7 +127,7 @@ local function viaText(node)
     return text
   end
   if node.noRoute then return "No route (soulbound)" end
-  if node.route == "buy" then
+  if node.route == Routes.BUY then
     if node.blocked == "cycle" then return "AH (recipe loops)" end
     if node.craftOption and not node.craftOption.learned then return "AH, or learn recipe" end
     if node.craftOption then return "AH (craft available)" end
@@ -475,7 +477,7 @@ local function createSide(view, tree)
       end
     else
       for _, child in ipairs(node.children) do
-        if #options < MAX_OPTIONS then options[#options + 1] = { kind = "reagent", node = child } end
+        if #options < MAX_OPTIONS then options[#options + 1] = { reagent = child } end
       end
     end
     self.alternative = nil
@@ -484,8 +486,8 @@ local function createSide(view, tree)
       if option then
         card.option, card.node = option, node
         local isCurrent = option.kind == node.route
-        local best = option.kind == "craft" and option.learned and not option.cycle and not node.raw
-        if option.kind == "craft" then
+        local best = option.kind == Routes.CRAFT and option.learned and not option.cycle and not node.raw
+        if option.kind == Routes.CRAFT then
           local reagents = {}
           for _, reagent in ipairs(option.recipe.reagents or {}) do
             reagents[#reagents + 1] = string.format("%d %s", reagent.quantity, nameOf(reagent.itemID))
@@ -510,11 +512,11 @@ local function createSide(view, tree)
             end
           end
           card.detail:SetText(state .. (option.cycle and "loops back to this item - " or "") .. table.concat(reagents, ", ") .. " per craft")
-        elseif option.kind == "buy" then
+        elseif option.kind == Routes.BUY then
           card.title:SetText("Buy on the Auction House")
           card.detail:SetText("No price source yet - CraftWise arrives later")
-        elseif option.kind == "reagent" then
-          local child = option.node
+        elseif option.reagent then
+          local child = option.reagent
           if child.step then
             card.title:SetText("Train " .. (child.step.name or "the recipe"))
           elseif child.forSkill then
@@ -526,9 +528,9 @@ local function createSide(view, tree)
           best = false
         else
           card.title:SetText(option.label or R.RouteLabels[option.kind] or "Obtain")
-          card.detail:SetText((option.detail or "") .. ((option.kind == "alt" or option.kind == "altcraft") and " - mail planning arrives with the shopping list" or ""))
+          card.detail:SetText((option.detail or "") .. ((option.kind == Routes.ALT or option.kind == Routes.ALTCRAFT) and " - mail planning arrives with the shopping list" or ""))
         end
-        local optionPrice = (option.kind == "buy" or option.kind == "vendor") and ns.PriceProvider.GetPrice(node.itemID) or nil
+        local optionPrice = (option.kind == Routes.BUY or option.kind == Routes.VENDOR) and ns.PriceProvider.GetPrice(node.itemID) or nil
         local costText
         if optionPrice and node.missing > 0 then
           costText = Widgets.Money(optionPrice.copper * node.missing, true) .. (isCurrent and Theme.ColorText("gold", " - current") or "")
@@ -572,7 +574,7 @@ local function createSide(view, tree)
       use:Hide()
     else
       use:Show()
-      use:SetLabel(self.alternative.kind == "craft" and "Use crafting route" or "Use buying route")
+      use:SetLabel(self.alternative.kind == Routes.CRAFT and "Use crafting route" or "Use buying route")
     end
     if not isCraftOnly(node) and node.routeSource == "override" then reset:Show() else reset:Hide() end
     link:SetEnabledState(item.link ~= nil)
@@ -702,7 +704,7 @@ function CraftingTree.Create(screen)
     end
     local ok, err = ns.GoalService.SetRoute(self.goal.id, node.itemID, option.kind)
     if ok then
-      ns.UI.MainFrame.SetAlert(string.format("%s: %s route selected.", nameOf(node.itemID), option.kind == "craft" and "crafting" or "buying"), "ok")
+      ns.UI.MainFrame.SetAlert(string.format("%s: %s route selected.", nameOf(node.itemID), option.kind == Routes.CRAFT and "crafting" or "buying"), "ok")
     else
       ns.UI.MainFrame.SetAlert(tostring(err), "error")
     end
@@ -766,15 +768,15 @@ function CraftingTree.Create(screen)
         row.have:SetText(string.format("%s%d|r%s/%d", Theme.Hex[node.coverage == "have" and "ok" or (node.coverage == "partial" and "partial" or "missing")], node.available or 0, Theme.Hex.text3, node.quantity))
         local badge = COVERAGE_BADGE[node.coverage] or COVERAGE_BADGE.missing
         row.badge:SetBadge(badge[1], badge[2])
-        local price = node.missing > 0 and node.route ~= "craft" and ns.PriceProvider.GetPrice(node.itemID) or nil
+        local price = node.missing > 0 and node.route ~= Routes.CRAFT and ns.PriceProvider.GetPrice(node.itemID) or nil
         if price then
           row.cost:SetText(Widgets.Money(price.copper * node.missing, true))
         else
-          row.cost:SetText(Theme.ColorText("text3", node.missing > 0 and (node.route == "craft" and "-" or "?") or "-"))
+          row.cost:SetText(Theme.ColorText("text3", node.missing > 0 and (node.route == Routes.CRAFT and "-" or "?") or "-"))
         end
       end
       row.via:SetText(viaText(node))
-      Widgets.SetTextColor(row.via, node.route == "craft" and node.missing > 0 and C.gold or C.text2)
+      Widgets.SetTextColor(row.via, node.route == Routes.CRAFT and node.missing > 0 and C.gold or C.text2)
       row:SetSelected(node.key == self.selectedKey)
     end
     self.pool:HideFrom(#rows + 1)
