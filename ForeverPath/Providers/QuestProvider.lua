@@ -301,7 +301,9 @@ local function copyObjectives(list)
   return out
 end
 
--- The quest log as the client lists it: { { questID, title, level, zone, ready, isHeader } }, plus counts.
+-- The quests in the log, in the client's order: { { questID, title, level,
+-- zone, logIndex, ready } }. Zone headers are not entries: each quest carries
+-- the header it sits under as `zone`. Counts are LogCapacity's.
 function QuestProvider.LogEntries()
   if QuestProvider.logCache then return QuestProvider.logCache end
   local ql = questLog()
@@ -480,10 +482,10 @@ function QuestProvider.Search(text, limit)
   end
   local CDB = ns.ClassicDB
   if CDB and CDB.IsAvailable() then
-    for _, questID in ipairs(CDB.Search(needle)) do
-      if not seen[questID] then
-        local entry = CDB.Quest(questID)
-        consider(questID, entry.name, (entry.location or "Classic") .. (entry.level and (" - level " .. entry.level) or ""))
+    for _, hit in ipairs(CDB.Search(text)) do
+      if not seen[hit.questID] then
+        local entry = CDB.Quest(hit.questID)
+        consider(hit.questID, hit.name, (entry.location or "Classic") .. (entry.level and (" - level " .. entry.level) or ""))
       end
     end
   end
@@ -555,10 +557,6 @@ local function firstQuestID(step)
   return tonumber(string.match(tostring(step.wowheadID or ""), "^(%d+)"))
 end
 
--- The attunement or class-quest chain (Attune) that leads to questID for
--- this faction and class, each quest step carrying its entry and live
--- state: { attune, steps, target, next, done, total, percent, complete }.
--- nil when no chain includes the quest.
 -- The quests to do before questID, then questID, in order, over whichever
 -- source knows each quest (Questie, else classic-db; Get decides). An "any
 -- of" prerequisite group takes the member already completed, else the first
@@ -641,6 +639,11 @@ function QuestProvider.ClassicQuestline(questID)
   return line
 end
 
+-- The attunement or class-quest chain (Attune) that leads to questID for
+-- this faction and class, else the database prerequisite chain
+-- (ClassicQuestline), each quest step carrying its entry and live state:
+-- { attune, steps, target, next, done, total, percent, complete }. nil when
+-- no chain includes the quest.
 function QuestProvider.Questline(questID)
   local AP = ns.AttuneProvider
   local line

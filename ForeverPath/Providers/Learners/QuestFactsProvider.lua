@@ -307,8 +307,7 @@ end
 
 local function retryPending()
   for questID in pairs(QuestFactsProvider.pending) do
-    local ql = _G.C_QuestLog
-    if ql and call(ql.IsOnQuest, questID) then
+    if call(ns.Compat.IsOnQuest, questID) then
       QuestFactsProvider.RecordItems(questID)
     else
       QuestFactsProvider.pending[questID] = nil

@@ -51,7 +51,7 @@ Providers\Integrations\ClassicDB.lua
 Providers\Learners\LootLearner.lua
 Providers\Integrations\QuestieBridge.lua
 Providers\Learners\QuestFactsProvider.lua
-Providers\Client\QuestProvider.lua
+Providers\QuestProvider.lua
 Providers\Client\EquipmentProvider.lua
 Providers\Client\ReputationProvider.lua
 Providers\PriceProvider.lua

@@ -35,9 +35,11 @@ ForeverPath/
     Overview.lua             dashboard aggregation (missing materials, next steps)
     ShoppingList.lua         cross-goal shopping rows, categories, mail plan, chat lines
     CraftWise.lua            buy / craft / hybrid comparison over a full tree, route plan, presets
-  Providers/                 wrap the WoW API and other addons behind small interfaces
+  Providers/                 wrap the WoW API and other addons behind small interfaces; the
+                             aggregators at this level combine the subfolders' providers
     SourceProvider.lua       item sources in a fixed order (vendors, learned loot, journal, AtlasLoot, quests, GearQuest, reputation, classic data, class heuristics)
     PriceProvider.lua        pricing boundary: cheapest of registered sources, freshness, status
+    QuestProvider.lua        quest log, objectives and completed flags plus the quest knowledge of the journal, Attune, Questie, classic data and the learners
     Client/                  the client's own data
       ItemProvider.lua       item parsing, C_Item lookups, async loading, name cache/search
       InventoryProvider.lua  bag index, bank snapshot, counts (plus alts' totals), owned count
@@ -45,7 +47,6 @@ ForeverPath/
       CharacterProvider.lua  account-wide character snapshots, alt stock / crafters / coverage
       EquipmentProvider.lua  worn gear per slot, item stats, GearQuest Forever upgrade picks
       ReputationProvider.lua standings (C_Reputation or legacy), thresholds, reputation quests and AtlasLoot faction rewards
-      QuestProvider.lua      quest log, objectives and completed flags plus the quest knowledge of the journal, Attune, Questie and classic data
     Integrations/            other addons' data, read at runtime
       AttuneProvider.lua     attunement chains from the Attune addon, progress from quest flags / log / level / bags / survey; questlines
       AuctionPriceProvider.lua Auctionator v1 API adapter (lowest buyout, age, 7-day mean, listings)
@@ -366,7 +367,7 @@ The Equipment screen is a consumer of `Analyze`; a target becomes a
 CRAFT_ITEM or OBTAIN_ITEM goal through `GoalService.AddItemGoal`.
 `FP_EQUIPMENT_UPDATED` follows the equipment events.
 
-**Quest planning.** `Providers/Client/QuestProvider.lua` builds a static index
+**Quest planning.** `Providers/QuestProvider.lua` builds a static index
 (`Index()`, lazily, dropped on `FP_READY`) from ForeverDungeonJournal
 (`DB[dungeon].quests`, `QUEST_PREREQ_CHAINS`, `QUEST_START_MAPS`,
 `FOREVER_QUEST_XP_FALLBACK`; chain prerequisites that are not dungeon

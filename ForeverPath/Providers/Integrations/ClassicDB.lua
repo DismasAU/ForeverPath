@@ -580,17 +580,29 @@ function ClassicDB.ReputationQuests(factionID, side, classID)
   return out
 end
 
--- Quest ids whose title contains needle (lowercase), eligible for this character.
-function ClassicDB.Search(needle, side, classID)
-  if not data() then return {} end
+-- Quests this character can take whose title matches text, like the other
+-- Search functions: { { questID, name, rank } }, best rank (Util.MatchRank)
+-- first, at most `limit`.
+function ClassicDB.Search(text, limit, side, classID)
+  if not data() or type(text) ~= "string" then return {} end
+  local needle = string.lower(Util.Trim(text))
+  if needle == "" then return {} end
   if not ClassicDB.titleIndex then buildIndexes() end
-  local out = {}
+  local hits = {}
   for _, t in ipairs(ClassicDB.titleIndex) do
-    if string.find(t.lower, needle, 1, true) and ClassicDB.Eligible(t.questID, side, classID) then
-      out[#out + 1] = t.questID
+    local rank = Util.MatchRank(t.lower, needle)
+    if rank and ClassicDB.Eligible(t.questID, side, classID) then
+      hits[#hits + 1] = { questID = t.questID, name = ClassicDB.Quest(t.questID).name, rank = rank }
     end
   end
-  return out
+  table.sort(hits, function(a, b)
+    if a.rank ~= b.rank then return a.rank < b.rank end
+    return a.questID < b.questID
+  end)
+  if limit and #hits > limit then
+    for i = #hits, limit + 1, -1 do hits[i] = nil end
+  end
+  return hits
 end
 
 -- The quests to do before questID, then questID, in order. For an "any of"
