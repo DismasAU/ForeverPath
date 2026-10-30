@@ -202,12 +202,10 @@ function TrainerProvider.Requirement(spellID)
   if recorded then return recorded end
   -- A trainer another player recorded and shared (App/Share.lua).
   local shared
-  if ns.Share then
-    ns.Share.EachImported("trainers", function(_, trainers)
-      local entry = trainers[spellID]
-      if not shared and type(entry) == "table" then shared = sharedRecord(entry) end
-    end)
-  end
+  ns.Database.EachImported("trainers", function(_, trainers)
+    local entry = trainers[spellID]
+    if not shared and type(entry) == "table" then shared = sharedRecord(entry) end
+  end)
   if shared then return shared end
   local CDB = ns.ClassicDB
   if CDB and CDB.IsAvailable() then

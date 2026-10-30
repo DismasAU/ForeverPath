@@ -176,13 +176,11 @@ function LootLearner.Combined()
     end
   end
   for key, entry in pairs(LootLearner.Store() or {}) do merge(key, entry, false) end
-  if ns.Share then
-    ns.Share.EachImported("lootSeen", function(_, store)
-      for key, entry in pairs(store) do
-        if type(key) == "string" and key:match("^[cof]:") then merge(key, entry, true) end
-      end
-    end)
-  end
+  ns.Database.EachImported("lootSeen", function(_, store)
+    for key, entry in pairs(store) do
+      if type(key) == "string" and key:match("^[cof]:") then merge(key, entry, true) end
+    end
+  end)
   return combined
 end
 

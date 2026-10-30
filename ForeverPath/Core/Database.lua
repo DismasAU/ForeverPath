@@ -172,6 +172,15 @@ function Database.Load()
   return globalTable, charTable
 end
 
+-- Calls fn(author, data, entry) for each imported copy of kind ("lootSeen",
+-- "questFacts", "vendors", "trainers") in ns.db.imported. App/Share writes
+-- the imports; the learners read them here, below them in the load order.
+function Database.EachImported(kind, fn)
+  for author, entry in pairs(ns.db and ns.db.imported or {}) do
+    if type(entry[kind]) == "table" then fn(author, entry[kind], entry) end
+  end
+end
+
 -- A saved setting (ns.db.settings[name]), or `default` when it is unset or
 -- before the database loads. The one place that answers both cases.
 function Database.Setting(name, default)

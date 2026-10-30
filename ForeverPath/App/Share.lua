@@ -156,13 +156,6 @@ function Share.Remove(author)
   return true
 end
 
--- Calls fn(author, data) for each imported copy of kind.
-function Share.EachImported(kind, fn)
-  for author, entry in pairs((db() and db().imported) or {}) do
-    if type(entry[kind]) == "table" then fn(author, entry[kind], entry) end
-  end
-end
-
 -- Modules holding derived data (the loot index, decoded recipes) drop it on
 -- FP_SHARED_DATA_CHANGED.
 function Share.Changed()

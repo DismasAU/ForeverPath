@@ -61,12 +61,10 @@ end
 -- The first imported copy (App/Share.lua) of a quest's facts, or nil.
 function QuestFactsProvider.Imported(questID)
   local found
-  if ns.Share then
-    ns.Share.EachImported("questFacts", function(_, store)
-      local entry = store[tonumber(questID) or 0]
-      if not found and type(entry) == "table" then found = entry end
-    end)
-  end
+  ns.Database.EachImported("questFacts", function(_, store)
+    local entry = store[tonumber(questID) or 0]
+    if not found and type(entry) == "table" then found = entry end
+  end)
   return found
 end
 

@@ -102,9 +102,7 @@ function VendorProvider.VendorsFor(itemID)
   end
   add(store and store[itemID], false)
   -- Merchants other players recorded and shared (App/Share.lua) fill in the ones not visited here.
-  if ns.Share then
-    ns.Share.EachImported("vendors", function(_, vendors) add(vendors[itemID], true) end)
-  end
+  ns.Database.EachImported("vendors", function(_, vendors) add(vendors[itemID], true) end)
   table.sort(out, function(a, b)
     local pa, pb = a.price or math.huge, b.price or math.huge
     if pa ~= pb then return pa < pb end
