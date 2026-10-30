@@ -163,47 +163,47 @@ local function extraRequirements(craft)
   return extras
 end
 
+-- A child node hung below `parent` at `index`; `fields` are copied over.
+local function childOf(parent, index, key, fields)
+  local child = { key = parent.key .. ">" .. key, depth = parent.depth + 1, parentKey = parent.key, index = index, perCraft = 0, children = {} }
+  for k, v in pairs(fields) do child[k] = v end
+  return child
+end
+
+-- A node that claims nothing (a root the goal makes, a step, a craft done
+-- for skill points): no inventory, everything still to do.
+local function resetNonClaiming(node, status)
+  node.claims = false
+  node.owned, node.ownedBags, node.reserved, node.available = 0, 0, 0, 0
+  node.missing = node.quantity
+  node.status = status
+end
+
 local function expand(node, opts, path, tree)
   local recipe = node.craft.recipe
   local crafts = node.craft.crafts
   -- An enchant makes no item, so it cannot be part of a reagent cycle.
   if node.itemID then path[node.itemID] = true end
-  local index = 0
-  local function addChild(itemID, perCraft, quantity, fields)
-    index = index + 1
-    local child = {
-      key = node.key .. ">" .. itemID,
-      itemID = itemID,
-      depth = node.depth + 1,
-      parentKey = node.key,
-      index = index,
-      perCraft = perCraft,
-      quantity = quantity,
-      children = {},
-    }
-    for k, v in pairs(fields or {}) do child[k] = v end
+  local function addChild(key, fields)
+    local child = childOf(node, #node.children + 1, key, fields)
     DependencyResolver.ResolveNode(child, opts, path, tree)
     node.children[#node.children + 1] = child
   end
   for _, extra in ipairs(extraRequirements(node.craft)) do
-    addChild(extra.itemID, 0, 1, extra)
+    extra.quantity = 1
+    addChild(tostring(extra.itemID), extra)
   end
   -- A trainer recipe nobody has learned: a "train it" step with the trainer
   -- recorded for it (name, zone, cost) when one has been visited.
   local craft = node.craft
   if (craft.static or craft.enchant) and not craft.learned and not craft.combine and not craft.teachItemID then
-    index = index + 1
-    local step = {
+    addChild("train:" .. tostring(recipe.recipeID), { quantity = 1, step = {
       kind = "train", spellID = recipe.recipeID, name = recipe.name, professionName = craft.professionName,
       icon = recipe.icon, rank = recipe.skill and recipe.skill.min or nil, trainer = recipe.trainer, who = craft.crafter,
-    }
-    local child = { key = node.key .. ">train:" .. tostring(recipe.recipeID), step = step, depth = node.depth + 1,
-      parentKey = node.key, index = index, perCraft = 0, quantity = 1, children = {} }
-    DependencyResolver.ResolveNode(child, opts, path, tree)
-    node.children[#node.children + 1] = child
+    } })
   end
   for _, reagent in ipairs(reagentList(recipe)) do
-    addChild(reagent.itemID, reagent.quantity, reagent.quantity * crafts, { alternatives = reagent.alternatives })
+    addChild(tostring(reagent.itemID), { itemID = reagent.itemID, perCraft = reagent.quantity, quantity = reagent.quantity * crafts, alternatives = reagent.alternatives })
   end
   if node.itemID then path[node.itemID] = nil end
 end
@@ -214,10 +214,7 @@ end
 local function resolveEnchantRoot(node, opts, path, tree)
   local spec = node.enchant
   local recipe = spec.recipe
-  node.claims = false
-  node.owned, node.ownedBags, node.reserved, node.available = 0, 0, 0, 0
-  node.missing = node.quantity
-  node.status = "root"
+  resetNonClaiming(node, "root")
   node.options, node.soulbound = {}, nil
   node.route, node.routeSource = "craft", "root"
   local learned = spec.learned and true or false
@@ -248,10 +245,7 @@ end
 local function resolveSkillCraft(node, opts, path, tree)
   local spec = node.forSkill
   local recipe = spec.recipe
-  node.claims = false
-  node.owned, node.ownedBags, node.reserved, node.available = 0, 0, 0, 0
-  node.missing = node.quantity
-  node.status = "missing"
+  resetNonClaiming(node, "missing")
   node.options, node.soulbound = {}, nil
   node.route, node.routeSource = "craft", "skill"
   local yield = recipe.quantityMin or 1
@@ -280,21 +274,11 @@ local function resolveSkillCraft(node, opts, path, tree)
   return node
 end
 
--- A child node hung below `parent` at `index`; `fields` are copied over.
-local function childOf(parent, index, key, fields)
-  local child = { key = parent.key .. ">" .. key, depth = parent.depth + 1, parentKey = parent.key, index = index, perCraft = 0, children = {} }
-  for k, v in pairs(fields) do child[k] = v end
-  return child
-end
-
 -- A step (train a recipe) is not an item: nothing to count, buy or expand.
 -- A quest root hangs the items the quest asks for below it like reagents;
 -- a skill plan root hangs one craft per recipe, done for the points.
 local function resolveStepNode(node, opts, path, tree)
-  node.claims = false
-  node.owned, node.ownedBags, node.reserved, node.available = 0, 0, 0, 0
-  node.missing = node.quantity
-  node.status = "missing"
+  resetNonClaiming(node, "missing")
   node.options = {}
   local children = {}
   if node.step.kind == "quest" then
@@ -333,8 +317,7 @@ end
 local function claimInventory(node, opts, tree)
   node.claims = node.depth > 0 or node.obtain == true
   if not node.claims then
-    node.owned, node.ownedBags, node.reserved, node.available = 0, 0, 0, 0
-    node.missing = node.quantity
+    resetNonClaiming(node, nil)
     return
   end
   local raw = opts.counts and opts.counts(node.itemID) or 0
@@ -474,20 +457,37 @@ function DependencyResolver.ResolveNode(node, opts, path, tree)
   return node
 end
 
--- root = { recipe = <RecipeModel>, quantity = n }
--- opts: findRecipes(itemID), counts(itemID), includeBank, routes, ledger, maxDepth, sources(itemID)
--- root = { recipe, quantity } crafts the recipe's output (the root never
--- claims inventory: the goal is to make it). root = { itemID, quantity } is
--- an "obtain" tree: the root is the item itself, claims inventory like any
--- other node, and expands into a craft only through a learned recipe;
--- `learn` / `learnFor` on such a root mark it as the plans for a recipe.
--- root = { step = { kind = "train", ... } } is a one-node tree whose root is
--- the step itself. root = { step = { kind = "skill", ... }, crafts = { {
--- recipe, crafts, learned, from, to } } } is a skill plan: the root is a
--- step, each craft a child done for the skill points (never owned or bought).
--- root = { recipe = <enchant recipe>, quantity = casts, learned = bool } is
--- an enchant tree: the root is the enchant itself (no item, never claimed),
--- its formula or trainer visit and its reagents below it.
+-- Resolves the tree for one goal. Returns tree, or nil, reason.
+--
+-- Root shapes (told apart in this order):
+--   { step = { kind = "skill", ... }, crafts = { { recipe, crafts, learned, from, to } } }
+--       a skill plan: the root is a step, each craft a child done for the
+--       skill points (never owned or bought).
+--   { step = { kind = "train" | "quest", ... } }
+--       a one-node tree whose root is the step; a quest step hangs
+--       step.items below it like reagents.
+--   { recipe = <enchant recipe>, quantity = casts, learned = bool }
+--       an enchant: the root is cast (no item, never claimed); its formula
+--       or trainer visit and its reagents hang below it.
+--   { recipe = <RecipeModel>, quantity }
+--       crafts the recipe's output; the root never claims inventory.
+--   { itemID, quantity, learn, learnFor }
+--       "obtain": the root is the item itself and claims inventory like any
+--       other node; it expands into a craft only through a learned recipe.
+--       learn / learnFor mark it as the plans for a recipe.
+--   Any shape may carry `key` for the root node's key.
+--
+-- opts (read-only; per-call state lives on the tree):
+--   findRecipes(itemID) -> { { recipe, learned, static } }   recipes that make an item
+--   counts(itemID) -> bags | { bags, bank, alts, ... }        inventory for the ledger
+--   sources(itemID) -> { hint }                               ItemHints: vendor, drop, quest...
+--   crafters(professionName, professionID) -> { { name, skillLevel } }  who could learn a recipe
+--   soulbound(itemID) -> bool                                 binds on pickup: no buy or alt routes
+--   isRaw(itemID) -> bool                                     gathered material, not crafted by default
+--   routes = { [itemID] = "craft" | "buy" }                   the goal's pinned routes
+--   includeBank, includeAlts                                  what counts as owned
+--   ledger                                                    shared Allocation (default: a new one)
+--   maxDepth                                                  default DependencyResolver.MAX_DEPTH
 function DependencyResolver.Resolve(root, opts)
   opts = opts or {}
   if type(root) ~= "table" or (type(root.recipe) ~= "table" and type(root.itemID) ~= "number" and type(root.step) ~= "table") then
@@ -496,6 +496,12 @@ function DependencyResolver.Resolve(root, opts)
   local quantity = tonumber(root.quantity) or 1
   if quantity < 1 then quantity = 1 end
   local ledger = opts.ledger or Allocation.New()
+  local function finishTree(tree, node)
+    DependencyResolver.ResolveNode(node, opts, {}, tree)
+    tree.root = node
+    tree.summary = DependencyResolver.Summarize(tree)
+    return tree
+  end
   if type(root.step) == "table" then
     local step = root.step
     local tree = { byKey = {}, ledger = ledger, obtain = true, step = true }
@@ -509,10 +515,7 @@ function DependencyResolver.Resolve(root, opts)
     else
       node = { key = root.key or ("train:" .. tostring(step.spellID or step.name or "?")), step = step, depth = 0, index = 1, quantity = 1, children = {} }
     end
-    DependencyResolver.ResolveNode(node, opts, {}, tree)
-    tree.root = node
-    tree.summary = DependencyResolver.Summarize(tree)
-    return tree
+    return finishTree(tree, node)
   end
   local obtain = type(root.recipe) ~= "table"
   if not obtain and root.recipe.enchant then
@@ -523,10 +526,7 @@ function DependencyResolver.Resolve(root, opts)
       name = root.recipe.name, icon = root.recipe.icon,
       enchant = { recipe = root.recipe, learned = root.learned ~= false },
     }
-    DependencyResolver.ResolveNode(node, opts, {}, tree)
-    tree.root = node
-    tree.summary = DependencyResolver.Summarize(tree)
-    return tree
+    return finishTree(tree, node)
   end
   local tree = { byKey = {}, ledger = ledger, obtain = obtain, rootRecipe = (not obtain) and root.recipe or nil }
   local itemID = obtain and root.itemID or root.recipe.outputItemID
@@ -541,13 +541,9 @@ function DependencyResolver.Resolve(root, opts)
     learn = root.learn or nil,
     learnFor = root.learnFor,
   }
-  DependencyResolver.ResolveNode(node, opts, {}, tree)
-  tree.root = node
-  tree.summary = DependencyResolver.Summarize(tree)
-  return tree
+  return finishTree(tree, node)
 end
 
--- Post-order walk collecting counts, missing leaves and craft steps.
 -- Hangs extra items below a resolved node (the items a quest reward's
 -- chain asks for, below the reward) and refreshes the summary. items =
 -- { { itemID, quantity | count, questName } }. Returns the new nodes.
@@ -557,10 +553,9 @@ function DependencyResolver.AttachItems(tree, parent, items, opts)
   for _, spec in ipairs(items or {}) do
     if tonumber(spec.itemID) then
       local index = #parent.children + 1
-      local child = {
-        key = parent.key .. ">" .. tostring(spec.itemID), itemID = spec.itemID, depth = parent.depth + 1, parentKey = parent.key, index = index,
-        perCraft = 0, quantity = spec.quantity or spec.count or 1, children = {}, questItem = true, questName = spec.questName,
-      }
+      local child = childOf(parent, index, tostring(spec.itemID), {
+        itemID = spec.itemID, quantity = spec.quantity or spec.count or 1, questItem = true, questName = spec.questName,
+      })
       DependencyResolver.ResolveNode(child, opts, {}, tree)
       parent.children[index] = child
       added[#added + 1] = child
@@ -571,6 +566,7 @@ function DependencyResolver.AttachItems(tree, parent, items, opts)
   return added
 end
 
+-- Post-order walk collecting counts, missing leaves and craft steps.
 function DependencyResolver.Summarize(tree)
   local summary = { nodes = 0, resolved = 0, leaves = {}, missingLeaves = {}, crafts = {}, maxDepth = 0, blocked = 0 }
   local leafByItem = {}
