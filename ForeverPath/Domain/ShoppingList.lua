@@ -100,28 +100,59 @@ function ShoppingList.Affordable(cost, gold)
   return nil
 end
 
--- entries: { { goal, view } } in priority order.
--- opts.included(goal) -> bool (default ShoppingList.DefaultIncluded)
--- opts.bought = { [itemID] = true }
--- opts.nameOf(itemID)
--- opts.priceOf(itemID) -> priceInfo { copper, ... } | nil (unknown), as PriceProvider.GetPrice and CraftWise
--- opts.gold = { current = copper, account = copper } (optional; enables affordability)
-function ShoppingList.Build(entries, opts)
-  opts = opts or {}
-  local included = opts.included or ShoppingList.DefaultIncluded
-  local bought = opts.bought or {}
-  local nameOf = opts.nameOf or function(itemID) return "Item " .. tostring(itemID) end
-  local result = {
-    rows = {}, goals = {},
-    counts = { all = 0, buy = 0, vendor = 0, gather = 0, craft = 0, learn = 0, alt = 0, bought = 0 },
-    units = { total = 0, owned = 0, missing = 0, reserved = 0 },
-    cost = { known = 0, pricedRows = 0, unpricedRows = 0, bought = 0, remaining = 0 },
-    mail = {},
-  }
-  local byItem = {}
-  local claimedByExcluded = {}
-  local stock = {}
+-- Appends value to list unless it is already there.
+local function addUnique(list, value)
+  for _, existing in ipairs(list) do
+    if existing == value then return end
+  end
+  list[#list + 1] = value
+end
 
+-- A tree's nodes shallowest first, then by key, so a row that several nodes
+-- feed takes its category, hint and zone from the same node every time.
+local function orderedNodes(tree)
+  local nodes = {}
+  for _, node in pairs(tree.byKey) do nodes[#nodes + 1] = node end
+  table.sort(nodes, function(a, b)
+    if a.depth ~= b.depth then return a.depth < b.depth end
+    return a.key < b.key
+  end)
+  return nodes
+end
+
+-- Whether a node is something to get: a craft done for skill points is not
+-- (its reagents are), a train step is.
+local function isShoppingNode(node)
+  return (node.claims or node.depth > 0 or (node.step and node.step.kind == Steps.TRAIN)) and not node.forSkill
+end
+
+-- Folds one missing node's category, hint, sources and alt holders into its row.
+local function addMissingNode(r, node)
+  if not r.category then r.category = categoryFor(node) end
+  if node.hint and not r.hint then r.hint = node.hint end
+  if node.hint and node.hint.zone and not r.zone then r.zone = node.hint.zone end
+  if node.learn then r.learn = true end
+  if node.step then
+    addUnique(r.sources, stepLabel(node.step))
+    if node.step.trainer and tonumber(node.step.trainer.cost) then r.stepCost = node.step.trainer.cost end
+  end
+  for _, label in ipairs(sourceLabels(node)) do addUnique(r.sources, label) end
+  for _, alt in ipairs(node.altSources or {}) do
+    r.altHolders[alt.name] = math.max(r.altHolders[alt.name] or 0, alt.count)
+  end
+  for _, option in ipairs(node.options or {}) do
+    if option.kind == Routes.ALT and option.name then
+      r.altHolders[option.name] = math.max(r.altHolders[option.name] or 0, option.count or 0)
+    end
+  end
+end
+
+-- Step 1: one row per item (a train step per spell) over every included
+-- goal's tree. Returns rows, goals, claimedByExcluded (units excluded goals
+-- hold), stock (units physically there per item).
+local function collectRows(entries, included, bought, nameOf)
+  local rows, goals, byItem = {}, {}, {}
+  local claimedByExcluded, stock = {}, {}
   -- Rows are keyed by item id; a train step by "train:<spellID>".
   local function row(key, itemID, step)
     local r = byItem[key]
@@ -129,144 +160,102 @@ function ShoppingList.Build(entries, opts)
       r = { key = key, itemID = itemID, step = step, name = step and step.name or nil, total = 0, owned = 0, reserved = 0, missing = 0,
         category = nil, sources = {}, goals = {}, altHolders = {}, bought = bought[key] == true }
       byItem[key] = r
-      result.rows[#result.rows + 1] = r
+      rows[#rows + 1] = r
     end
     return r
   end
-
   for _, entry in ipairs(entries or {}) do
     local goal, view = entry.goal, entry.view
     local isIncluded = included(goal) and true or false
-    result.goals[#result.goals + 1] = { goal = goal, included = isIncluded, name = GoalModel.Name(goal, nameOf), quantity = goal.target and goal.target.quantity or 1 }
+    local goalName = GoalModel.Name(goal, nameOf)
+    goals[#goals + 1] = { goal = goal, included = isIncluded, name = goalName, quantity = goal.target and goal.target.quantity or 1 }
     local tree = view and view.tree
-    if tree and tree.byKey then
-      for _, node in pairs(tree.byKey) do
-        -- A craft done for skill points is not something to get; its reagents are.
-        if (node.claims or node.depth > 0 or (node.step and node.step.kind == Steps.TRAIN)) and not node.forSkill then
+    for _, node in ipairs(tree and tree.byKey and orderedNodes(tree) or {}) do
+      if isShoppingNode(node) then
+        if node.itemID then
+          local full = (node.available or 0) + (node.reserved or 0)
+          if full > (stock[node.itemID] or 0) then stock[node.itemID] = full end
+        end
+        if isIncluded then
           local key = node.itemID or ("train:" .. tostring(node.step and node.step.spellID or node.key))
-          if node.itemID then
-            local full = (node.available or 0) + (node.reserved or 0)
-            if full > (stock[node.itemID] or 0) then stock[node.itemID] = full end
-          end
-          if isIncluded then
-            local r = row(key, node.itemID, node.step)
-            r.total = r.total + node.quantity
-            r.owned = r.owned + (node.owned or 0)
-            r.missing = r.missing + (node.missing or 0)
-            if node.missing > 0 then
-              local category = categoryFor(node)
-              if not r.category then r.category = category end
-              if node.hint and not r.hint then r.hint = node.hint end
-              if node.hint and node.hint.zone and not r.zone then r.zone = node.hint.zone end
-              if node.learn then r.learn = true end
-              if node.step then
-                local label = stepLabel(node.step)
-                local seen = false
-                for _, existing in ipairs(r.sources) do if existing == label then seen = true end end
-                if not seen then r.sources[#r.sources + 1] = label end
-                if node.step.trainer and tonumber(node.step.trainer.cost) then r.stepCost = node.step.trainer.cost end
-              end
-              for _, label in ipairs(sourceLabels(node)) do
-                local seen = false
-                for _, existing in ipairs(r.sources) do if existing == label then seen = true end end
-                if not seen then r.sources[#r.sources + 1] = label end
-              end
-              for _, alt in ipairs(node.altSources or {}) do
-                r.altHolders[alt.name] = math.max(r.altHolders[alt.name] or 0, alt.count)
-              end
-              for _, option in ipairs(node.options or {}) do
-                if option.kind == Routes.ALT and option.name then
-                  r.altHolders[option.name] = math.max(r.altHolders[option.name] or 0, option.count or 0)
-                end
-              end
-            end
-            local goalName = result.goals[#result.goals].name
-            local listed = false
-            for _, g in ipairs(r.goals) do if g == goalName then listed = true end end
-            if not listed then r.goals[#r.goals + 1] = goalName end
-          elseif node.itemID then
-            claimedByExcluded[node.itemID] = (claimedByExcluded[node.itemID] or 0) + (node.owned or 0)
-          end
+          local r = row(key, node.itemID, node.step)
+          r.total = r.total + node.quantity
+          r.owned = r.owned + (node.owned or 0)
+          r.missing = r.missing + (node.missing or 0)
+          if node.missing > 0 then addMissingNode(r, node) end
+          addUnique(r.goals, goalName)
+        elseif node.itemID then
+          claimedByExcluded[node.itemID] = (claimedByExcluded[node.itemID] or 0) + (node.owned or 0)
         end
       end
     end
   end
+  return rows, goals, claimedByExcluded, stock
+end
 
-  -- Keep only rows that still need something; compute owned/reserved and totals.
-  -- Owned = units physically there for this row (capped at Total); Reserved =
-  -- the part of Owned held by goals not on the list; Missing = Total - usable.
-  local kept = {}
-  for _, r in ipairs(result.rows) do
-    if r.missing > 0 then
-      r.category = r.category or "buy"
-      r.usable = r.owned
-      local held = r.itemID and math.min(claimedByExcluded[r.itemID] or 0, math.max(0, (stock[r.itemID] or 0) - r.usable)) or 0
-      r.owned = math.min(r.total, r.usable + held)
-      r.reserved = r.owned - r.usable
-      r.farm = ns.Farming.Estimate(r.hint, r.missing)
-      kept[#kept + 1] = r
-      result.counts.all = result.counts.all + 1
-      result.counts[r.category] = (result.counts[r.category] or 0) + 1
-      if r.bought then result.counts.bought = result.counts.bought + 1 end
-      result.units.total = result.units.total + r.total
-      result.units.owned = result.units.owned + r.usable
-      result.units.missing = result.units.missing + r.missing
-      result.units.reserved = result.units.reserved + r.reserved
-      -- Estimated cost from the price boundary (vendor and AH prices); a
-      -- train step costs what the trainer charges.
-      local info = not r.step and r.itemID and opts.priceOf and opts.priceOf(r.itemID) or nil
-      local unit = r.step and r.stepCost or (type(info) == "table" and info.copper) or nil
-      if type(unit) == "number" then
-        r.unitPrice = unit
-        r.cost = unit * r.missing
-        result.cost.known = result.cost.known + r.cost
-        result.cost.pricedRows = result.cost.pricedRows + 1
-        if r.bought then
-          result.cost.bought = result.cost.bought + r.cost
-        else
-          result.cost.remaining = result.cost.remaining + r.cost
-        end
-        r.affordable = ShoppingList.Affordable(r.cost, opts.gold)
-      elseif r.category ~= "craft" and r.category ~= "alt" then
-        result.cost.unpricedRows = result.cost.unpricedRows + 1
-      end
-      -- Mail plan: which alt can send how much of this.
-      local remaining = r.missing
-      local holders = {}
-      for name, count in pairs(r.altHolders) do holders[#holders + 1] = { name = name, count = count } end
-      table.sort(holders, function(a, b)
-        if a.count ~= b.count then return a.count > b.count end
-        return a.name < b.name
-      end)
-      for _, holder in ipairs(holders) do
-        if remaining <= 0 then break end
-        local send = math.min(remaining, holder.count)
-        if send > 0 then
-          local plan
-          for _, m in ipairs(result.mail) do if m.name == holder.name then plan = m end end
-          if not plan then
-            plan = { name = holder.name, items = {}, units = 0 }
-            result.mail[#result.mail + 1] = plan
-          end
-          plan.items[#plan.items + 1] = { itemID = r.itemID, count = send }
-          plan.units = plan.units + send
-          remaining = remaining - send
-        end
-      end
+-- Step 2: a kept row's owned / reserved split. Owned = units physically
+-- there for this row (capped at Total); Reserved = the part of Owned held by
+-- goals not on the list; Missing = Total - usable.
+local function settleRow(r, claimedByExcluded, stock)
+  r.category = r.category or "buy"
+  r.usable = r.owned
+  local held = r.itemID and math.min(claimedByExcluded[r.itemID] or 0, math.max(0, (stock[r.itemID] or 0) - r.usable)) or 0
+  r.owned = math.min(r.total, r.usable + held)
+  r.reserved = r.owned - r.usable
+  r.farm = ns.Farming.Estimate(r.hint, r.missing)
+end
+
+-- Step 3: the estimated cost from the price boundary (vendor and AH prices);
+-- a train step costs what the trainer charges.
+local function priceRow(r, result, opts)
+  local info = not r.step and r.itemID and opts.priceOf and opts.priceOf(r.itemID) or nil
+  local unit = r.step and r.stepCost or (type(info) == "table" and info.copper) or nil
+  if type(unit) == "number" then
+    r.unitPrice = unit
+    r.cost = unit * r.missing
+    result.cost.known = result.cost.known + r.cost
+    result.cost.pricedRows = result.cost.pricedRows + 1
+    if r.bought then
+      result.cost.bought = result.cost.bought + r.cost
+    else
+      result.cost.remaining = result.cost.remaining + r.cost
     end
+    r.affordable = ShoppingList.Affordable(r.cost, opts.gold)
+  elseif r.category ~= "craft" and r.category ~= "alt" then
+    result.cost.unpricedRows = result.cost.unpricedRows + 1
   end
-  result.rows = kept
-  table.sort(result.mail, function(a, b)
-    if a.units ~= b.units then return a.units > b.units end
+end
+
+-- Step 4: which alt can mail how much of a row, most first.
+local function planMail(r, mail)
+  local remaining = r.missing
+  local holders = {}
+  for name, count in pairs(r.altHolders) do holders[#holders + 1] = { name = name, count = count } end
+  table.sort(holders, function(a, b)
+    if a.count ~= b.count then return a.count > b.count end
     return a.name < b.name
   end)
-  result.units.percent = result.units.total > 0 and math.floor(result.units.owned * 100 / result.units.total + 0.5) or 100
-  ShoppingList.Sort(result.rows, opts.sort or "missing", nameOf)
-  -- Can you pay for what is still to buy? Current gold first, then the
-  -- account (alts' snapshotted gold, reachable by mailing).
-  local gold = opts.gold
-  local remaining = result.cost.remaining
-  local aff = { remaining = remaining, unpriced = result.cost.unpricedRows, status = "unknown" }
+  for _, holder in ipairs(holders) do
+    if remaining <= 0 then break end
+    local send = math.min(remaining, holder.count)
+    if send > 0 then
+      local plan
+      for _, m in ipairs(mail) do if m.name == holder.name then plan = m end end
+      if not plan then
+        plan = { name = holder.name, items = {}, units = 0 }
+        mail[#mail + 1] = plan
+      end
+      plan.items[#plan.items + 1] = { itemID = r.itemID, count = send }
+      plan.units = plan.units + send
+      remaining = remaining - send
+    end
+  end
+end
+
+-- Step 5: can you pay for what is still to buy? Current gold first, then the
+-- account (alts' snapshotted gold, reachable by mailing).
+local function affordability(remaining, unpriced, gold)
+  local aff = { remaining = remaining, unpriced = unpriced, status = "unknown" }
   if type(gold) == "table" and (type(gold.current) == "number" or type(gold.account) == "number") then
     aff.current = gold.current
     aff.account = gold.account
@@ -275,8 +264,50 @@ function ShoppingList.Build(entries, opts)
     if type(gold.account) == "number" then aff.shortAccount = math.max(0, remaining - gold.account) end
     if type(gold.current) == "number" and type(gold.account) == "number" then aff.altsGold = math.max(0, gold.account - gold.current) end
   end
-  result.affordability = aff
+  return aff
+end
 
+-- entries: { { goal, view } } in priority order.
+-- opts.included(goal) -> bool (default ShoppingList.DefaultIncluded)
+-- opts.bought = { [itemID] = true }
+-- opts.nameOf(itemID)
+-- opts.priceOf(itemID) -> priceInfo { copper, ... } | nil (unknown), as PriceProvider.GetPrice and CraftWise
+-- opts.gold = { current = copper, account = copper } (optional; enables affordability)
+function ShoppingList.Build(entries, opts)
+  opts = opts or {}
+  local nameOf = opts.nameOf or function(itemID) return "Item " .. tostring(itemID) end
+  local result = {
+    rows = {}, goals = {},
+    counts = { all = 0, buy = 0, vendor = 0, gather = 0, craft = 0, learn = 0, alt = 0, bought = 0 },
+    units = { total = 0, owned = 0, missing = 0, reserved = 0 },
+    cost = { known = 0, pricedRows = 0, unpricedRows = 0, bought = 0, remaining = 0 },
+    mail = {},
+  }
+  local rows, claimedByExcluded, stock
+  rows, result.goals, claimedByExcluded, stock = collectRows(entries, opts.included or ShoppingList.DefaultIncluded, opts.bought or {}, nameOf)
+  -- Only rows that still need something are listed.
+  for _, r in ipairs(rows) do
+    if r.missing > 0 then
+      settleRow(r, claimedByExcluded, stock)
+      result.rows[#result.rows + 1] = r
+      result.counts.all = result.counts.all + 1
+      result.counts[r.category] = (result.counts[r.category] or 0) + 1
+      if r.bought then result.counts.bought = result.counts.bought + 1 end
+      result.units.total = result.units.total + r.total
+      result.units.owned = result.units.owned + r.usable
+      result.units.missing = result.units.missing + r.missing
+      result.units.reserved = result.units.reserved + r.reserved
+      priceRow(r, result, opts)
+      planMail(r, result.mail)
+    end
+  end
+  table.sort(result.mail, function(a, b)
+    if a.units ~= b.units then return a.units > b.units end
+    return a.name < b.name
+  end)
+  result.units.percent = result.units.total > 0 and math.floor(result.units.owned * 100 / result.units.total + 0.5) or 100
+  ShoppingList.Sort(result.rows, opts.sort or "missing", nameOf)
+  result.affordability = affordability(result.cost.remaining, result.cost.unpricedRows, opts.gold)
   return result
 end
 
