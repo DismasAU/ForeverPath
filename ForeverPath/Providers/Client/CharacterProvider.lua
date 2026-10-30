@@ -25,7 +25,7 @@ function CharacterProvider.Identity()
   local info = { name = "Adventurer", realm = "", level = 0, class = "", classFile = nil, race = "", gold = nil }
   info.name = call(UnitName, "player") or info.name
   info.level = ns.Compat.PlayerLevel()
-  local className, classFile = call(UnitClass, "player")
+  local classFile, _, className = ns.Compat.PlayerClass()
   info.class = className or ""
   info.classFile = classFile
   info.race = call(UnitRace, "player") or ""

@@ -187,8 +187,8 @@ function Compat.RegisterEvent(frame, event)
   return true
 end
 
--- Human readable capability summary used by /fp status.
-function Compat.Describe()
+-- Capability rows { label, value } for /fp status.
+function Compat.Capabilities()
   local c = Compat.client or {}
   return {
     { "Client", string.format("%s (build %s, interface %s)", tostring(c.version), tostring(c.build), tostring(c.interface)) },
@@ -231,11 +231,12 @@ function Compat.PlayerFaction()
   return type(faction) == "string" and faction or nil
 end
 
--- The class token ("SHAMAN") and the numeric class id (7).
+-- The class token ("SHAMAN"), the numeric class id (7) and the client's
+-- localized class name ("Shaman").
 function Compat.PlayerClass()
-  local _, classFile, classID = ns.Util.SafeCall(_G.UnitClass, "player")
+  local className, classFile, classID = ns.Util.SafeCall(_G.UnitClass, "player")
   classFile = type(classFile) == "string" and classFile ~= "" and string.upper(classFile) or nil
-  return classFile, tonumber(classID)
+  return classFile, tonumber(classID), type(className) == "string" and className or nil
 end
 
 function Compat.PlayerLevel()

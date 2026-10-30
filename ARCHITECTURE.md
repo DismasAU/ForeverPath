@@ -120,7 +120,8 @@ compartment click handler the TOC requires.
    not `Get*`; the older `Get*` accessors (`ItemProvider.GetItem`, the
    Planner's provider interface) are renamed when their module is next
    reworked, not in one sweep. `Describe` returns lines, `StatusLine` a
-   one-line diagnostics string, `StatusInfo` a table, `ItemHints(itemID)`
+   one-line diagnostics string (every data module `/fp status` lists has
+   one), `StatusInfo` the same state as a table for the UI, `ItemHints(itemID)`
    resolver hints. "Status" alone means a goal's lifecycle (`goal.status`);
    whether the Planner could plan a goal is `view.readiness`.
 

@@ -539,6 +539,11 @@ function SourceProvider.StatusInfo()
   return status
 end
 
+function SourceProvider.StatusLine()
+  local status = SourceProvider.StatusInfo()
+  return string.format("Item sources: AtlasLoot %s; DungeonJournal %s", status.atlasloot, status.journal)
+end
+
 function SourceProvider.Init()
   if ns.ItemProvider and ns.ItemProvider.RegisterNameSource then ns.ItemProvider.RegisterNameSource(SourceProvider.JournalNames) end
 end

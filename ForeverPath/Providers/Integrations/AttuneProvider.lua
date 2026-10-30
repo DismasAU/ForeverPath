@@ -433,7 +433,7 @@ function AttuneProvider.StepText(step)
 end
 
 function AttuneProvider.StatusLine()
-  if not AttuneProvider.IsAvailable() then return "Attune not installed" end
+  if not AttuneProvider.IsAvailable() then return "Attune: not installed" end
   return string.format("Attune: %d attunements for %s", #AttuneProvider.List(), Compat.PlayerFaction() or "all factions")
 end
 

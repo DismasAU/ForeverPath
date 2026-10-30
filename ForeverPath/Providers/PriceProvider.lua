@@ -147,6 +147,10 @@ function PriceProvider.StatusInfo(now)
   return status
 end
 
+function PriceProvider.StatusLine()
+  return PriceProvider.StatusInfo().text
+end
+
 -- Chat lines for /fp prices <item>.
 function PriceProvider.Describe(itemID, moneyFn)
   moneyFn = moneyFn or function(c) return tostring(c) .. "c" end

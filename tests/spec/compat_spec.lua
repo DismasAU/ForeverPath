@@ -51,7 +51,7 @@ describe("Compat", function()
     Compat = legacyClient()
     assert_nil(Compat.GetContainerSlot)
     local described = {}
-    for _, row in ipairs(Compat.Describe()) do described[row[1]] = row[2] end
+    for _, row in ipairs(Compat.Capabilities()) do described[row[1]] = row[2] end
     assert_eq(described["Container API"], "missing")
     assert_eq(described["Forever client"], "yes")
   end)
@@ -129,9 +129,11 @@ describe("Compat", function()
     Mock.character.classID = 7
     Mock.character.level = 42
     assert_eq(Compat.PlayerFaction(), "Horde")
-    local classFile, classID = Compat.PlayerClass()
+    Mock.character.class = "Shaman"
+    local classFile, classID, className = Compat.PlayerClass()
     assert_eq(classFile, "SHAMAN")
     assert_eq(classID, 7)
+    assert_eq(className, "Shaman")
     assert_eq(Compat.PlayerLevel(), 42)
     _G.UnitFactionGroup = function() return nil end
     _G.UnitClass = function() return nil, "", nil end

@@ -78,10 +78,14 @@ function handlers.scan(rest)
   ns.ProfessionProvider.RequestScan(rest == "all")
 end
 
+-- Every data module /fp status reports on; each has StatusLine().
+local STATUS_MODULES = { "Recipes", "TrainerProvider", "QuestProvider", "QuestFactsProvider", "ClassicDB", "LootLearner",
+  "Share", "QuestieBridge", "AttuneProvider", "EquipmentProvider", "ReputationProvider", "SourceProvider", "PriceProvider" }
+
 function handlers.status()
   if not requireLoaded() then return end
   Log.Print("Version %s", tostring(ns.VERSION))
-  for _, row in ipairs(ns.Compat.Describe()) do
+  for _, row in ipairs(ns.Compat.Capabilities()) do
     Log.output(string.format("  %s: %s", row[1], row[2]))
   end
   local professions = ns.ProfessionProvider.GetScannedProfessions()
@@ -101,16 +105,10 @@ function handlers.status()
     Log.output("  Character professions: " .. Util.Join(names))
   end
   Log.output(string.format("  Goals: %d open, %d completed", ns.GoalService.Count({ open = true }), ns.GoalService.Count({ status = ns.GoalModel.Statuses.COMPLETED })))
-  Log.output("  " .. ns.Data.Recipes.StatusLine())
-  Log.output("  " .. ns.TrainerProvider.StatusLine())
-  Log.output("  " .. ns.QuestProvider.StatusLine())
-  Log.output("  " .. ns.QuestFactsProvider.StatusLine())
-  Log.output("  " .. ns.ClassicDB.StatusLine())
-  Log.output("  " .. ns.LootLearner.StatusLine())
-  Log.output("  " .. ns.Share.StatusLine())
-  Log.output("  " .. ns.QuestieBridge.StatusLine())
-  Log.output("  " .. ns.EquipmentProvider.StatusLine())
-  Log.output("  " .. ns.ReputationProvider.StatusLine())
+  for _, name in ipairs(STATUS_MODULES) do
+    local module = name == "Recipes" and ns.Data.Recipes or ns[name]
+    Log.output("  " .. tostring(ns.Log.Try(module.StatusLine) or (name .. ": status unavailable")))
+  end
 end
 
 function handlers.goals()
