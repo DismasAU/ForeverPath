@@ -380,8 +380,8 @@ local function Create(parent)
     local questID = tonumber(string.match(tostring(step.wowheadID or ""), "^(%d+)"))
     if (step.type == "Quest" or step.type == "Pick Up" or step.type == "Turn In") and questID and QP and QP.IsAvailable() then
       step.questID = questID
-      local entry = QP.Get(questID)
-      local state = QP.State(questID)
+      local detail = QP.Detail(questID)
+      local entry, state = detail.entry, detail.state
       local label, kind = QP.StateLabel(state, entry)
       -- The chain knows what the journal does not: earlier steps still block this one.
       if label == "Available" and step.state == "locked" then label, kind = "Locked", "text" end
@@ -393,22 +393,14 @@ local function Create(parent)
       elseif entry and entry.objective then
         add("Objective", entry.objective)
       end
-      local giver = QP.Giver(questID)
-      if giver then add("Pick up", giver.label) end
-      local turnin = QP.Turnin(questID)
-      if turnin then add("Turn in", turnin.label) end
-      for _, item in ipairs(QP.RequiredItems(questID)) do
-        local name = item.name or (item.itemID and ns.ItemProvider.GetName(item.itemID)) or "?"
-        local have = item.itemID and (ns.InventoryProvider.GetCounts(item.itemID).bags or 0) or (item.have or 0)
-        add("Bring", string.format("%d x %s (%d/%d)%s", item.count, name, math.min(have, item.count), item.count,
+      if detail.giver then add("Pick up", detail.giver.label) end
+      if detail.turnin then add("Turn in", detail.turnin.label) end
+      for _, item in ipairs(detail.items) do
+        add("Bring", string.format("%d x %s (%d/%d)%s", item.count, item.name, math.min(item.have, item.count), item.count,
           item.source and (" - " .. (item.source:match("^([^,]+)") or item.source)) or ""))
       end
-      if entry and #entry.rewards > 0 then
-        local names = {}
-        for _, reward in ipairs(entry.rewards) do
-          names[#names + 1] = (reward.count and reward.count > 1 and (reward.count .. " x ") or "") .. (reward.name or ns.ItemProvider.GetName(reward.itemID))
-        end
-        add(entry.rewardChoice and "Reward (choose one)" or "Rewards", table.concat(names, ", "))
+      if #detail.rewards > 0 then
+        add(detail.rewardChoice and "Reward (choose one)" or "Rewards", QP.RewardText(detail.rewards))
       end
       local facts = QP.Facts(questID)
       if facts and facts.note then add("Note", facts.note) end

@@ -503,6 +503,13 @@ describe("Questlines", function()
     assert_match(text, "Turn in:|r Prate Cloudseer %- Thousand Needles")
     assert_match(text, "Bring:|r 5 x Twisted Fire Totem %(0/5%) %- Stonevault troggs")
     assert_match(text, "Bring:|r 5 x Twisted Earth Totem %(2/5%) %- Lost Ones")
+    -- The provider counts the bags too, so every screen shows the same 2/5.
+    local sef = ns.QuestProvider.Search("Storm, Earth, and Fire", 1)[1]
+    local earth
+    for _, item in ipairs(ns.QuestProvider.RequiredItems(sef.questID)) do
+      if item.itemID == EARTH then earth = item end
+    end
+    assert_eq(earth.have, 2, "owned count for a quest that is not in the log")
     assert_true(att.side.waypoint:IsShown())
     att.side.waypoint:Click()
     assert_eq(Mock.waypoint.uiMapID, 1441)

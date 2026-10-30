@@ -728,8 +728,14 @@ function QuestProvider.Turnin(questID)
   return classic
 end
 
+-- Bag count of an item a quest asks for (0 without an item id).
+local function owned(itemID)
+  return itemID and (ns.InventoryProvider.GetCounts(itemID).bags or 0) or 0
+end
+
 -- Items a quest asks for: live objectives while it is in the log, else the
--- recorded facts. { { name, count, have, itemID } }
+-- recorded facts, with `have` counted from the bags.
+-- { { name, count, have, itemID, source } }
 function QuestProvider.RequiredItems(questID)
   local QF = ns.QuestFactsProvider
   local state = QuestProvider.State(questID)
@@ -740,7 +746,7 @@ function QuestProvider.RequiredItems(questID)
   local facts = QuestProvider.Facts(questID)
   local out = {}
   for _, item in ipairs(facts and facts.items or {}) do
-    out[#out + 1] = { name = item.name, count = item.count or 1, have = 0, itemID = item.itemID, source = item.source }
+    out[#out + 1] = { name = item.name, count = item.count or 1, have = owned(item.itemID), itemID = item.itemID, source = item.source }
   end
   if #out == 0 and not (facts and facts.items and #facts.items == 0 and facts.learned) then
     local CDB = ns.ClassicDB
@@ -752,11 +758,11 @@ function QuestProvider.RequiredItems(questID)
     local questie = QB and QB.IsAvailable() and QB.Quest(questID) or nil
     if questie and #questie.items > 0 then
       for _, item in ipairs(questie.items) do
-        out[#out + 1] = { count = counts[item.itemID] or item.count or 1, have = 0, itemID = item.itemID, questie = true }
+        out[#out + 1] = { count = counts[item.itemID] or item.count or 1, have = owned(item.itemID), itemID = item.itemID, questie = true }
       end
     else
       for _, item in ipairs(classicItems) do
-        out[#out + 1] = { count = item.count or 1, have = 0, itemID = item.itemID, classic = true }
+        out[#out + 1] = { count = item.count or 1, have = owned(item.itemID), itemID = item.itemID, classic = true }
       end
     end
   end
@@ -784,11 +790,41 @@ function QuestProvider.SetWaypoint(point)
   return false, reason
 end
 
+-- Everything the screens and /fp quest show for one quest:
+-- { entry, state, giver, turnin, items = { { name, count, have, itemID, source } },
+--   rewards = { { name, count, itemID, quality } }, rewardChoice, questline }.
+-- Item and reward names are resolved; `have` is the bag count (or the live
+-- objective while the quest is in the log).
+function QuestProvider.Detail(questID, nameOf)
+  nameOf = nameOf or ns.ItemProvider.GetName
+  local entry = QuestProvider.Get(questID)
+  local detail = {
+    entry = entry, state = QuestProvider.State(questID),
+    giver = QuestProvider.Giver(questID), turnin = QuestProvider.Turnin(questID),
+    items = {}, rewards = {}, rewardChoice = entry and entry.rewardChoice or nil,
+    questline = QuestProvider.Questline(questID),
+  }
+  for _, item in ipairs(QuestProvider.RequiredItems(questID)) do
+    item.name = item.name or (item.itemID and nameOf(item.itemID)) or "?"
+    detail.items[#detail.items + 1] = item
+  end
+  for _, reward in ipairs(entry and entry.rewards or {}) do
+    detail.rewards[#detail.rewards + 1] = { name = reward.name or nameOf(reward.itemID), count = reward.count, itemID = reward.itemID, quality = reward.quality }
+  end
+  return detail
+end
+
+-- "2 x Name, Other" for a detail's rewards.
+function QuestProvider.RewardText(rewards)
+  local parts = {}
+  for _, reward in ipairs(rewards) do parts[#parts + 1] = (reward.count and reward.count > 1 and (reward.count .. " x ") or "") .. reward.name end
+  return table.concat(parts, ", ")
+end
+
 -- Chat lines for one quest.
 function QuestProvider.Describe(questID, nameOf)
-  nameOf = nameOf or function(id) return "Item " .. tostring(id) end
-  local entry = QuestProvider.Get(questID)
-  local state = QuestProvider.State(questID)
+  local detail = QuestProvider.Detail(questID, nameOf)
+  local entry, state = detail.entry, detail.state
   local lines = {}
   local label = QuestProvider.StateLabel(state, entry)
   lines[#lines + 1] = string.format("%s [%s]%s%s%s", QuestProvider.Name(questID), label,
@@ -802,14 +838,12 @@ function QuestProvider.Describe(questID, nameOf)
     local id = tonumber(link.id)
     lines[#lines + 1] = string.format("  Requires: %s%s", link.name or ("quest " .. tostring(link.id)), id and QuestProvider.State(id).completed and " (done)" or "")
   end
-  local giver = QuestProvider.Giver(questID)
-  if giver and not (entry and entry.pickup) then lines[#lines + 1] = "  Pick up: " .. giver.label end
-  local turnin = QuestProvider.Turnin(questID)
-  if turnin and not (entry and entry.turnin) then lines[#lines + 1] = "  Turn in: " .. turnin.label end
-  for _, item in ipairs(QuestProvider.RequiredItems(questID)) do
-    lines[#lines + 1] = string.format("  Needs: %d x %s%s", item.count, item.name or (item.itemID and nameOf(item.itemID)) or "?", item.have > 0 and string.format(" (%d/%d)", item.have, item.count) or "")
+  if detail.giver and not (entry and entry.pickup) then lines[#lines + 1] = "  Pick up: " .. detail.giver.label end
+  if detail.turnin and not (entry and entry.turnin) then lines[#lines + 1] = "  Turn in: " .. detail.turnin.label end
+  for _, item in ipairs(detail.items) do
+    lines[#lines + 1] = string.format("  Needs: %d x %s%s", item.count, item.name, item.have > 0 and string.format(" (%d/%d)", math.min(item.have, item.count), item.count) or "")
   end
-  local line = QuestProvider.Questline(questID)
+  local line = detail.questline
   if line then
     lines[#lines + 1] = string.format("  Chain: %s - %d of %d steps done", line.attune.name, line.done, line.total)
     for index, step in ipairs(line.steps) do
@@ -817,10 +851,8 @@ function QuestProvider.Describe(questID, nameOf)
         step.location and (" - " .. step.location) or "")
     end
   end
-  if entry and #entry.rewards > 0 then
-    local parts = {}
-    for _, reward in ipairs(entry.rewards) do parts[#parts + 1] = (reward.count and reward.count > 1 and (reward.count .. " x ") or "") .. (reward.name or nameOf(reward.itemID)) end
-    lines[#lines + 1] = string.format("  Reward%s: %s", entry.rewardChoice and " (choose one)" or "s", table.concat(parts, ", "))
+  if #detail.rewards > 0 then
+    lines[#lines + 1] = string.format("  Reward%s: %s", detail.rewardChoice and " (choose one)" or "s", QuestProvider.RewardText(detail.rewards))
   end
   return lines
 end

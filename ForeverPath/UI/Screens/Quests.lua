@@ -296,8 +296,8 @@ local function Create(parent)
     end
     s.empty:Hide()
     for _, w in ipairs(s.content) do w:Show() end
-    local entry = QP.Get(questID)
-    local state = QP.State(questID)
+    local detail = QP.Detail(questID)
+    local entry, state = detail.entry, detail.state
     local playerLevel = ns.Compat.PlayerLevel()
     local label, kind = QP.StateLabel(state, entry, playerLevel)
     s.icon:SetItem(state.ready and QP.ICON_READY or QP.ICON, 1)
@@ -306,7 +306,7 @@ local function Create(parent)
     local level = (entry and entry.level) or state.level
     if level then metaParts[#metaParts + 1] = Theme.Hex[DIFFICULTY_HEX[QP.Difficulty(level, playerLevel)]] .. "Level " .. level .. "|r" end
     if entry and entry.instance then metaParts[#metaParts + 1] = entry.instance end
-    local giver = QP.Giver(questID)
+    local giver = detail.giver
     if giver and giver.name then metaParts[#metaParts + 1] = giver.name .. (giver.zone and not (entry and entry.pickup) and (" - " .. giver.zone) or "") end
     if entry and entry.requires and entry.requires > playerLevel then metaParts[#metaParts + 1] = Theme.ColorText("missing", "requires level " .. entry.requires) end
     if entry and entry.groupSize and entry.groupSize > 1 then metaParts[#metaParts + 1] = entry.groupSize .. " players" end
@@ -323,12 +323,12 @@ local function Create(parent)
     elseif entry and entry.objective then
       lines[#lines + 1] = { text = entry.objective, value = state.completed and 1 or 0, done = state.completed }
     end
-    for _, item in ipairs(QP.RequiredItems(questID)) do
-      local have = math.min(item.have or 0, item.count)
-      lines[#lines + 1] = { text = string.format("%sBring %d x %s|r", have >= item.count and Theme.Hex.text3 or Theme.Hex.text2, item.count, item.name or (item.itemID and ns.ItemProvider.GetName(item.itemID)) or "?"),
+    for _, item in ipairs(detail.items) do
+      local have = math.min(item.have, item.count)
+      lines[#lines + 1] = { text = string.format("%sBring %d x %s|r", have >= item.count and Theme.Hex.text3 or Theme.Hex.text2, item.count, item.name),
         value = item.count > 0 and have / item.count or 0, done = have >= item.count }
     end
-    local line = QP.Questline(questID)
+    local line = detail.questline
     if line then
       for index, step in ipairs(line.steps) do
         local current = step.state == "current"
@@ -365,7 +365,7 @@ local function Create(parent)
       s.callout:Hide()
     end
     -- Rewards
-    local rewards = entry and entry.rewards or {}
+    local rewards = detail.rewards
     for i, iconFrame in ipairs(s.rewardIcons) do
       local reward = rewards[i]
       if reward then
