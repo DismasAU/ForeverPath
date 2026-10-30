@@ -1,18 +1,11 @@
--- Where an item comes from, aggregated from the sources that are available on
--- this client without any external service:
---   1. vendors recorded from merchant windows (VendorProvider), and what
---      this account has looted on Forever (LootLearner),
---   2. item class heuristics (Data/ItemClasses.lua): herbs are picked, ore is
---      mined, leather is skinned, cloth drops from humanoids,
---   3. ForeverDungeonJournal's boss loot, shared loot and dungeon quest
---      rewards (Forever-specific data, read from its namespace at runtime),
---   4. AtlasLootClassic's dungeon and raid loot tables, when that addon is
---      installed and enabled (read at runtime, never copied),
---   5. classic-era vendors, creature drops, gathering nodes, skinning,
---      fishing and containers from CMaNGOS classic-db (ns.ClassicDB), behind
---      everything above (a recorded vendor hides the classic ones; a boss the
---      journal or AtlasLoot names is not listed twice).
--- Everything is returned as resolver hints: { kind, label, detail, ... }.
+-- Where an item comes from, aggregated from what is available on this client
+-- without any external service: recorded vendors and loot (the learners),
+-- ForeverDungeonJournal and AtlasLoot (read at runtime, never copied), the
+-- quest catalogue, GearQuest Forever, reputation vendors, CMaNGOS classic-db
+-- (ns.ClassicDB) and the item class heuristic (Data/ItemClasses.lua).
+-- Everything is returned as resolver hints: { kind, label, detail, ... }, in
+-- the order the comment on SourceProvider.Sources gives - that order is the
+-- contract.
 local _, ns = ...
 local Routes = ns.DependencyResolver.Routes
 

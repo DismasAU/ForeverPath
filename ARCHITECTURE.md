@@ -241,10 +241,23 @@ as `alternatives`.
 Goal (`ForeverPathCharDB.goals[id]`):
 
 ```lua
-{ id = "fp-<time>-<n>-<rand>", type = "CRAFT_ITEM" | "OBTAIN_ITEM", status = "ACTIVE" | "QUEUED" | "PAUSED" | "COMPLETED",
-  target = { itemID, quantity }, tracked = true, priority = 1,
+{ id = "fp-<time>-<n>-<rand>", type = <a GoalModel.Types key>, status = "ACTIVE" | "QUEUED" | "PAUSED" | "COMPLETED",
+  target = <per type, below>, tracked = true, priority = 1, routes = { [itemID] = "craft" | "buy" } | nil,
   createdAt, updatedAt, completedAt, notes }
 ```
+
+`GoalModel.Types` is the registry of goal types; each one's target is checked
+by its validator in `Domain/GoalModel.lua`:
+
+| Type | Target |
+|---|---|
+| `CRAFT_ITEM`, `OBTAIN_ITEM` | `{ itemID, quantity }` (craft goals add `baseline`, `peak`) |
+| `LEARN_RECIPE` | `{ spellID, name, professionName, professionID, icon }` |
+| `APPLY_ENCHANT` | `{ spellID, name, professionName, professionID, icon, quantity, casts }` |
+| `REACH_SKILL` | `{ professionName, professionID, rank, startRank, icon }` |
+| `COMPLETE_QUEST` | `{ questID, name, level, instance, icon }` |
+| `REACH_REPUTATION` | `{ factionID, name, standing, startValue, icon }` |
+| `COMPLETE_ATTUNEMENT` | `{ attuneID, name, icon }` |
 
 Open goals (not COMPLETED) carry sequential priorities; `GoalStore:List(filter)`
 orders by status group, priority, then creation time. The tracker and the
