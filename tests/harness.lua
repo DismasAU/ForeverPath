@@ -194,6 +194,25 @@ function Harness.loadClassicDB(root)
   end
 end
 
+-- Accessors for widget internals shared by the UI specs, so a widget
+-- restructure is fixed here once instead of in every spec.
+local DRAW_ORDER = { BACKGROUND = 1, BORDER = 2, ARTWORK = 3, OVERLAY = 4, HIGHLIGHT = 5 }
+Harness.ui = {
+  -- Whether a texture draws beneath a font string.
+  drawnUnder = function(fill, text) return DRAW_ORDER[fill.layer] < DRAW_ORDER[text.layer] end,
+  -- A row's source tag: its text, and the tag frame.
+  sourceTag = function(row, index)
+    local tag = row.sourceFrame.tags[index]
+    return tag and tag.label:GetText(), tag
+  end,
+  shownSourceTags = function(row)
+    local texts = {}
+    for _, tag in ipairs(row.sourceFrame.tags) do if tag:IsShown() then texts[#texts + 1] = tag.label:GetText() end end
+    return texts
+  end,
+  routeCard = function(tree, index) return tree.side.cards[index] end,
+}
+
 -- Fresh client state plus a freshly loaded addon. opts.setup runs after the
 -- mock reset and before the addon files execute (to remove APIs, seed data).
 function Harness.fresh(opts)

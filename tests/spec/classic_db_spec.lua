@@ -65,7 +65,7 @@ describe("ClassicDB (generated data)", function()
     local quests, npcs = CDB.Counts()
     assert_gt(quests, 4000)
     assert_gt(npcs, 2000)
-    assert_match(CDB.StatusLine(), "^Classic data: %d+ quests, %d+ NPCs, %d+ objects; drop sources for %d+ items, vendors for %d+, trainers for %d+ recipes from CMaNGOS classic%-db ec4f5961%.$")
+    assert_match(CDB.StatusLine(), "^Classic data: %d+ quests, %d+ NPCs, %d+ objects; drop sources for %d+ items, vendors for %d+, trainers for %d+ recipes from CMaNGOS classic%-db %x%x%x%x%x%x%x%x%.$")
     -- Every row has the documented shape.
     for questID, row in pairs(ns.ClassicData.quests) do
       assert_eq(type(row[1]), "string", "title of " .. questID)

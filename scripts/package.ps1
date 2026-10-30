@@ -5,8 +5,13 @@
 # Entries are written with forward slashes. Compress-Archive on Windows
 # PowerShell 5.1 stores backslashes, which macOS unpacks into a flat folder
 # of files named "ForeverPath\Core\Bootstrap.lua".
+#
+# The offline test suite runs first; a failing suite stops the build.
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$python = if (Get-Command python -ErrorAction SilentlyContinue) { "python" } else { "py" }
+& $python (Join-Path $repoRoot "testsun_tests.py")
+if ($LASTEXITCODE -ne 0) { throw "Tests failed (exit code $LASTEXITCODE); no package built." }
 $source = Join-Path $repoRoot "ForeverPath"
 $toc = Get-Content (Join-Path $source "ForeverPath.toc")
 $versionLine = $toc | Where-Object { $_ -match '^## Version:\s*(.+)$' } | Select-Object -First 1

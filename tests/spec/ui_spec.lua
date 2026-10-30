@@ -25,21 +25,7 @@ describe("UI shell and screens (mock widgets)", function()
 
   local function screen(key) return MainFrame.screens[key] end
 
-  -- Accessors for widget internals, so a widget restructure is fixed here once.
-  local DRAW_ORDER = { BACKGROUND = 1, BORDER = 2, ARTWORK = 3, OVERLAY = 4, HIGHLIGHT = 5 }
-  local function drawnUnder(fill, text)
-    return DRAW_ORDER[fill.layer] < DRAW_ORDER[text.layer]
-  end
-  local function sourceTag(row, index)
-    local tag = row.sourceFrame.tags[index]
-    return tag and tag.label:GetText()
-  end
-  local function shownSourceTags(row)
-    local texts = {}
-    for _, tag in ipairs(row.sourceFrame.tags) do if tag:IsShown() then texts[#texts + 1] = tag.label:GetText() end end
-    return texts
-  end
-  local function routeCard(tree, index) return tree.side.cards[index] end
+  local drawnUnder, sourceTag, shownSourceTags, routeCard = H.ui.drawnUnder, H.ui.sourceTag, H.ui.shownSourceTags, H.ui.routeCard
 
   it("builds the shell: header, sidebar, status bar, screens", function()
     assert_eq(frame.title:GetText(), "ForeverPath")
