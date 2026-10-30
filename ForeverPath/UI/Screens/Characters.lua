@@ -50,8 +50,9 @@ local function currentNeeds()
     if view.goal and view.goal.status == ns.GoalModel.Statuses.ACTIVE and view.tree then
       for _, node in pairs(view.tree.byKey) do
         -- What this character cannot cover from its own bags and bank, so
-        -- the banner reads the same whether alts are counted or not.
-        local short = node.depth > 0 and (node.missing + (node.ownedAlts or 0)) or 0
+        -- the banner reads the same whether alts are counted or not. Train
+        -- and quest steps carry no item, so no alt can hold them.
+        local short = node.depth > 0 and node.itemID and (node.missing + (node.ownedAlts or 0)) or 0
         if short > 0 then
           if not needs[node.itemID] then order[#order + 1] = node.itemID end
           needs[node.itemID] = (needs[node.itemID] or 0) + short

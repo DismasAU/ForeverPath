@@ -175,6 +175,11 @@ describe("TrainerProvider", function()
     assert_eq(found.key, "train:" .. WOOLEN)
     ns.UI.MainFrame.ShowScreen("crafting")
     Mock.RunTimers()
+    -- The Characters banner counts items only: the step is not a material an alt can hold.
+    ns.UI.MainFrame.ShowScreen("characters")
+    Mock.RunTimers()
+    assert_eq(#ns.Log.errors, 0)
+    assert_true(ns.UI.MainFrame.screens.characters:IsShown())
   end)
 
   it("ignores class trainers, copes with missing functions and merges repeat visits", function()
