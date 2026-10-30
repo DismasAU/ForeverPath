@@ -339,8 +339,7 @@ function ReputationProvider.QuestsFor(factionName, factionID)
 end
 
 function ReputationProvider.HasAtlasLoot()
-  local atlas = _G.AtlasLoot
-  return type(atlas) == "table" and type(atlas.ItemDB) == "table" and type(atlas.ItemDB.Storage) == "table"
+  return ns.AtlasLoot.IsInstalled()
 end
 
 local function tierStanding(name, position, count)
@@ -354,39 +353,27 @@ local function tierStanding(name, position, count)
 end
 
 -- Reads the loaded factions module into tiers[factionID] = { { standing, label, items } } and byItem.
-function ReputationProvider.IndexAtlas()
-  local storage = ReputationProvider.HasAtlasLoot() and _G.AtlasLoot.ItemDB.Storage[ReputationProvider.MODULE] or nil
-  if type(storage) ~= "table" then return 0 end
+function ReputationProvider.IndexAtlas(storage)
   local tiers, byItem, added = {}, {}, 0
-  for key, content in pairs(storage) do
-    if type(key) == "string" and key ~= "__atlaslootdata" and type(content) == "table" and type(content.items) == "table" then
-      local factionID = tonumber(content.FactionID)
-      if factionID then
-        local list = {}
-        for position, tier in ipairs(content.items) do
-          if type(tier) == "table" then
-            local standing = tierStanding(tier.name, position, #content.items)
-            local items = {}
-            for dif, entries in pairs(tier) do
-              if type(dif) == "number" and type(entries) == "table" then
-                for _, entry in ipairs(entries) do
-                  local itemID = type(entry) == "table" and entry[2] or nil
-                  if type(itemID) == "number" and itemID > 0 then
-                    items[#items + 1] = itemID
-                    local list2 = byItem[itemID]
-                    if not list2 then list2 = {} byItem[itemID] = list2 end
-                    list2[#list2 + 1] = { factionID = factionID, standing = standing }
-                    added = added + 1
-                  end
-                end
-              end
-            end
-            list[#list + 1] = { standing = standing, label = ReputationProvider.StandingLabel(standing), items = items }
+  for _, content in ns.AtlasLoot.Contents(storage) do
+    local factionID = tonumber(content.FactionID)
+    if factionID then
+      local list = {}
+      for position, tier in ipairs(content.items) do
+        if type(tier) == "table" then
+          local standing = tierStanding(tier.name, position, #content.items)
+          local items = ns.AtlasLoot.ItemIDs(tier)
+          for _, itemID in ipairs(items) do
+            local sales = byItem[itemID]
+            if not sales then sales = {} byItem[itemID] = sales end
+            sales[#sales + 1] = { factionID = factionID, standing = standing }
+            added = added + 1
           end
+          list[#list + 1] = { standing = standing, label = ReputationProvider.StandingLabel(standing), items = items }
         end
-        table.sort(list, function(a, b) return a.standing < b.standing end)
-        tiers[factionID] = list
       end
+      table.sort(list, function(a, b) return a.standing < b.standing end)
+      tiers[factionID] = list
     end
   end
   ReputationProvider.atlas.tiers = tiers
@@ -397,10 +384,10 @@ end
 -- Loads the factions module once per session (on demand).
 function ReputationProvider.EnsureAtlas()
   local atlas = ReputationProvider.atlas
-  if atlas.state ~= "idle" or not ReputationProvider.HasAtlasLoot() then return atlas.state end
+  if atlas.state ~= "idle" or not ns.AtlasLoot.IsInstalled() then return atlas.state end
   atlas.state = "loading"
-  local function finish()
-    local ok, added = Log.Capture(ReputationProvider.IndexAtlas)
+  local state = ns.AtlasLoot.Load(ReputationProvider.MODULE, function(storage)
+    local ok, added = Log.Capture(ReputationProvider.IndexAtlas, storage)
     if ok then
       Log.Debug("Indexed AtlasLoot factions: %s", tostring(added))
     else
@@ -408,15 +395,8 @@ function ReputationProvider.EnsureAtlas()
     end
     atlas.state = "ready"
     Events.Fire("FP_REPUTATION_UPDATED", "atlasloot")
-  end
-  local loader = _G.AtlasLoot.Loader
-  local result
-  if type(loader) == "table" and type(loader.LoadModule) == "function" then
-    result = Util.SafeCall(loader.LoadModule, loader, ReputationProvider.MODULE, finish, true)
-  end
-  if result ~= true and result ~= "InCombat" then
-    if type(_G.AtlasLoot.ItemDB.Storage[ReputationProvider.MODULE]) == "table" then finish() else atlas.state = "missing" end
-  end
+  end)
+  if state == "missing" then atlas.state = "missing" end
   return atlas.state
 end
 

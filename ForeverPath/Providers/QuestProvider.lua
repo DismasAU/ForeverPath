@@ -48,16 +48,10 @@ function QuestProvider.IsAvailable()
   return Compat.IsQuestFlaggedCompleted ~= nil and Compat.IsOnQuest ~= nil
 end
 
+-- Both addons are read through their own adapters (SourceProvider for the
+-- journal, AttuneProvider for Attune), so each is detected in one place.
 local function journal()
-  local j = _G.ForeverDungeonJournal_NS
-  if type(j) == "table" and type(j.DB) == "table" then return j end
-  return nil
-end
-
-local function attune()
-  local d = _G.Attune_Data
-  if type(d) == "table" and type(d.quests) == "table" then return d end
-  return nil
+  return ns.SourceProvider.Journal()
 end
 
 function QuestProvider.HasJournal()
@@ -65,16 +59,7 @@ function QuestProvider.HasJournal()
 end
 
 function QuestProvider.HasAttune()
-  return attune() ~= nil
-end
-
-local function attuneName(questID)
-  local l = _G.AttuneLang
-  if type(l) ~= "table" then return nil end
-  local key = "Q1_" .. tostring(questID)
-  local value = Util.SafeCall(function() return l[key] end)
-  if type(value) == "string" and value ~= key then return value end
-  return nil
+  return ns.AttuneProvider.IsAvailable()
 end
 
 local function rewardsFromJournal(quest)
@@ -150,55 +135,27 @@ function QuestProvider.Index()
       end
     end
   end
-  local a = attune()
-  if a then
-    local givers = type(a.questGivers) == "table" and a.questGivers or {}
-    local rewards = type(a.questRewards) == "table" and a.questRewards or {}
-    -- Which attunement and location each quest belongs to.
-    local usedBy = {}
-    for _, step in ipairs(type(a.steps) == "table" and a.steps or {}) do
-      local t = step.TYPE
-      if t == "Quest" or t == "Pick Up" or t == "Turn In" then
-        for id in tostring(step.ID_WOWHEAD or ""):gmatch("%d+") do
-          id = tonumber(id)
-          if id and not usedBy[id] then usedBy[id] = { attune = tostring(step.ID_ATTUNE), location = step.LOCATION } end
-        end
+  for _, record in ipairs(ns.AttuneProvider.QuestRecords()) do
+    local id = record.id
+    local entry = index[id]
+    if not entry then
+      local items, choice = rewardsFromAttune(record.rewards)
+      local giver = record.giver
+      entry = {
+        id = id, name = record.name or ("Quest " .. id), requires = record.requires, groupSize = record.groupSize,
+        faction = record.faction or "Both", instance = record.attunement or "Attunements", location = record.location,
+        pickup = giver and giver.label or nil, rewards = items, rewardChoice = choice, source = "attune", start = giver,
+      }
+      index[id] = entry
+    else
+      entry.groupSize = entry.groupSize or record.groupSize
+      entry.requires = entry.requires or record.requires
+      if not entry.start and record.giver then
+        entry.start = record.giver
+        entry.pickup = entry.pickup or record.giver.label
       end
     end
-    local attuneNames = {}
-    for _, raw in ipairs(type(a.attunes) == "table" and a.attunes or {}) do
-      attuneNames[tostring(raw.ID)] = { name = raw.NAME, faction = raw.FACTION }
-    end
-    for questID, record in pairs(a.quests) do
-      local id = tonumber(questID)
-      if id then
-        local name = attuneName(id)
-        local use = usedBy[id]
-        local owner = use and attuneNames[use.attune] or nil
-        local entry = index[id]
-        if not entry then
-          local items, choice = rewardsFromAttune(rewards[id])
-          local giver = givers[id]
-          entry = {
-            id = id, name = name or ("Quest " .. id), requires = type(record) == "table" and tonumber(record[1]) or nil,
-            groupSize = type(record) == "table" and tonumber(record[2]) or nil,
-            faction = owner and owner.faction or "Both", instance = owner and owner.name or "Attunements", location = use and use.location or nil,
-            pickup = type(giver) == "table" and giver[4] or nil, rewards = items, rewardChoice = choice, source = "attune",
-            start = type(giver) == "table" and { mapID = giver[1], x = giver[2], y = giver[3], label = giver[4] } or nil,
-          }
-          index[id] = entry
-        else
-          entry.groupSize = entry.groupSize or (type(record) == "table" and tonumber(record[2]) or nil)
-          entry.requires = entry.requires or (type(record) == "table" and tonumber(record[1]) or nil)
-          if not entry.start and type(givers[id]) == "table" then
-            local giver = givers[id]
-            entry.start = { mapID = giver[1], x = giver[2], y = giver[3], label = giver[4] }
-            entry.pickup = entry.pickup or giver[4]
-          end
-        end
-        if owner then entry.attunement = owner.name end
-      end
-    end
+    if record.attunement then entry.attunement = record.attunement end
   end
   QuestProvider.index = index
   return index

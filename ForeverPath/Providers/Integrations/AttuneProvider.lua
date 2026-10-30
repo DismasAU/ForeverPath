@@ -47,6 +47,50 @@ local function lang(key, fallback)
   return fallback
 end
 
+-- Every quest Attune knows, for QuestProvider's index:
+-- { { id, name, requires, groupSize, faction, attunement, location,
+--     giver = { mapID, x, y, label } | nil, rewards = <Attune's raw reward record> } }.
+-- Empty without Attune (or without its quest table).
+function AttuneProvider.QuestRecords()
+  local d = data()
+  if not d or type(d.quests) ~= "table" then return {} end
+  local givers = type(d.questGivers) == "table" and d.questGivers or {}
+  local rewards = type(d.questRewards) == "table" and d.questRewards or {}
+  -- Which attunement and location each quest belongs to.
+  local usedBy = {}
+  for _, step in ipairs(d.steps) do
+    local t = step.TYPE
+    if t == "Quest" or t == "Pick Up" or t == "Turn In" then
+      for id in tostring(step.ID_WOWHEAD or ""):gmatch("%d+") do
+        id = tonumber(id)
+        if id and not usedBy[id] then usedBy[id] = { attune = tostring(step.ID_ATTUNE), location = step.LOCATION } end
+      end
+    end
+  end
+  local owners = {}
+  for _, raw in ipairs(d.attunes) do
+    owners[tostring(raw.ID)] = { name = raw.NAME, faction = raw.FACTION }
+  end
+  local out = {}
+  for questID, record in pairs(d.quests) do
+    local id = tonumber(questID)
+    if id then
+      local use = usedBy[id]
+      local owner = use and owners[use.attune] or nil
+      local giver = givers[id]
+      out[#out + 1] = {
+        id = id, name = lang("Q1_" .. id, nil),
+        requires = type(record) == "table" and tonumber(record[1]) or nil,
+        groupSize = type(record) == "table" and tonumber(record[2]) or nil,
+        faction = owner and owner.faction or nil, attunement = owner and owner.name or nil, location = use and use.location or nil,
+        giver = type(giver) == "table" and { mapID = giver[1], x = giver[2], y = giver[3], label = giver[4] } or nil,
+        rewards = rewards[id],
+      }
+    end
+  end
+  return out
+end
+
 local function normalizeAttune(raw)
   return {
     id = tostring(raw.ID), name = tostring(raw.NAME or ("Attunement " .. tostring(raw.ID))),

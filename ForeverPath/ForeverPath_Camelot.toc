@@ -45,6 +45,7 @@ Providers\Client\InventoryProvider.lua
 Providers\Client\CharacterProvider.lua
 Providers\Learners\VendorProvider.lua
 Providers\Learners\TrainerProvider.lua
+Providers\Integrations\AtlasLoot.lua
 Providers\SourceProvider.lua
 Providers\Integrations\AttuneProvider.lua
 Providers\Integrations\ClassicDB.lua

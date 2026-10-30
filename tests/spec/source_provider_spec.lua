@@ -117,13 +117,40 @@ describe("SourceProvider", function()
     assert_eq(#sources, 5, "vendor + 3 loot entries (capped, duplicates merged) + class hint")
     assert_eq(sources[5].label, "Humanoid drops")
     assert_eq(SP.atlas.state, "ready")
-    assert_eq(Mock.atlasLoads[1], "AtlasLootClassic_DungeonsAndRaids")
+    for _, name in ipairs(Mock.atlasLoads) do
+      assert_true(name ~= "AtlasLootClassic_DungeonsAndRaids", "an already loaded module is read, not loaded again")
+    end
     local cape = SP.Sources(14149)
     assert_eq(#cape, 1)
     assert_eq(cape[1].boss, "Taragaman the Hungerer")
     assert_eq(cape[1].npcID, 11520)
     local lines = SP.Describe(14149)
     assert_match(lines[1], "^Drop: Dropped by Taragaman the Hungerer %- Ragefire %(AtlasLoot%)")
+  end)
+
+  it("loads AtlasLoot modules on demand and never stays loading when one cannot load", function()
+    Mock.InstallAtlasLoot({
+      AtlasLootClassic_DungeonsAndRaids = { Ragefire = { items = { { name = "Taragaman the Hungerer", npcID = 11520, [1] = { { 1, 14149 } } } } } },
+    }, { lazy = true })
+    assert_eq(SP.Sources(14149)[1].boss, "Taragaman the Hungerer", "loaded on first use")
+    assert_eq(Mock.atlasLoads[1], "AtlasLootClassic_DungeonsAndRaids")
+    assert_eq(SP.atlas.state, "ready")
+    -- A loader that throws: the index still reaches an end state.
+    ns = H.fresh()
+    H.login(ns)
+    SP = ns.SourceProvider
+    Mock.InstallAtlasLoot({}, { lazy = true })
+    _G.AtlasLoot.Loader.LoadModule = function() error("loader broke") end
+    assert_eq(#SP.AtlasSources(14149), 0)
+    assert_eq(SP.atlas.state, "ready", "every module answered (missing), so nothing is left loading")
+    -- No loader at all.
+    ns = H.fresh()
+    H.login(ns)
+    SP = ns.SourceProvider
+    Mock.InstallAtlasLoot({}, { lazy = true })
+    _G.AtlasLoot.Loader = nil
+    SP.AtlasSources(14149)
+    assert_eq(SP.atlas.state, "ready")
   end)
 
   it("works without AtlasLoot and feeds the planner's default route", function()

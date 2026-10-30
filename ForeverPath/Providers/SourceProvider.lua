@@ -38,9 +38,16 @@ SourceProvider.JOURNAL_GLOBAL = "ForeverDungeonJournal_NS"
 --   DB[dungeonName] = { bosses = { { name, npcID, trash, loot = { { itemID, name, slot, quality, mobName } } } },
 --                       quests = { { id, name, faction, rewardChoice, rewardItems = { { itemID, name, quality } } } } }
 --   SHARED_BY_BOSS[dungeonName][bossName] = { { itemID, name, slot, quality } }
-function SourceProvider.HasDungeonJournal()
+-- The journal's namespace, or nil when it is not installed. The one place
+-- that names its global; QuestProvider reads the journal through it too.
+function SourceProvider.Journal()
   local fdj = _G[SourceProvider.JOURNAL_GLOBAL]
-  return type(fdj) == "table" and type(fdj.DB) == "table"
+  if type(fdj) == "table" and type(fdj.DB) == "table" then return fdj end
+  return nil
+end
+
+function SourceProvider.HasDungeonJournal()
+  return SourceProvider.Journal() ~= nil
 end
 
 local function addJournalEntry(index, itemID, entry, cap)
@@ -66,7 +73,7 @@ end
 
 -- Walks the journal's tables into journal.index[itemID] = { entries }.
 function SourceProvider.IndexDungeonJournal()
-  local fdj = _G[SourceProvider.JOURNAL_GLOBAL]
+  local fdj = SourceProvider.Journal()
   local index, added = {}, 0
   local cap = SourceProvider.MAX_JOURNAL_ENTRIES
   for dungeonName, dungeon in pairs(fdj.DB) do
@@ -122,7 +129,7 @@ end
 function SourceProvider.JournalNames()
   if SourceProvider.journalNames then return SourceProvider.journalNames end
   local names = {}
-  local fdj = SourceProvider.HasDungeonJournal() and _G[SourceProvider.JOURNAL_GLOBAL] or nil
+  local fdj = SourceProvider.Journal()
   local function take(entry)
     if type(entry) == "table" and tonumber(entry[1]) and type(entry[2]) == "string" and entry[2] ~= "" then
       names[tonumber(entry[1])] = entry[2]
@@ -285,88 +292,70 @@ end
 -- AtlasLoot bridge
 ---------------------------------------------------------------------------
 function SourceProvider.HasAtlasLoot()
-  local atlas = _G.AtlasLoot
-  return type(atlas) == "table" and type(atlas.ItemDB) == "table" and type(atlas.ItemDB.Storage) == "table"
+  return ns.AtlasLoot.IsInstalled()
 end
 
-local function contentName(content)
-  local name = Util.SafeCall(content.GetName, content, true)
-  if type(name) == "string" then return name end
-  return type(content.name) == "string" and content.name or "?"
+-- One drop entry for itemID, at most MAX_ATLAS_ENTRIES per item, no
+-- duplicate boss in the same instance. Returns whether it was added.
+local function addAtlasEntry(index, itemID, instance, boss)
+  local list = index[itemID]
+  if not list then
+    list = {}
+    index[itemID] = list
+  end
+  if #list >= SourceProvider.MAX_ATLAS_ENTRIES then return false end
+  for _, existing in ipairs(list) do
+    if existing.boss == boss.name and existing.instance == instance then return false end
+  end
+  list[#list + 1] = { instance = instance, boss = boss.name or "?", npcID = boss.npcID }
+  return true
 end
 
--- Walks one loaded AtlasLoot module's storage into index[itemID] = { { instance, boss, npcID } }.
-function SourceProvider.IndexAtlasModule(moduleName)
-  local storage = _G.AtlasLoot.ItemDB.Storage[moduleName]
-  if type(storage) ~= "table" then return 0 end
+-- Walks one loaded AtlasLoot module into index[itemID] = { { instance, boss, npcID } }.
+function SourceProvider.IndexAtlasModule(storage)
   local index = SourceProvider.atlas.index
   local added = 0
-  for key, content in pairs(storage) do
-    if type(key) == "string" and key ~= "__atlaslootdata" and type(content) == "table" and type(content.items) == "table" then
-      local instance = contentName(content)
-      for _, boss in ipairs(content.items) do
-        if type(boss) == "table" then
-          for dif, items in pairs(boss) do
-            if type(dif) == "number" and type(items) == "table" then
-              for _, entry in ipairs(items) do
-                local itemID = type(entry) == "table" and entry[2] or nil
-                if type(itemID) == "number" and itemID > 0 then
-                  local list = index[itemID]
-                  if not list then
-                    list = {}
-                    index[itemID] = list
-                  end
-                  local duplicate = false
-                  for _, existing in ipairs(list) do
-                    if existing.boss == boss.name and existing.instance == instance then duplicate = true end
-                  end
-                  if not duplicate and #list < SourceProvider.MAX_ATLAS_ENTRIES then
-                    list[#list + 1] = { instance = instance, boss = boss.name or "?", npcID = boss.npcID }
-                    added = added + 1
-                  end
-                end
-              end
-            end
-          end
-        end
+  for _, content in ns.AtlasLoot.Contents(storage) do
+    local instance = ns.AtlasLoot.ContentName(content)
+    for _, boss in ipairs(content.items) do
+      for _, itemID in ipairs(ns.AtlasLoot.ItemIDs(boss)) do
+        if addAtlasEntry(index, itemID, instance, boss) then added = added + 1 end
       end
     end
   end
   return added
 end
 
--- Loads the AtlasLoot loot modules on demand and indexes them once per session.
+-- Loads the AtlasLoot loot modules on demand and indexes them once per
+-- session. The state ends "ready" once every module is indexed or known to
+-- be missing; it stays "loading" only while AtlasLoot is still loading one.
 function SourceProvider.BuildAtlasIndex()
   local atlas = SourceProvider.atlas
-  if atlas.state ~= "idle" or not SourceProvider.HasAtlasLoot() then
+  if atlas.state ~= "idle" or not ns.AtlasLoot.IsInstalled() then
     return atlas.state
   end
   atlas.state = "loading"
   local pending = #atlas.modules
-  local function finish(moduleName)
-    local ok, added = Log.Capture(SourceProvider.IndexAtlasModule, moduleName)
-    if ok then
-      Log.Debug("Indexed AtlasLoot module %s: %d loot entries", moduleName, added)
-    else
-      Log.Error("AtlasLoot index failed for %s: %s", moduleName, tostring(added))
-    end
+  local function done()
     pending = pending - 1
     if pending <= 0 then
       atlas.state = "ready"
       Events.Fire("FP_SOURCES_UPDATED", "atlasloot")
     end
   end
-  local loader = _G.AtlasLoot.Loader
   for _, moduleName in ipairs(atlas.modules) do
-    local result
-    if type(loader) == "table" and type(loader.LoadModule) == "function" then
-      result = Util.SafeCall(loader.LoadModule, loader, moduleName, finish, true)
-    end
-    if result ~= true and result ~= "InCombat" and type(_G.AtlasLoot.ItemDB.Storage[moduleName]) == "table" then
-      -- Already loaded (LoadModule returned a state) or loader unavailable: index what is there.
-      finish(moduleName)
-    elseif result ~= true and result ~= "InCombat" and result ~= nil then
-      finish(moduleName) -- module missing/disabled: nothing to index, but do not block
+    local state = ns.AtlasLoot.Load(moduleName, function(storage)
+      local ok, added = Log.Capture(SourceProvider.IndexAtlasModule, storage)
+      if ok then
+        Log.Debug("Indexed AtlasLoot module %s: %d loot entries", moduleName, added)
+      else
+        Log.Error("AtlasLoot index failed for %s: %s", moduleName, tostring(added))
+      end
+      done()
+    end)
+    if state == "missing" then
+      Log.Debug("AtlasLoot module %s is not available", moduleName)
+      done()
     end
   end
   return atlas.state
