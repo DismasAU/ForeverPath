@@ -974,6 +974,69 @@ function GoalService.Equipment(source, goals, views)
   return analysis
 end
 
+---------------------------------------------------------------------------
+-- Cross-goal summaries the screens render
+---------------------------------------------------------------------------
+-- What the active goals still need beyond this character's own bags and
+-- bank, per item: needs[itemID] = units, and order (most needed first).
+-- Alts' snapshots are added back, so the answer is the same whether they
+-- count as owned or not. Train and quest steps carry no item and are left out.
+function GoalService.Needs()
+  local needs, order = {}, {}
+  for _, view in pairs(GoalService.views) do
+    if view.goal and view.goal.status == GoalModel.Statuses.ACTIVE and view.tree then
+      for _, node in pairs(view.tree.byKey) do
+        local short = node.depth > 0 and node.itemID and (node.missing + (node.ownedAlts or 0)) or 0
+        if short > 0 then
+          if not needs[node.itemID] then order[#order + 1] = node.itemID end
+          needs[node.itemID] = (needs[node.itemID] or 0) + short
+        end
+      end
+    end
+  end
+  table.sort(order, function(a, b)
+    if needs[a] ~= needs[b] then return needs[a] > needs[b] end
+    return a < b
+  end)
+  return needs, order
+end
+
+-- The Dashboard overview (Domain/Overview) over the active goals' views.
+function GoalService.Overview()
+  local entries = {}
+  for _, goal in ipairs(GoalService.List({ status = GoalModel.Statuses.ACTIVE })) do
+    entries[#entries + 1] = { goal = goal, view = GoalService.views[goal.id] }
+  end
+  return ns.Overview.Build(entries, {
+    nameOf = ItemProvider.GetName,
+    craftableBy = function(itemID)
+      for _, candidate in ipairs(ns.ProfessionProvider.FindRecipesForItem(itemID)) do
+        if candidate.learned then return candidate.recipe.professionName end
+      end
+      return nil
+    end,
+    completedCount = GoalService.Count({ status = GoalModel.Statuses.COMPLETED }),
+  })
+end
+
+-- Prices for a material list ({ { itemID, missing } }): byItem[itemID] =
+-- priceInfo, and the cost of buying everything missing (buyTotal) over the
+-- priced rows, with how many missing rows have no price (unpriced).
+function GoalService.PriceMaterials(materials)
+  local result = { byItem = {}, buyTotal = 0, priced = 0, unpriced = 0 }
+  for _, material in ipairs(materials) do
+    local price = ns.PriceProvider.GetPrice(material.itemID)
+    result.byItem[material.itemID] = price
+    if price then
+      result.priced = result.priced + 1
+      if material.missing > 0 then result.buyTotal = result.buyTotal + price.copper * material.missing end
+    elseif material.missing > 0 then
+      result.unpriced = result.unpriced + 1
+    end
+  end
+  return result
+end
+
 -- Tracked, open goals in priority order (drives the tracker and header pill).
 function GoalService.TrackedGoals()
   return GoalService.List({ open = true, tracked = true })

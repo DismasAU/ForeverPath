@@ -335,11 +335,9 @@ local function Create(parent)
     goalsCell.sub:SetText(doneLine)
 
     -- Active goals
-    local entries = {}
     local activeGoals = ns.GoalService.List({ status = ns.GoalModel.Statuses.ACTIVE })
     for index, goal in ipairs(activeGoals) do
       local view = ns.GoalService.Views()[goal.id]
-      entries[#entries + 1] = { goal = goal, view = view }
       local row = goalsPanel.pool:Get(index)
       local item = view and view.item or {}
       row.goalID = goal.id
@@ -389,17 +387,7 @@ local function Create(parent)
     goalsScroll:SetContentHeight(#activeGoals * GOAL_ROW)
     if #activeGoals == 0 then goalsPanel.empty:Show() else goalsPanel.empty:Hide() end
 
-    -- Overview
-    local overview = ns.Overview.Build(entries, {
-      nameOf = ns.ItemProvider.GetName,
-      craftableBy = function(itemID)
-        for _, candidate in ipairs(ns.ProfessionProvider.FindRecipesForItem(itemID)) do
-          if candidate.learned then return candidate.recipe.professionName end
-        end
-        return nil
-      end,
-      completedCount = completed,
-    })
+    local overview = ns.GoalService.Overview()
     for index, step in ipairs(overview.nextSteps) do
       local row = recommended.pool:Get(index)
       row.title:SetText(step.title)

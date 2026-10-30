@@ -384,7 +384,7 @@ end
 
 -- Fills the material rows. Returns buyTotal, pricedRows, unpricedRows.
 local function renderMaterials(screen, materials)
-  local buyTotal, pricedRows, unpricedRows = 0, 0, 0
+  local prices = ns.GoalService.PriceMaterials(materials)
   for index, material in ipairs(materials) do
     local row = screen.pool:Get(index)
     local info = ns.ItemProvider.GetItem(material.itemID)
@@ -411,16 +411,13 @@ local function renderMaterials(screen, materials)
       row.missing:SetText("")
       row.check:Show()
     end
-    local price = ns.PriceProvider.GetPrice(material.itemID)
+    local price = prices.byItem[material.itemID]
     if price then
       row.price:SetText(Widgets.Money(price.copper, true))
       row.subtotal:SetText(material.missing > 0 and Widgets.Money(price.copper * material.missing, true) or Theme.ColorText("text3", "-"))
-      if material.missing > 0 then buyTotal = buyTotal + price.copper * material.missing end
-      pricedRows = pricedRows + 1
     else
       row.price:SetText(Theme.ColorText("text3", "?"))
       row.subtotal:SetText(Theme.ColorText("text3", material.missing > 0 and "?" or "-"))
-      if material.missing > 0 then unpricedRows = unpricedRows + 1 end
     end
     row:SetTags(ns.SourceProvider.MaterialTags(material))
     if material.missing > 0 and material.owned > 0 then
@@ -433,7 +430,7 @@ local function renderMaterials(screen, materials)
   end
   screen.pool:HideFrom(#materials + 1)
   screen.scroll:SetContentHeight(#materials * ROW)
-  return buyTotal, pricedRows, unpricedRows
+  return prices.buyTotal, prices.priced, prices.unpriced
 end
 
 -- The footer: CraftWise's route and the cost of buying what is missing.

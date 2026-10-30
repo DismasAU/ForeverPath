@@ -42,32 +42,6 @@ local function ageText(record)
 end
 
 ---------------------------------------------------------------------------
--- Needs of the current character's active goals, from the planner views.
----------------------------------------------------------------------------
-local function currentNeeds()
-  local needs, order = {}, {}
-  for _, view in pairs(ns.GoalService.Views()) do
-    if view.goal and view.goal.status == ns.GoalModel.Statuses.ACTIVE and view.tree then
-      for _, node in pairs(view.tree.byKey) do
-        -- What this character cannot cover from its own bags and bank, so
-        -- the banner reads the same whether alts are counted or not. Train
-        -- and quest steps carry no item, so no alt can hold them.
-        local short = node.depth > 0 and node.itemID and (node.missing + (node.ownedAlts or 0)) or 0
-        if short > 0 then
-          if not needs[node.itemID] then order[#order + 1] = node.itemID end
-          needs[node.itemID] = (needs[node.itemID] or 0) + short
-        end
-      end
-    end
-  end
-  table.sort(order, function(a, b)
-    if needs[a] ~= needs[b] then return needs[a] > needs[b] end
-    return a < b
-  end)
-  return needs, order
-end
-
----------------------------------------------------------------------------
 -- Card
 ---------------------------------------------------------------------------
 local function sectionLabel(parent, text)
@@ -410,7 +384,7 @@ local function Create(parent)
     scope:Select(includeAlts and "account" or "character")
     scopeHint:SetText(includeAlts and "Alts' snapshots count as owned in every goal" or "Alts are shown for information only")
 
-    local needs, needOrder = currentNeeds()
+    local needs, needOrder = ns.GoalService.Needs()
     local entries = Characters.List()
     self.cardCount = #entries
     -- Every card shows the same number of profession rows so sections line up.
