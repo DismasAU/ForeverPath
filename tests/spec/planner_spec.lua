@@ -276,6 +276,91 @@ describe("Planner", function()
   end)
 
 
+  -- Profession-goal doubles: one Tailoring recipe in the catalogue, the
+  -- character's professions, and whether the spell is learned.
+  local crusader = { recipeID = 20034, name = "Enchant Weapon - Crusader", professionName = "Enchanting", professionID = 333, enchant = true,
+    skill = { min = 300 }, reagents = { { itemID = 14344, quantity = 4 } } }
+  local function professionDeps(opts)
+    opts = opts or {}
+    local d = deps()
+    d.catalogue = {
+      IsAvailable = function() return true end,
+      Lookup = function() return nil end,
+      Get = function(id) if id == recipe.recipeID then return recipe end if id == crusader.recipeID then return crusader end end,
+      ProfessionID = function(name) return name == "Tailoring" and 197 or nil end,
+    }
+    d.profession.IsLearned = function() return opts.learned == true end
+    d.profession.GetRecipe = function(id) if id == recipe.recipeID then return recipe, true end end
+    d.profession.GetCharacterProfessions = function()
+      return opts.professions or { { name = "Tailoring", skillLevel = 150, maxSkillLevel = 150, skillLine = 197 } }
+    end
+    return d
+  end
+
+  it("evaluates learn-recipe goals from the catalogue and the learned flag", function()
+    local learnGoal = { id = "l", type = "LEARN_RECIPE", status = "ACTIVE", target = { spellID = recipe.recipeID } }
+    local view = Planner.Evaluate(learnGoal, professionDeps({ learned = true }))
+    assert_eq(view.readiness, Readiness.OK)
+    assert_true(view.learn.learned)
+    assert_eq(view.nextStep, "Mark the goal complete")
+    view = Planner.Evaluate({ id = "l2", type = "LEARN_RECIPE", status = "ACTIVE", target = { spellID = 1 } }, professionDeps())
+    assert_eq(view.readiness, Readiness.ITEM_INVALID, "a spell neither the catalogue nor a recorded window knows")
+  end)
+
+  it("evaluates enchant goals: casts done, and an item recipe refused", function()
+    local done = Planner.Evaluate({ id = "e", type = "APPLY_ENCHANT", status = "ACTIVE", target = { spellID = crusader.recipeID, quantity = 2, casts = 2 } }, professionDeps())
+    assert_eq(done.enchant.remaining, 0)
+    assert_match(done.message, "cast 2 times")
+    local wrong = Planner.Evaluate({ id = "e2", type = "APPLY_ENCHANT", status = "ACTIVE", target = { spellID = recipe.recipeID, quantity = 1 } }, professionDeps())
+    assert_eq(wrong.readiness, Readiness.ITEM_INVALID)
+    assert_match(wrong.message, "makes an item")
+  end)
+
+  it("evaluates reach-skill goals from the character's professions", function()
+    local reached = Planner.Evaluate({ id = "s", type = "REACH_SKILL", status = "ACTIVE", target = { professionName = "Tailoring", rank = 150, startRank = 75 } }, professionDeps())
+    assert_true(reached.skill.reached)
+    assert_eq(reached.progress.percent, 100)
+    local missing = Planner.Evaluate({ id = "s2", type = "REACH_SKILL", status = "ACTIVE", target = { professionName = "Mining", rank = 75 } }, professionDeps())
+    assert_eq(missing.readiness, Readiness.PROFESSION_MISSING)
+  end)
+
+  it("evaluates quest goals through the quest provider double", function()
+    local questGoal = { id = "q", type = "COMPLETE_QUEST", status = "ACTIVE", target = { questID = 5, name = "A Quest" } }
+    local d = deps({ quest = { IsAvailable = function() return false end } })
+    assert_eq(Planner.Evaluate(questGoal, d).readiness, Readiness.PROVIDER_UNAVAILABLE)
+    local completed = { completed = true, inLog = false, objectives = {} }
+    d = deps({ quest = {
+      IsAvailable = function() return true end, ICON = 1, ICON_READY = 2,
+      Get = function() return { id = 5, name = "A Quest", level = 10 } end,
+      Name = function() return "A Quest" end,
+      Chain = function() local step = { questID = 5, state = completed } return { step }, nil end,
+      PlayerLevel = function() return 20 end,
+      StateLabel = function() return "Completed", "ok" end,
+      QuestlineItems = function() return {} end,
+    } })
+    local view = Planner.Evaluate(questGoal, d)
+    assert_eq(view.progress.percent, 100)
+    assert_eq(view.nextStep, "Mark the goal complete")
+  end)
+
+  it("evaluates reputation goals: the next quest that raises it, or reached", function()
+    local repGoal = { id = "r", type = "REACH_REPUTATION", status = "ACTIVE", target = { factionID = 72, standing = 6, startValue = 0, name = "Stormwind" } }
+    local record = { name = "Stormwind", factionID = 72, value = 3000, standingLabel = "Friendly", into = 0, span = 6000 }
+    local reached = false
+    local d = deps({ reputation = {
+      IsAvailable = function() return true end, ICON = 1,
+      Progress = function() return { record = record, reached = reached, percent = reached and 100 or 33, start = 0, targetMin = 9000, remaining = 6000, targetLabel = "Honored" } end,
+      QuestsFor = function() return { { name = "Report to the Keep", amount = 250, state = { completed = false } } } end,
+      Rewards = function() return {} end,
+    } })
+    local view = Planner.Evaluate(repGoal, d)
+    assert_eq(view.nextStep, "Report to the Keep (+250)")
+    assert_match(view.message, "^6000 more reputation to Honored with Stormwind")
+    reached = true
+    view = Planner.Evaluate(repGoal, d)
+    assert_eq(view.nextStep, "Mark the goal complete")
+  end)
+
   it("evaluates attunement goals through the Attune bridge", function()
     local attuneGoal = { id = "a", type = "COMPLETE_ATTUNEMENT", target = { attuneID = "40", name = "Onyxia's Lair", icon = "ony" } }
     local view = Planner.Evaluate(attuneGoal, deps({ attune = { IsAvailable = function() return false end } }))

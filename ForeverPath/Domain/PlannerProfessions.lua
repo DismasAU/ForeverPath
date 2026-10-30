@@ -95,20 +95,20 @@ Planner.TRAIN_WINDOW = 25
 function Planner.Trainable(professionName, window, deps)
   deps = deps or Planner.DefaultDeps()
   window = window or Planner.TRAIN_WINDOW
-  local data = deps.catalogue
+  local catalogue = deps.catalogue
   local profession = deps.profession
   local out = {}
-  if not (data and data.ForProfession and profession and profession.GetCharacterProfessions) then return out end
+  if not (catalogue and catalogue.ForProfession and profession and profession.GetCharacterProfessions) then return out end
   local list = Log.Try(profession.GetCharacterProfessions)
   local scanned = {}
   for _, p in ipairs(Log.Try(profession.GetScannedProfessions) or {}) do scanned[p.name] = true end
   for _, p in ipairs(list or {}) do
     if not professionName or string.lower(p.name or "") == string.lower(professionName) then
-      local skillLine = p.skillLine or (data.ProfessionID and data.ProfessionID(p.name))
+      local skillLine = p.skillLine or (catalogue.ProfessionID and catalogue.ProfessionID(p.name))
       local current = p.skillLevel or 0
       local entry = { profession = p.name, skill = current, max = p.maxSkillLevel or 0, scanned = scanned[p.name] == true, now = {}, soon = {}, cost = 0 }
-      for _, spellID in ipairs(skillLine and Log.Try(data.ForProfession, skillLine) or {}) do
-        local recipe = Log.Try(data.Get, spellID)
+      for _, spellID in ipairs(skillLine and Log.Try(catalogue.ForProfession, skillLine) or {}) do
+        local recipe = Log.Try(catalogue.Get, spellID)
         local trainer = recipe and recipe.trainer
         if trainer and not isLearned(deps, spellID) then
           local rank = tonumber(trainer.rank) or (recipe.skill and recipe.skill.min) or 0

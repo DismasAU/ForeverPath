@@ -1,16 +1,28 @@
 -- Evaluates a goal against the providers and produces a view model for the UI.
 --
--- Providers are injected (deps table) so the planner is testable with mocks:
---   deps.item        GetItem(itemID) -> { itemID, exists, loaded, name, link, icon, quality }
---   deps.profession  IsAvailable(), HasScanData(), GetScannedProfessions(),
---                    FindRecipesForItem(itemID) -> { { recipe = r, learned = bool }, ... },
+-- Providers are injected (deps table) so the planner is testable with
+-- doubles; App/PlannerDeps.lua wires the real ones. What the planners
+-- (Planner*.lua) call on each:
+--   deps.item        GetItem(itemID) -> { itemID, exists, loaded, name, link, icon, quality }, BindType(itemID)
+--   deps.profession  IsAvailable(), HasScanData(), IsLearned(spellID), GetScannedProfessions(),
+--                    GetCharacterProfessions(), FindRecipesForItem(itemID) -> { { recipe, learned } },
 --                    GetRecipe(recipeID, refresh) -> recipe
---   deps.inventory   GetCounts(itemID) -> { bags, bank, bankSource, bankScannedAt }
---   deps.catalogue   the recipe catalogue (Data/Recipes.lua): Lookup(itemID) -> static recipe hints, Get, ForProfession, Sources ...
---   deps.settings    { includeBank = bool }
+--   deps.inventory   GetCounts(itemID) -> { bags, bank, alts, bankSource, bankScannedAt }
+--   deps.catalogue   the recipe catalogue (Data/Recipes.lua): IsAvailable(), Lookup(itemID), Get(spellID),
+--                    GetCombine(spellID), ForProfession(skillLine), ProfessionID(name), Sources(itemID),
+--                    IsSoulbound(itemID), ItemBind(itemID)
+--   deps.characters  Sources(itemID) -> alt hints, WhoKnows(spellID), WithProfession(name, id)
+--   deps.sources     Sources(itemID) -> vendor / drop / quest / gather hints, IsRawMaterial(itemID)
+--   deps.price       GetPrice(itemID) -> priceInfo (skill plans rank recipes by cost)
+--   deps.attune      IsAvailable(), Progress(attuneID), StepText(step)          (attunement goals)
+--   deps.quest       IsAvailable(), Get, Name, State, StateLabel, ObjectiveText, Giver, Turnin,
+--                    Waypoint, RequiredItems, Questline, Chain, QuestsRewarding, Faction,
+--                    PlayerLevel, ICON, ICON_READY                              (quest goals, reward chains)
+--   deps.reputation  IsAvailable(), Progress(...), QuestsFor(name, id), Rewards(id), ICON   (reputation goals)
+--   deps.settings    { includeBank = bool, includeAlts = bool }
 --   deps.ledger      Allocation ledger shared across goals (EvaluateAll creates one)
---   deps.characters  Sources(itemID) -> alt hints (optional)
---   deps.sources     Sources(itemID) -> vendor / drop / quest / gather hints (optional)
+-- Every dep may be missing in a test double; the planners treat a missing
+-- provider as "no data" rather than raising.
 --
 -- CRAFT_ITEM goals plan the recipe. OBTAIN_ITEM goals, and crafting goals
 -- whose item has no recorded recipe but at least one known source, plan the
@@ -372,10 +384,10 @@ end
 -- 1 bind on pickup, 2 on equip, 3 on use, 4 quest item; nil when unknown.
 -- The client's answer (deps.item) first, then the catalogue's (deps.catalogue).
 function Planner.BindType(itemID, deps)
-  local item, data = deps and deps.item, deps and deps.catalogue
+  local item, catalogue = deps and deps.item, deps and deps.catalogue
   local bind = item and item.BindType and Log.Try(item.BindType, itemID)
   if bind then return bind end
-  return data and data.ItemBind and data.ItemBind(itemID) or nil
+  return catalogue and catalogue.ItemBind and catalogue.ItemBind(itemID) or nil
 end
 
 -- Source hints for one item through the same finders the resolver uses.
