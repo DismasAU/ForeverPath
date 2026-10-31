@@ -242,12 +242,14 @@ describe("Sharing learned data", function()
     assert_nil((ns.Codec.Deserialize("n1e999;")), "infinity is refused like the writer refuses it")
     ok = ns.Share.Import(ns.Codec.Pack({ v = 1, author = "0123456789abcdef", label = "Someone",
       lootSeen = { ["c:525"] = { name = "Mangy Wolf", looted = -50, items = { [LINEN] = { times = 1e12, quantity = 2 } } } },
-      vendors = { [THREAD] = { Tharynn = { price = -1, stack = 1 } } } }))
+      vendors = { [THREAD] = { Tharynn = { price = -1, stack = 1 } }, [-7] = { Bad = { stack = 1 } }, [1e12] = { Huge = { stack = 1 } } } }))
     assert_true(ok)
     local entry = ns.db.imported["0123456789abcdef"]
     assert_nil(entry.lootSeen["c:525"].looted, "a negative count is dropped")
     assert_deep_eq(entry.lootSeen["c:525"].items[LINEN], { quantity = 2 }, "a huge count is dropped")
     assert_deep_eq(entry.vendors[THREAD], { Tharynn = { stack = 1 } })
+    assert_nil(entry.vendors[-7], "a negative key is dropped")
+    assert_nil(entry.vendors[1e12], "a key out of range is dropped")
     -- An import stored by an older version is cleaned again on load.
     local old = H.fresh()
     _G.ForeverPathDB = { schemaVersion = 2, settings = {}, imported = {

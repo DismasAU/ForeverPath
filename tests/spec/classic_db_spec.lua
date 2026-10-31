@@ -142,6 +142,18 @@ describe("ClassicDB (generated data)", function()
     end
   end)
 
+  it("loads the data addon on first use, not at login", function()
+    local ns = H.fresh()
+    local calls = 0
+    Mock.addOnLoaders.ForeverPath_ClassicDB = function() calls = calls + 1; ns.ClassicData = fixture() end
+    H.login(ns)
+    assert_eq(calls, 0, "login leaves the load-on-demand addon alone")
+    assert_true(ns.ClassicDBBridge.IsAvailable())
+    assert_eq(calls, 1)
+    ns.ClassicDBBridge.Quest(102)
+    assert_eq(calls, 1, "loaded once")
+  end)
+
   it("says when the data addon is missing", function()
     local ns = H.fresh()
     H.login(ns)

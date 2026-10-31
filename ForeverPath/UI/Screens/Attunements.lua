@@ -219,8 +219,8 @@ local function Create(parent)
   end
 
   function screen:Refresh()
-    local AP = ns.AttuneBridge
-    if not AP.IsAvailable() then
+    local AttuneBridge = ns.AttuneBridge
+    if not AttuneBridge.IsAvailable() then
       picker:Hide()
       addGoal:Hide()
       showContent(false)
@@ -237,8 +237,8 @@ local function Create(parent)
     if goalAttune and (goal.id ~= self.lastGoalID or not attuneID) then attuneID = goalAttune end
     self.lastGoalID = goal and goal.id or nil
     attuneID = attuneID or ns.chardb.ui.attunement
-    if not attuneID or not AP.Get(attuneID) then
-      local first = AP.List()[1]
+    if not attuneID or not AttuneBridge.Get(attuneID) then
+      local first = AttuneBridge.List()[1]
       attuneID = first and first.id or nil
     end
     self.attuneID = attuneID
@@ -249,7 +249,7 @@ local function Create(parent)
       return
     end
     showContent(true)
-    local progress = AP.Progress(attuneID)
+    local progress = AttuneBridge.Progress(attuneID)
     self.progress = progress
     self:RefreshHeader(progress)
     self:RefreshTimeline(progress)

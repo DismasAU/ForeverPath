@@ -106,7 +106,7 @@ Share.MAX_NUMBER = 2147483647
 
 -- Bumped whenever sanitizing gets stricter; stored imports made under an
 -- older version are cleaned again on load (Share.Init).
-Share.SANITIZER = 2
+Share.SANITIZER = 3
 
 -- The shape AuthorToken makes: 16 hex digits.
 local AUTHOR_PATTERN = "^" .. string.rep("%x", 16) .. "$"
@@ -132,7 +132,7 @@ local function sanitize(value, spec)
   local out = {}
   if spec.each then
     for key, item in pairs(value) do
-      if spec.keys == "number" then key = tonumber(key)
+      if spec.keys == "number" then key = sanitize(key, "number")
       elseif type(key) ~= "string" or not key:match(spec.keys) then key = nil
       else key = Share.CleanString(key) end
       if key ~= nil then out[key] = sanitize(item, spec.each) end

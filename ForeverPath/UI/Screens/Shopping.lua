@@ -103,7 +103,7 @@ local function Create(parent)
     local chip
     chip = Widgets.Checkbox(header, "", function(checked)
       if chip.goalID then
-        ns.GoalService.SetInShopping(chip.goalID, checked)
+        ns.UI.MainFrame.ReportFailure(ns.GoalService.SetInShopping(chip.goalID, checked))
         screen:Refresh()
       end
     end)

@@ -228,8 +228,6 @@ rule(function(c)
   if not view then return false end
   if view.readiness == Readiness.RECIPES_NOT_SCANNED then
     return true, { title = "Open your profession windows", detail = "ForeverPath records recipes while a window is open", badge = "Scan", badgeKind = "partial" }
-  elseif view.readiness == Readiness.RECIPE_NOT_LEARNED and view.recipe then
-    return true, { title = string.format("Learn %s", view.recipe.name or "the recipe"), detail = string.format("%s - needed for %s", view.recipe.professionName or "Profession", goalName), badge = "Recipe", badgeKind = "partial" }
   elseif view.readiness == Readiness.RECIPE_NOT_FOUND then
     return true, { title = string.format("Find a recipe for %s", goalName), detail = "No recorded profession makes this item", badge = "Unknown", badgeKind = "missing" }
   end

@@ -51,8 +51,9 @@ function Ledger:Available(itemID, counts, includeBank, includeAlts)
   local used = self:Used(itemID)
   local bags = math.max(0, c.bags - used)
   local spill = math.max(0, used - c.bags)
-  local bank = c.bank and math.max(0, c.bank - spill) or nil
-  local bankSpill = c.bank and math.max(0, spill - c.bank) or spill
+  local bankCounts = includeBank ~= false and c.bank ~= nil
+  local bank = c.bank and (bankCounts and math.max(0, c.bank - spill) or c.bank) or nil
+  local bankSpill = bankCounts and math.max(0, spill - c.bank) or spill
   local alts = c.alts and math.max(0, c.alts - bankSpill) or nil
   local total = bags
   if includeBank ~= false and bank then

@@ -599,11 +599,11 @@ function GoalService.Suggest(kind, text, limit)
     end
   end
   local function attunements(n)
-    local AP = ns.AttuneBridge
-    if not AP.IsAvailable() then return end
+    local AttuneBridge = ns.AttuneBridge
+    if not AttuneBridge.IsAvailable() then return end
     local needle = string.lower(text)
     local count = 0
-    for _, attune in ipairs(AP.List()) do
+    for _, attune in ipairs(AttuneBridge.List()) do
       if count < n and string.find(string.lower(attune.name or ""), needle, 1, true) then
         count = count + 1
         local id = attune.id

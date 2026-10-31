@@ -249,17 +249,24 @@ local function resolveOrComplain(rest)
   return goal
 end
 
+-- Prints why a GoalService write failed (its false/nil, reason); true when
+-- it succeeded.
+local function succeeded(ok, reason)
+  if not ok then Log.Print("Could not do that: %s", tostring(reason or "unknown error")) end
+  return ok and true or false
+end
+
 function handlers.remove(rest)
   local goal = resolveOrComplain(rest)
   if not goal then return end
-  ns.GoalService.Remove(goal.id)
+  if not succeeded(ns.GoalService.Remove(goal.id)) then return end
   Log.Print("Removed %s", ns.GoalService.Title(goal))
 end
 
 function handlers.select(rest)
   local goal = resolveOrComplain(rest)
   if not goal then return end
-  ns.GoalService.Select(goal.id)
+  if not succeeded(ns.GoalService.Select(goal.id)) then return end
   Log.Print("Selected %s", ns.GoalService.Title(goal))
   if ns.UI.MainFrame.IsShown() then
     ns.UI.MainFrame.ShowScreen("crafting")
@@ -270,7 +277,7 @@ local function setStatusCommand(status, verb)
   return function(rest)
       local goal = resolveOrComplain(rest)
     if not goal then return end
-    ns.GoalService.SetStatus(goal.id, status)
+    if not succeeded(ns.GoalService.SetStatus(goal.id, status)) then return end
     Log.Print("%s %s", verb, ns.GoalService.Title(goal))
   end
 end
@@ -480,18 +487,18 @@ function handlers.prices(rest)
 end
 
 function handlers.attunements()
-  local AP = ns.AttuneBridge
-  if not AP.IsAvailable() then
+  local AttuneBridge = ns.AttuneBridge
+  if not AttuneBridge.IsAvailable() then
     Log.Print("Attune is not installed; attunement goals need it.")
     return
   end
-  local list = AP.List()
-  Log.Print("%s:", AP.StatusLine())
+  local list = AttuneBridge.List()
+  Log.Print("%s:", AttuneBridge.StatusLine())
   for _, attune in ipairs(list) do
-    local p = AP.Progress(attune.id)
+    local p = AttuneBridge.Progress(attune.id)
     local goal = ns.GoalService.FindAttunementGoal(attune.id)
     Log.Output(string.format("  %s%s - %d%% (%d of %d steps)%s%s", attune.name, attune.levels and (" [" .. attune.levels .. "]") or "",
-      p.percent, p.done, p.total, p.next and (" - next: " .. AP.StepText(p.next)) or "", goal and " [goal]" or ""))
+      p.percent, p.done, p.total, p.next and (" - next: " .. AttuneBridge.StepText(p.next)) or "", goal and " [goal]" or ""))
   end
 end
 
@@ -549,7 +556,8 @@ function handlers.snapshot()
 end
 
 function handlers.alts()
-  Log.Print("%s", ns.GoalService.SetIncludeAlts(not ns.GoalService.IncludesAlts()))
+  local message, reason = ns.GoalService.SetIncludeAlts(not ns.GoalService.IncludesAlts())
+  Log.Print("%s", message or reason)
 end
 
 function handlers.tracker()

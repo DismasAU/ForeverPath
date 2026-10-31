@@ -62,15 +62,26 @@ local function formatOf(d)
   return type(d.meta) == "table" and d.meta.format or nil
 end
 
-local function data()
+local function loaded()
   local d = ns.ClassicData
   if type(d) == "table" and type(d.quests) == "table" and formatOf(d) == ClassicDBBridge.FORMAT then return d end
   return nil
 end
 
--- Loads the data addon once (it is load-on-demand). True when the data is there.
+-- The data, loading the addon on first use (it is load-on-demand, so a
+-- session that never needs classic facts never loads it).
+local function data()
+  local d = loaded()
+  if d or ClassicDBBridge.loadTried then return d end
+  ClassicDBBridge.Load()
+  return loaded()
+end
+
+-- Loads the data addon once. True when the data is there. Indexes built
+-- before the load (and recipes decoded without its trainers and vendors)
+-- are dropped.
 function ClassicDBBridge.Load()
-  if data() then return true end
+  if loaded() then return true end
   if not ClassicDBBridge.loadTried then
     ClassicDBBridge.loadTried = true
     if Compat.LoadAddOn then
@@ -88,8 +99,9 @@ function ClassicDBBridge.Load()
         tostring(formatOf(d) or "unknown"), ClassicDBBridge.FORMAT)
       Log.Debug("%s ignored: %s", ClassicDBBridge.ADDON, ClassicDBBridge.loadError)
     end
+    if loaded() then ClassicDBBridge.Reset() end
   end
-  return data() ~= nil
+  return loaded() ~= nil
 end
 
 function ClassicDBBridge.IsAvailable()
@@ -654,9 +666,7 @@ function ClassicDBBridge.StatusLine()
   return string.format("Classic data: %d quests, %d NPCs, %d objects%s from %s %s.", quests, npcs, objects, extra, meta.source or "CMaNGOS classic-db", string.sub(tostring(meta.commit or "?"), 1, 8))
 end
 
+-- Nothing is loaded here: the data addon loads on first use (data above).
 function ClassicDBBridge.Init()
-  local loaded = ClassicDBBridge.Load()
   ClassicDBBridge.Reset()
-  Log.Debug("%s", ClassicDBBridge.StatusLine())
-  return loaded
 end

@@ -224,7 +224,7 @@ local function Create(parent)
   craftwise.dot, craftwise.scan = cwDot, cwScan
   local compare = Widgets.Button(craftwise.body, "Compare", { width = 90, onClick = function()
     if craftwise.goalID then
-      ns.GoalService.Select(craftwise.goalID)
+      ns.UI.MainFrame.ReportFailure(ns.GoalService.Select(craftwise.goalID))
       ns.UI.MainFrame.ShowScreen("crafting", nil, "craftwise")
     end
   end })

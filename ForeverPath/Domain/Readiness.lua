@@ -10,13 +10,12 @@ local _, ns = ...
 --   PROVIDER_UNAVAILABLE  required API missing on this client
 --   RECIPES_NOT_SCANNED   no profession data captured yet
 --   RECIPE_NOT_FOUND      scanned data has no recipe for the item
---   RECIPE_NOT_LEARNED    a recipe exists, this character lacks it
 --   RECIPE_DATA_INVALID   cached recipe failed validation
 --   PROFESSION_MISSING    a skill goal for a profession this character lacks
 -- A misspelt name raises (Util.StrictNames) instead of reading as nil.
 local Readiness = ns.Util.StrictNames({
   "OK", "UNSUPPORTED_GOAL", "ITEM_INVALID", "ITEM_UNAVAILABLE", "PROVIDER_UNAVAILABLE",
-  "RECIPES_NOT_SCANNED", "RECIPE_NOT_FOUND", "RECIPE_NOT_LEARNED", "RECIPE_DATA_INVALID",
+  "RECIPES_NOT_SCANNED", "RECIPE_NOT_FOUND", "RECIPE_DATA_INVALID",
   "PROFESSION_MISSING",
 }, "readiness")
 ns.Readiness = Readiness
@@ -30,7 +29,6 @@ local LABELS = {
   [Readiness.PROVIDER_UNAVAILABLE] = "API unavailable",
   [Readiness.RECIPES_NOT_SCANNED] = "Recipes not scanned",
   [Readiness.RECIPE_NOT_FOUND] = "No known recipe",
-  [Readiness.RECIPE_NOT_LEARNED] = "Recipe not learned",
   [Readiness.RECIPE_DATA_INVALID] = "Recipe data invalid",
   [Readiness.PROFESSION_MISSING] = "Profession not known",
 }

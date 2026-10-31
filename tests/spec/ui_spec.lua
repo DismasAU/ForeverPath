@@ -47,6 +47,17 @@ describe("UI shell and screens (mock widgets)", function()
     assert_match(frame.pill.name:GetText(), "No goals yet")
   end)
 
+  it("shows a goal write's failure reason in the alert line", function()
+    local ns = H.fresh()
+    H.login(ns)
+    local MainFrame = ns.UI.MainFrame
+    MainFrame.Show()
+    assert_false(MainFrame.ReportFailure(ns.GoalService.SetStatus("no-such-goal", "COMPLETED")))
+    assert_eq(MainFrame.frame.alertText:GetText(), "no such goal")
+    assert_true(MainFrame.ReportFailure(true))
+    assert_eq(MainFrame.frame.alertText:GetText(), "no such goal", "a success leaves the alert alone")
+  end)
+
   it("switches screens from the sidebar and remembers the last one", function()
     frame.navButtons.goals:Click()
     assert_eq(MainFrame.currentScreen, "goals")

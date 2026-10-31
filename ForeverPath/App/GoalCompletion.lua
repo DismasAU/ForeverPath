@@ -80,8 +80,8 @@ local DONE_CHECKS = {
   CRAFT_ITEM = itemDone,
   OBTAIN_ITEM = itemDone,
   COMPLETE_ATTUNEMENT = function(goal)
-    local AP = ns.AttuneBridge
-    local progress = AP.IsAvailable() and AP.Progress(goal.target.attuneID) or nil
+    local AttuneBridge = ns.AttuneBridge
+    local progress = AttuneBridge.IsAvailable() and AttuneBridge.Progress(goal.target.attuneID) or nil
     return progress ~= nil and progress.complete == true
   end,
   COMPLETE_QUEST = function(goal)

@@ -115,6 +115,13 @@ function MainFrame.SetAlert(text, kind)
   if text and text ~= "" then frame.alertDot:Show() else frame.alertDot:Hide() end
 end
 
+-- Shows why a GoalService write failed (its false/nil, reason) in the alert
+-- line. Returns ok so callers can still branch on it.
+function MainFrame.ReportFailure(ok, reason)
+  if not ok and reason then MainFrame.SetAlert(tostring(reason), "error") end
+  return ok
+end
+
 function MainFrame.IsShown()
   return MainFrame.frame ~= nil and MainFrame.frame:IsShown()
 end
@@ -489,7 +496,7 @@ end
 
 -- Opens the window on the crafting screen for a goal.
 function MainFrame.OpenGoal(goalID)
-  ns.GoalService.Select(goalID)
+  MainFrame.ReportFailure(ns.GoalService.Select(goalID))
   MainFrame.Show()
   local goal = ns.GoalService.Get(goalID)
   local def = goal and ns.GoalModel.Types[goal.type]
@@ -609,7 +616,7 @@ function MainFrame.OpenGoalSwitcher(anchor)
     }
   end
   return Widgets.Menu(anchor, items, function(goalID)
-    ns.GoalService.Select(goalID)
+    MainFrame.ReportFailure(ns.GoalService.Select(goalID))
     MainFrame.ShowScreen("crafting")
   end, 250)
 end

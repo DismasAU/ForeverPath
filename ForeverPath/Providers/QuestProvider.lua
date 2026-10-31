@@ -603,10 +603,10 @@ end
 -- { attune, steps, target, next, done, total, percent, complete }. nil when
 -- no chain includes the quest.
 function QuestProvider.Questline(questID)
-  local AP = ns.AttuneBridge
+  local AttuneBridge = ns.AttuneBridge
   local line
-  if AP.IsAvailable() then
-    local result = Log.Try(AP.QuestlineFor, tonumber(questID))
+  if AttuneBridge.IsAvailable() then
+    local result = Log.Try(AttuneBridge.QuestlineFor, tonumber(questID))
     if type(result) == "table" then line = result end
   end
   if not line then

@@ -470,7 +470,7 @@ local function createSide(view, tree)
   link:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", -12, 10)
   local reset = Widgets.Button(body, "Default route", { onClick = function()
     if side.node and side.node.itemID and tree.goal then
-      ns.GoalService.SetRoute(tree.goal.id, side.node.itemID, nil)
+      ns.UI.MainFrame.ReportFailure(ns.GoalService.SetRoute(tree.goal.id, side.node.itemID, nil))
       ns.UI.MainFrame.SetAlert("Route reset to default.", "info")
     end
   end })

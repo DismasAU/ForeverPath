@@ -106,7 +106,7 @@ local function createGoalRow(content, index)
   local icon = Widgets.ItemIcon(row, 32)
   icon:SetPoint("LEFT", number, "RIGHT", 10, 0)
   local tracked = Widgets.Checkbox(row, "", function(checked)
-    if row.goalID then ns.GoalService.SetTracked(row.goalID, checked) end
+    if row.goalID then ns.UI.MainFrame.ReportFailure(ns.GoalService.SetTracked(row.goalID, checked)) end
   end)
   tracked:SetWidth(16)
   tracked:SetPoint("RIGHT", row, "RIGHT", -12, 0)
@@ -129,7 +129,7 @@ local function createGoalRow(content, index)
   row.number, row.icon, row.tracked, row.cost, row.percent, row.bar, row.name, row.badge, row.sub =
     number, icon, tracked, cost, percent, bar, name, badge, sub
   row:SetScript("OnClick", function(self)
-    if self.goalID then ns.GoalService.Select(self.goalID) end
+    if self.goalID then ns.UI.MainFrame.ReportFailure(ns.GoalService.Select(self.goalID)) end
   end)
   Widgets.SetItemTooltip(row, function(self) return self.itemID end)
   return row
@@ -167,7 +167,7 @@ local function createSettings(screen)
   local quantityLabel = field("Quantity", icon, -18)
   local stepper = Widgets.Stepper(body, function(value)
     if not panel.goalID then return end
-    ns.GoalService.SetAmount(panel.goalID, value)
+    ns.UI.MainFrame.ReportFailure(ns.GoalService.SetAmount(panel.goalID, value))
   end)
   stepper:SetPoint("TOPLEFT", quantityLabel, "BOTTOMLEFT", 0, -6)
 
@@ -180,7 +180,7 @@ local function createSettings(screen)
       items[index] = { text = tostring(index) .. (index == 1 and " - Highest" or (index == #openGoals and " - Lowest" or "")), value = index, selected = panel.goal and panel.goal.priority == index }
     end
     Widgets.Menu(self, items, function(position)
-      ns.GoalService.SetPriority(panel.goalID, position)
+      ns.UI.MainFrame.ReportFailure(ns.GoalService.SetPriority(panel.goalID, position))
     end)
   end)
   priority:SetPoint("TOPLEFT", priorityLabel, "BOTTOMLEFT", 0, -6)
@@ -191,7 +191,7 @@ local function createSettings(screen)
     { key = GoalModel.Statuses.QUEUED, label = GoalModel.StatusLabel.QUEUED },
     { key = GoalModel.Statuses.PAUSED, label = GoalModel.StatusLabel.PAUSED },
   }, function(key)
-    if panel.goalID then ns.GoalService.SetStatus(panel.goalID, key) end
+    if panel.goalID then ns.UI.MainFrame.ReportFailure(ns.GoalService.SetStatus(panel.goalID, key)) end
   end)
   status:SetPoint("TOPLEFT", statusLabel, "BOTTOMLEFT", 0, -6)
 
@@ -220,14 +220,14 @@ local function createSettings(screen)
 
   function panel:ApplyRouteMode(mode)
     if not self.goalID then return end
-    ns.GoalService.ApplyRoutePreset(self.goalID, mode, self.craftwise)
+    ns.UI.MainFrame.ReportFailure(ns.GoalService.ApplyRoutePreset(self.goalID, mode, self.craftwise))
     local labels = { default = "Default routes restored.", hybrid = "CraftWise hybrid plan applied.", buyall = "Buying every material." }
     ns.UI.MainFrame.SetAlert(labels[mode] or "Routes updated.", "ok")
     ns.UI.MainFrame.RequestRefresh()
   end
 
   local tracker = Widgets.Checkbox(body, "Show in tracker", function(checked)
-    if panel.goalID then ns.GoalService.SetTracked(panel.goalID, checked) end
+    if panel.goalID then ns.UI.MainFrame.ReportFailure(ns.GoalService.SetTracked(panel.goalID, checked)) end
   end)
   tracker:SetPoint("TOPLEFT", route, "BOTTOMLEFT", 0, -14)
   local reserve = Widgets.Checkbox(body, "Reserve owned materials")
@@ -239,7 +239,7 @@ local function createSettings(screen)
 
   local delete = Widgets.Button(body, "Delete", { width = 70, onClick = function()
     if panel.goalID then
-      ns.GoalService.Remove(panel.goalID)
+      ns.UI.MainFrame.ReportFailure(ns.GoalService.Remove(panel.goalID))
       ns.UI.MainFrame.SetAlert("Goal deleted.", "info")
     end
   end })
@@ -249,10 +249,10 @@ local function createSettings(screen)
   local complete = Widgets.Button(body, "Mark complete", { onClick = function()
     if not panel.goalID or not panel.goal then return end
     if GoalModel.IsOpen(panel.goal) then
-      ns.GoalService.SetStatus(panel.goalID, GoalModel.Statuses.COMPLETED)
+      ns.UI.MainFrame.ReportFailure(ns.GoalService.SetStatus(panel.goalID, GoalModel.Statuses.COMPLETED))
       ns.UI.MainFrame.SetAlert("Goal marked complete.", "ok")
     else
-      ns.GoalService.SetStatus(panel.goalID, GoalModel.Statuses.ACTIVE)
+      ns.UI.MainFrame.ReportFailure(ns.GoalService.SetStatus(panel.goalID, GoalModel.Statuses.ACTIVE))
       ns.UI.MainFrame.SetAlert("Goal reopened.", "ok")
     end
   end })

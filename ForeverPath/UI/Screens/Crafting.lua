@@ -127,7 +127,7 @@ local function createHero(screen)
   quantityLabel:SetPoint("TOP", divider, "TOP", -70, 0)
   local stepper = Widgets.Stepper(body, function(value)
     if not screen.goal then return end
-    ns.GoalService.SetAmount(screen.goal.id, value)
+    ns.UI.MainFrame.ReportFailure(ns.GoalService.SetAmount(screen.goal.id, value))
   end)
   stepper:SetPoint("TOP", quantityLabel, "BOTTOM", 0, -8)
   -- Keep the name block clear of the quantity stepper at small window sizes.
@@ -277,7 +277,7 @@ local function recipeChips(view, chips)
   elseif recipe.professionName then
     chips[#chips + 1] = { recipe.professionName, "info" }
   end
-  if view.readiness == Readiness.RECIPE_NOT_LEARNED or view.recipeStatus == "unlearned" then
+  if view.recipeStatus == "unlearned" then
     local craft = view.tree and view.tree.root and view.tree.root.craft
     if craft and craft.combine then
       chips[#chips + 1] = { "Combine - anyone can", "ok" }
@@ -517,13 +517,13 @@ local function Create(parent)
   crumbRest:SetPoint("LEFT", crumbGoals, "RIGHT", 0, 0)
   local remove = Widgets.Button(crumbs, "Remove goal", { onClick = function()
     if screen.goal then
-      ns.GoalService.Remove(screen.goal.id)
+      ns.UI.MainFrame.ReportFailure(ns.GoalService.Remove(screen.goal.id))
       ns.UI.MainFrame.SetAlert("Goal removed.", "info")
     end
   end })
   remove:SetPoint("RIGHT", crumbs, "RIGHT", 0, 0)
   local tracked = Widgets.Checkbox(crumbs, "Show in tracker", function(checked)
-    if screen.goal then ns.GoalService.SetTracked(screen.goal.id, checked) end
+    if screen.goal then ns.UI.MainFrame.ReportFailure(ns.GoalService.SetTracked(screen.goal.id, checked)) end
   end)
   tracked:SetPoint("RIGHT", remove, "LEFT", -14, 0)
   screen.crumbRest, screen.tracked, screen.remove = crumbRest, tracked, remove
@@ -565,8 +565,8 @@ local function Create(parent)
   end)
   sort:SetPoint("BOTTOMRIGHT", hero, "BOTTOMRIGHT", 0, -36)
   local alts = Widgets.Checkbox(screen, "Include alts' bags", function(checked)
-    local message = ns.GoalService.SetIncludeAlts(checked)
-    if message then ns.UI.MainFrame.SetAlert(message, "info") end
+    local message, reason = ns.GoalService.SetIncludeAlts(checked)
+    ns.UI.MainFrame.SetAlert(message or reason, message and "info" or "error")
   end)
   alts:SetPoint("RIGHT", sort, "LEFT", -14, 0)
   Widgets.SetTooltip(alts, "Include alts' bags", { "Counts the snapshotted bags and bank of your other characters as owned.", "Snapshots are taken whenever you log in or out on a character." })

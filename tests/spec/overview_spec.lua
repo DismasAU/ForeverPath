@@ -50,8 +50,6 @@ describe("Overview", function()
         view = { readiness = "OK", plan = plan({ { itemID = 10, required = 2, owned = 5, missing = 0, perCraft = 1 } }, true) } },
       { goal = { id = "b", status = "ACTIVE", type = "CRAFT_ITEM", target = { itemID = 2, quantity = 1 } },
         view = { readiness = ns.Readiness.RECIPES_NOT_SCANNED } },
-      { goal = { id = "c", status = "ACTIVE", type = "CRAFT_ITEM", target = { itemID = 2, quantity = 1 } },
-        view = { readiness = ns.Readiness.RECIPE_NOT_LEARNED, recipe = { name = "Beta Potion", professionName = "Alchemy" } } },
       { goal = { id = "d", status = "ACTIVE", type = "CRAFT_ITEM", target = { itemID = 2, quantity = 1 } },
         view = { readiness = ns.Readiness.RECIPE_NOT_FOUND } },
     }
@@ -60,7 +58,7 @@ describe("Overview", function()
     assert_eq(overview.nextSteps[1].title, "Craft 2 x Alpha Sword")
     assert_eq(overview.nextSteps[1].badge, "Ready")
     assert_eq(overview.nextSteps[2].badge, "Scan")
-    assert_eq(overview.nextSteps[3].title, "Learn Beta Potion")
+    assert_eq(overview.nextSteps[3].badge, "Unknown")
     assert_eq(#overview.missing, 0)
   end)
 
