@@ -96,9 +96,7 @@ local function createSide(screen)
     row.name:SetPoint("RIGHT", row.amount, "LEFT", -6, 0)
     row:SetScript("OnClick", function(self)
       if self.questID then
-        ns.UI.MainFrame.ShowScreen("quests")
-        local quests = ns.UI.MainFrame.screens.quests
-        if quests then quests:Select(self.questID) end
+        ns.UI.MainFrame.ShowScreen("quests", nil, self.questID)
       end
     end)
     row:Hide()
@@ -192,9 +190,7 @@ local function Create(parent)
   screen.list = list
 
   screen.empty = Widgets.EmptyState(screen, "Reputations", "")
-  screen.empty:SetPoint("TOPLEFT", screen, "TOPLEFT", 0, -80)
-  screen.empty:SetPoint("TOPRIGHT", screen, "TOPRIGHT", 0, -80)
-  screen.empty:SetHeight(120)
+  Widgets.StackAt(screen.empty, screen, 80, 120)
   screen.empty:Hide()
 
   function screen:Select(factionID)
@@ -333,9 +329,7 @@ local function Create(parent)
     for _, group in ipairs(groups) do
       groupIndex = groupIndex + 1
       local groupRow = self.groupPool:Get(groupIndex)
-      groupRow:ClearAllPoints()
-      groupRow:SetPoint("TOPLEFT", scroll.content, "TOPLEFT", 0, -y)
-      groupRow:SetPoint("TOPRIGHT", scroll.content, "TOPRIGHT", 0, -y)
+      Widgets.StackAt(groupRow, scroll.content, y)
       groupRow.label:SetText(Theme.Upper(group.label))
       groupRow.count:SetText(tostring(#group.rows))
       y = y + GROUP_ROW
@@ -344,9 +338,7 @@ local function Create(parent)
         total = total + 1
         first = first or record.factionID
         local row = self.rowPool:Get(rowIndex)
-        row:ClearAllPoints()
-        row:SetPoint("TOPLEFT", scroll.content, "TOPLEFT", 0, -y)
-        row:SetPoint("TOPRIGHT", scroll.content, "TOPRIGHT", 0, -y)
+        Widgets.StackAt(row, scroll.content, y)
         y = y + ROW
         row.factionID = record.factionID
         row.name:SetText(record.name)

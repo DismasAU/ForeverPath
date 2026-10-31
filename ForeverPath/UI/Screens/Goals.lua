@@ -70,7 +70,7 @@ local function createNewGoalBar(screen)
   })
   input:SetPoint("LEFT", label, "RIGHT", 14, 0)
   bar.input, bar.stepper, bar.add, bar.segment, bar.row1 = input, stepper, add, segment, row1
-  table.insert(ns.UI.MainFrame.linkTargets, input)
+  ns.UI.MainFrame.AddLinkTarget(input)
 
   -- One row when the segment fits beside a usable input, two rows otherwise.
   function bar:Layout(forceWidth)
@@ -454,9 +454,7 @@ local function Create(parent)
     for _, group in ipairs(groups) do
       groupIndex = groupIndex + 1
       local groupRow = self.groupPool:Get(groupIndex)
-      groupRow:ClearAllPoints()
-      groupRow:SetPoint("TOPLEFT", scroll.content, "TOPLEFT", 0, -y)
-      groupRow:SetPoint("TOPRIGHT", scroll.content, "TOPRIGHT", 0, -y)
+      Widgets.StackAt(groupRow, scroll.content, y)
       groupRow.label:SetText(Theme.Upper(group.label))
       groupRow.count:SetText(tostring(#group.goals))
       y = y + GROUP_ROW
@@ -464,9 +462,7 @@ local function Create(parent)
         total = total + 1
         rowIndex = rowIndex + 1
         local row = self.rowPool:Get(rowIndex)
-        row:ClearAllPoints()
-        row:SetPoint("TOPLEFT", scroll.content, "TOPLEFT", 0, -y)
-        row:SetPoint("TOPRIGHT", scroll.content, "TOPRIGHT", 0, -y)
+        Widgets.StackAt(row, scroll.content, y)
         y = y + ROW
         local view = views[goal.id]
         local item = view and view.item or (goal.target.itemID and ns.ItemProvider.GetItem(goal.target.itemID)) or { icon = goal.target.icon, quality = 1 }

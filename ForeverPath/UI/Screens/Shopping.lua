@@ -159,7 +159,7 @@ local function Create(parent)
   screen.summary = summary
 
   -- Mail plan strip (only when alts hold something)
-  local mail = Widgets.Frame(screen, nil, { bg = Theme.RGB("#1B222A"), border = Theme.RGB("#4A6A8A") })
+  local mail = Widgets.Frame(screen, nil, { bg = C.noticeBg, border = C.noticeBorder })
   mail:SetHeight(30)
   mail:SetPoint("TOPLEFT", summary, "BOTTOMLEFT", 0, -8)
   mail:SetPoint("TOPRIGHT", summary, "BOTTOMRIGHT", 0, -8)

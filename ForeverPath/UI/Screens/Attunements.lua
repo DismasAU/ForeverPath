@@ -31,11 +31,11 @@ local function createStepRow(content, index, screen)
     if self.step and screen then screen:SelectStep(self.step.key) end
   end)
   -- Timeline: a connector line and a node.
-  row.connector = Widgets.Texture(row, Theme.RGB("#4A4335"), 1)
+  row.connector = Widgets.Texture(row, C.lineDark, 1)
   row.connector:SetWidth(2)
   row.connector:SetPoint("TOP", row, "TOPLEFT", 22, 0)
   row.connector:SetPoint("BOTTOM", row, "BOTTOMLEFT", 22, 0)
-  row.node = Widgets.Frame(row, nil, { bg = C.panel, border = Theme.RGB("#6B6352") })
+  row.node = Widgets.Frame(row, nil, { bg = C.panel, border = C.nodeBorder })
   row.node:SetSize(14, 14)
   row.node:SetPoint("CENTER", row, "LEFT", 22, 0)
   row.nodeMark = Widgets.Text(row.node, "label", "", { justify = "CENTER" })
@@ -172,9 +172,7 @@ local function Create(parent)
   alsoText:SetPoint("RIGHT", sb, "RIGHT", -12, 0)
   local openQuest = Widgets.Button(sb, "Quests >", { onClick = function()
     if not side.questID then return end
-    ns.UI.MainFrame.ShowScreen("quests")
-    local quests = ns.UI.MainFrame.screens.quests
-    if quests and quests.Select then quests:Select(side.questID) end
+    ns.UI.MainFrame.ShowScreen("quests", nil, side.questID)
   end })
   openQuest:SetPoint("BOTTOMRIGHT", sb, "BOTTOMRIGHT", -12, 10)
   openQuest:Hide()
@@ -196,9 +194,7 @@ local function Create(parent)
   screen.side = side
 
   screen.empty = Widgets.EmptyState(screen, "Attunements", "")
-  screen.empty:SetPoint("TOPLEFT", screen, "TOPLEFT", 0, -80)
-  screen.empty:SetPoint("TOPRIGHT", screen, "TOPRIGHT", 0, -80)
-  screen.empty:SetHeight(120)
+  Widgets.StackAt(screen.empty, screen, 80, 120)
   screen.empty:Hide()
 
   local function showContent(visible)
@@ -255,7 +251,15 @@ local function Create(parent)
     showContent(true)
     local progress = AP.Progress(attuneID)
     self.progress = progress
+    self:RefreshHeader(progress)
+    self:RefreshTimeline(progress)
+    self:RefreshSide(progress)
+  end
+
+  -- Header: picker, add-goal button, name, meta, chips and progress bar.
+  function screen:RefreshHeader(progress)
     local attune = progress.attune
+    local attuneID = self.attuneID
     picker:SetLabel(attune.name)
     local existing = ns.GoalService.FindAttunementGoal(attuneID)
     addGoal:SetLabel(existing and (existing.status == ns.GoalModel.Statuses.COMPLETED and "Goal completed" or "Goal added") or "+ Add goal")
@@ -280,8 +284,10 @@ local function Create(parent)
     header.bar:SetKind(progress.complete and "ok" or "gold")
     header.bar:SetValue(progress.percent / 100)
     header.stepsText:SetText(progress.complete and "Attuned" or string.format("%d step%s to go", progress.total - progress.done, (progress.total - progress.done) == 1 and "" or "s"))
+  end
 
-    -- Timeline
+  -- Timeline: one row per step with its state's node and badge.
+  function screen:RefreshTimeline(progress)
     local number = 0
     for index, step in ipairs(progress.steps) do
       local row = chain.pool:Get(index)
@@ -304,11 +310,11 @@ local function Create(parent)
       elseif step.state == StepStates.CURRENT then
         Widgets.SetBackdrop(row.node, C.panel, C.gold)
         row.nodeMark:SetText(Theme.ColorText("gold", "o"))
-        Widgets.SetColor(row.connector, Theme.RGB("#4A4335"), 1)
+        Widgets.SetColor(row.connector, C.lineDark, 1)
       else
-        Widgets.SetBackdrop(row.node, C.panel, Theme.RGB("#6B6352"))
+        Widgets.SetBackdrop(row.node, C.panel, C.nodeBorder)
         row.nodeMark:SetText("")
-        Widgets.SetColor(row.connector, Theme.RGB("#4A4335"), 1)
+        Widgets.SetColor(row.connector, C.lineDark, 1)
       end
       row:SetAlpha(step.state == StepStates.LOCKED and 0.7 or 1)
       Widgets.SetColor(row.selected, C.gold, self.stepKey == step.key and 0.08 or 0)
@@ -318,8 +324,10 @@ local function Create(parent)
     chain.pool:HideFrom(#progress.steps + 1)
     chain.scroll:SetContentHeight(#progress.steps * ROW)
     chain.count:SetText(string.format("%d / %d", progress.done, progress.total))
+  end
 
-    -- The selected step, else the current one
+  -- Side panel: the selected step, else the current one.
+  function screen:RefreshSide(progress)
     local step, stepNumber
     if self.stepKey then
       local n = 0

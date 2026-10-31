@@ -31,6 +31,9 @@ local palette = {
   -- Quest level difficulty, as the default UI colours them.
   questTrivial = "#9D9D9D", questEasy = "#40C040", questStandard = "#FFD100", questHard = "#FF8040", questImpossible = "#FF2020",
   questReadyBg = "#1C2A1E", questReadyBorder = "#3E6A48",
+  -- Surfaces several screens share: a best/selected card, a locked chain node, nav labels.
+  cardBest = "#2B2619", nodeBorder = "#6B6352", navText = "#D2C9B4",
+  noticeBg = "#1B222A", noticeBorder = "#4A6A8A", -- the blue information banners (alts, mail)
 }
 
 Theme.Colors = {}

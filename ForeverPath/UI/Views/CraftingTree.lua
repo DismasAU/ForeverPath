@@ -230,7 +230,8 @@ local function createRow(content, index, tree)
     if node.craftOption then
       lines[#lines + 1] = string.format("Recipe: %s (%s)%s", node.craftOption.recipe.name or "?", node.craftOption.professionName or "?", node.craftOption.learned and "" or " - not learned")
     end
-    lines[#lines + 1] = "Price: no data (CraftWise arrives later)"
+    local price = node.itemID and ns.PriceProvider.GetPrice(node.itemID)
+    lines[#lines + 1] = price and ("Price: " .. Widgets.Money(price.copper, true) .. " each") or "Price: no data"
     return lines
   end)
 
@@ -306,7 +307,7 @@ end
 -- Selected node panel
 ---------------------------------------------------------------------------
 local function createOptionCard(parent, index, tree)
-  local card = Widgets.Frame(parent, nil, { frameType = "Button", bg = Theme.RGB("#1C1B18"), border = C.line })
+  local card = Widgets.Frame(parent, nil, { frameType = "Button", bg = C.sidebar, border = C.line })
   card:SetHeight(38)
   local highlight = card:CreateTexture(nil, "HIGHLIGHT")
   highlight:SetAllPoints(card)
@@ -335,6 +336,93 @@ local function createOptionCard(parent, index, tree)
     self:SetHeight(math.max(38, 5 + titleHeight + 2 + detailHeight + 6))
   end
   return card
+end
+
+-- The side panel header for a node: { sub, count, missing, missingColor,
+-- barKind, barValue, ways } (ways: the label above the option cards).
+local function nodeHeader(node)
+  local resolved = node.childrenResolved and 1 or 0
+  if isSkillRoot(node) then
+    return { sub = string.format("%d craft%s over %d recipe%s", node.quantity, node.quantity == 1 and "" or "s", #node.children, #node.children == 1 and "" or "s"),
+      count = string.format("%d|r %s crafts", node.quantity, Theme.Hex.text3), missing = "", barKind = "gold", barValue = resolved, ways = "Recipes" }
+  elseif node.forSkill then
+    return { sub = string.format("Skill %d to %d - %s", node.forSkill.from or 0, node.forSkill.to or 0, viaText(node)),
+      count = string.format("%d|r %s crafts", node.craft and node.craft.crafts or 0, Theme.Hex.text3),
+      missing = node.craft and not node.craft.learned and "not learned" or "", barKind = "gold", barValue = resolved, ways = "Reagents" }
+  elseif isQuestRoot(node) then
+    return { sub = "Quest - the items below are what its chain asks you to bring",
+      count = string.format("%d|r %s items", #node.children, Theme.Hex.text3), missing = "", barKind = "gold", barValue = resolved, ways = "Quest items" }
+  elseif node.step then
+    local trainer = node.step.trainer
+    return {
+      sub = trainer and trainer.name
+        and string.format("Train at %s%s%s", trainer.name, trainer.zone and (" - " .. trainer.zone) or "", trainer.subzone and (" (" .. trainer.subzone .. ")") or "")
+        or string.format("Train at any %s trainer (requirement recorded on your next visit)", node.step.professionName or "profession"),
+      count = string.format("%d|r %s/ %d", 0, Theme.Hex.text3, 1),
+      missing = node.step.rank and node.step.rank > 1 and string.format("needs %s %d", node.step.professionName or "skill", node.step.rank) or "1 step",
+      barKind = "gold", barValue = 0,
+      ways = trainer and trainer.cost and trainer.cost > 0 and ("Training cost: " .. Widgets.Money(trainer.cost, true)) or "Training",
+    }
+  elseif isCraftRoot(node) then
+    local unit = node.enchant and "cast" or "craft"
+    return { sub = string.format("Goal target - %d %s%s", node.craft and node.craft.crafts or 0, unit, node.craft and node.craft.crafts == 1 and "" or "s"),
+      count = string.format("%d|r %s/ %d", 0, Theme.Hex.text3, node.quantity), missing = string.format("%d to %s", node.quantity, unit),
+      barKind = "gold", barValue = resolved, ways = "Reagents" }
+  end
+  return {
+    sub = node.depth == 0 and ("Goal item - " .. viaText(node)) or string.format("Depth %d - %s", node.depth, viaText(node)),
+    count = string.format("%s%d|r %s/ %d", Theme.Hex[node.missing > 0 and (node.owned > 0 and "partial" or "missing") or "ok"], node.available or 0, Theme.Hex.text3, node.quantity),
+    missing = node.missing > 0 and string.format("%d missing", node.missing) or "complete",
+    missingColor = node.missing > 0 and C.missing or C.ok,
+    barKind = node.missing > 0 and "gold" or "ok",
+    barValue = node.quantity > 0 and math.min(1, (node.owned or 0) / node.quantity) or 1,
+    ways = node.missing > 0 and string.format("Ways to get %d more", node.missing) or "Ways to get it",
+  }
+end
+
+-- What a craft option still needs before it can be used, as a prefix.
+local function craftState(option, node)
+  if node.raw then return "Gathering material: refining the tier below is off by default - " end
+  if option.combine then return "Anyone can - " end
+  if option.learned then return "" end
+  if option.unavailable then return "Recipe not learned: " .. (option.reason or "no crafter") .. " - " end
+  if option.crafter then
+    return (option.crafter.isCurrent and "You can learn it" or (option.crafter.name .. " can learn it"))
+      .. (option.skill and option.skill.min > 1 and (" (" .. option.skill.min .. ")") or "") .. " - "
+  end
+  return "Recipe not learned - "
+end
+
+-- Fills an option card's title and detail. Returns whether it is the best
+-- way (a learned craft that is not a gathering material or a loop).
+local function fillCard(card, option, node)
+  if option.kind == Routes.CRAFT then
+    local reagents = {}
+    for _, reagent in ipairs(option.recipe.reagents or {}) do
+      reagents[#reagents + 1] = string.format("%d %s", reagent.quantity, nameOf(reagent.itemID))
+    end
+    card.title:SetText(option.combine and ("Combine " .. (option.name or "the items")) or string.format("Craft with %s", option.professionName or "a profession"))
+    card.detail:SetText(craftState(option, node) .. (option.cycle and "loops back to this item - " or "") .. table.concat(reagents, ", ") .. " per craft")
+    return option.learned and not option.cycle and not node.raw
+  elseif option.kind == Routes.BUY then
+    local price = ns.PriceProvider.GetMarket(node.itemID)
+    card.title:SetText("Buy on the Auction House")
+    card.detail:SetText(price and ("Auction House - " .. ns.PriceProvider.Freshness(price).label) or "No Auction House price recorded")
+  elseif option.reagent then
+    local child = option.reagent
+    if child.step then
+      card.title:SetText("Train " .. (child.step.name or "the recipe"))
+    elseif child.forSkill then
+      card.title:SetText(string.format("%d x %s", child.craft and child.craft.crafts or 0, labelOf(child)))
+    else
+      card.title:SetText(string.format("%d x %s", child.quantity, labelOf(child)))
+    end
+    card.detail:SetText(child.forSkill and noteText(child) or viaText(child))
+  else
+    card.title:SetText(option.label or R.RouteLabels[option.kind] or "Obtain")
+    card.detail:SetText(option.detail or "")
+  end
+  return false
 end
 
 local function createSide(view, tree)
@@ -414,54 +502,14 @@ local function createSide(view, tree)
     self:SetTitle(isSkillRoot(node) and "Skill plan" or (node.depth == 0 and "Goal item" or (node.step and "Step" or (node.forSkill and "Craft for skill" or "Selected node"))))
     icon:SetItem(item.icon, item.quality)
     name:SetText(Theme.QualityText(item.name or ("Item " .. tostring(node.itemID)), item.quality))
-    if isSkillRoot(node) then
-      sub:SetText(string.format("%d craft%s over %d recipe%s", node.quantity, node.quantity == 1 and "" or "s", #node.children, #node.children == 1 and "" or "s"))
-      count:SetText(string.format("%d|r %s crafts", node.quantity, Theme.Hex.text3))
-      missing:SetText("")
-      bar:SetKind("gold")
-      bar:SetValue(node.childrenResolved and 1 or 0)
-      waysLabel:SetText(Theme.Upper("Recipes"))
-    elseif node.forSkill then
-      sub:SetText(string.format("Skill %d to %d - %s", node.forSkill.from or 0, node.forSkill.to or 0, viaText(node)))
-      count:SetText(string.format("%d|r %s crafts", node.craft and node.craft.crafts or 0, Theme.Hex.text3))
-      missing:SetText(node.craft and not node.craft.learned and "not learned" or "")
-      bar:SetKind("gold")
-      bar:SetValue(node.childrenResolved and 1 or 0)
-      waysLabel:SetText(Theme.Upper("Reagents"))
-    elseif isQuestRoot(node) then
-      sub:SetText("Quest - the items below are what its chain asks you to bring")
-      count:SetText(string.format("%d|r %s items", #node.children, Theme.Hex.text3))
-      missing:SetText("")
-      bar:SetKind("gold")
-      bar:SetValue(node.childrenResolved and 1 or 0)
-      waysLabel:SetText(Theme.Upper("Quest items"))
-    elseif node.step then
-      local trainer = node.step.trainer
-      sub:SetText(trainer and trainer.name
-        and string.format("Train at %s%s%s", trainer.name, trainer.zone and (" - " .. trainer.zone) or "", trainer.subzone and (" (" .. trainer.subzone .. ")") or "")
-        or string.format("Train at any %s trainer (requirement recorded on your next visit)", node.step.professionName or "profession"))
-      count:SetText(string.format("%d|r %s/ %d", 0, Theme.Hex.text3, 1))
-      missing:SetText(node.step.rank and node.step.rank > 1 and string.format("needs %s %d", node.step.professionName or "skill", node.step.rank) or "1 step")
-      bar:SetKind("gold")
-      bar:SetValue(0)
-      waysLabel:SetText(Theme.Upper(trainer and trainer.cost and trainer.cost > 0 and ("Training cost: " .. Widgets.Money(trainer.cost, true)) or "Training"))
-    elseif isCraftRoot(node) then
-      local unit = node.enchant and "cast" or "craft"
-      sub:SetText(string.format("Goal target - %d %s%s", node.craft and node.craft.crafts or 0, unit, node.craft and node.craft.crafts == 1 and "" or "s"))
-      count:SetText(string.format("%d|r %s/ %d", 0, Theme.Hex.text3, node.quantity))
-      missing:SetText(string.format("%d to %s", node.quantity, unit))
-      bar:SetKind("gold")
-      bar:SetValue(node.childrenResolved and 1 or 0)
-      waysLabel:SetText(Theme.Upper("Reagents"))
-    else
-      sub:SetText(node.depth == 0 and ("Goal item - " .. viaText(node)) or string.format("Depth %d - %s", node.depth, viaText(node)))
-      count:SetText(string.format("%s%d|r %s/ %d", Theme.Hex[node.missing > 0 and (node.owned > 0 and "partial" or "missing") or "ok"], node.available or 0, Theme.Hex.text3, node.quantity))
-      missing:SetText(node.missing > 0 and string.format("%d missing", node.missing) or "complete")
-      Widgets.SetTextColor(missing, node.missing > 0 and C.missing or C.ok)
-      bar:SetKind(node.missing > 0 and "gold" or "ok")
-      bar:SetValue(node.quantity > 0 and math.min(1, (node.owned or 0) / node.quantity) or 1)
-      waysLabel:SetText(Theme.Upper(node.missing > 0 and string.format("Ways to get %d more", node.missing) or "Ways to get it"))
-    end
+    local h = nodeHeader(node)
+    sub:SetText(h.sub)
+    count:SetText(h.count)
+    missing:SetText(h.missing)
+    if h.missingColor then Widgets.SetTextColor(missing, h.missingColor) end
+    bar:SetKind(h.barKind)
+    bar:SetValue(h.barValue)
+    waysLabel:SetText(Theme.Upper(h.ways))
 
     -- Option cards: craft (best when learned), buy, static hints.
     local options = {}
@@ -480,50 +528,7 @@ local function createSide(view, tree)
       if option then
         card.option, card.node = option, node
         local isCurrent = option.kind == node.route
-        local best = option.kind == Routes.CRAFT and option.learned and not option.cycle and not node.raw
-        if option.kind == Routes.CRAFT then
-          local reagents = {}
-          for _, reagent in ipairs(option.recipe.reagents or {}) do
-            reagents[#reagents + 1] = string.format("%d %s", reagent.quantity, nameOf(reagent.itemID))
-          end
-          if option.combine then
-            card.title:SetText("Combine " .. (option.name or "the items"))
-          else
-            card.title:SetText(string.format("Craft with %s", option.professionName or "a profession"))
-          end
-          local state = ""
-          if node.raw then
-            state = "Gathering material: refining the tier below is off by default - "
-          elseif option.combine then
-            state = "Anyone can - "
-          elseif not option.learned then
-            if option.unavailable then
-              state = "Recipe not learned: " .. (option.reason or "no crafter") .. " - "
-            elseif option.crafter then
-              state = (option.crafter.isCurrent and "You can learn it" or (option.crafter.name .. " can learn it")) .. (option.skill and option.skill.min > 1 and (" (" .. option.skill.min .. ")") or "") .. " - "
-            else
-              state = "Recipe not learned - "
-            end
-          end
-          card.detail:SetText(state .. (option.cycle and "loops back to this item - " or "") .. table.concat(reagents, ", ") .. " per craft")
-        elseif option.kind == Routes.BUY then
-          card.title:SetText("Buy on the Auction House")
-          card.detail:SetText("No price source yet - CraftWise arrives later")
-        elseif option.reagent then
-          local child = option.reagent
-          if child.step then
-            card.title:SetText("Train " .. (child.step.name or "the recipe"))
-          elseif child.forSkill then
-            card.title:SetText(string.format("%d x %s", child.craft and child.craft.crafts or 0, labelOf(child)))
-          else
-            card.title:SetText(string.format("%d x %s", child.quantity, labelOf(child)))
-          end
-          card.detail:SetText(child.forSkill and noteText(child) or viaText(child))
-          best = false
-        else
-          card.title:SetText(option.label or R.RouteLabels[option.kind] or "Obtain")
-          card.detail:SetText((option.detail or "") .. ((option.kind == Routes.ALT or option.kind == Routes.ALTCRAFT) and " - mail planning arrives with the shopping list" or ""))
-        end
+        local best = fillCard(card, option, node)
         local optionPrice = (option.kind == Routes.BUY or option.kind == Routes.VENDOR) and ns.PriceProvider.GetPrice(node.itemID) or nil
         local costText
         if optionPrice and node.missing > 0 then
@@ -534,10 +539,10 @@ local function createSide(view, tree)
         card.cost:SetText(costText)
         card:Fit()
         if best then
-          Widgets.SetBackdrop(card, Theme.RGB("#2B2619"), C.gold)
+          Widgets.SetBackdrop(card, C.cardBest, C.gold)
           card.best:Show()
         else
-          Widgets.SetBackdrop(card, Theme.RGB("#1C1B18"), isCurrent and C.bronzeDim or C.line)
+          Widgets.SetBackdrop(card, C.sidebar, isCurrent and C.bronzeDim or C.line)
           card.best:Hide()
         end
         if not isCurrent and not self.alternative and ns.GoalModel.IsRouteOverride(option.kind) and not option.cycle then

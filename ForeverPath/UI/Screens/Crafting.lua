@@ -546,6 +546,14 @@ local function Create(parent)
   tabs:SetPoint("TOPRIGHT", hero, "BOTTOMRIGHT", -330, -10)
   screen.tabs = tabs
   screen.tab = "requirements"
+
+  -- Shows a tab ("requirements", "tree", "craftwise", ...); also what
+  -- MainFrame.ShowScreen("crafting", nil, tab) calls.
+  function screen:Focus(tab)
+    self.tabs:Select(tab)
+    self.tab = tab
+    self:Refresh()
+  end
   local sort = Widgets.Dropdown(screen, Widgets.SortLabel(SORTS, "missing"), 150, function(self)
     local current = ns.chardb.ui.materialSort
     local items = {}
@@ -583,9 +591,7 @@ local function Create(parent)
   shopping:SetPoint("RIGHT", footer, "RIGHT", -10, 0)
   screen.shoppingButton = shopping
   local craftwise = Widgets.Button(footer, "Open CraftWise >", { primary = true, onClick = function()
-    screen.tabs:Select("craftwise")
-    screen.tab = "craftwise"
-    screen:Refresh()
+    screen:Focus("craftwise")
   end })
   craftwise:SetPoint("RIGHT", shopping, "LEFT", -8, 0)
   local routeText = Widgets.Text(footer, "secondary", "CraftWise: no price data", { color = C.text3, justify = "RIGHT" })

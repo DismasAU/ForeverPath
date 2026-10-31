@@ -1173,6 +1173,15 @@ function Widgets.ResizeGrip(frame, onStop)
   return grip
 end
 
+-- Places frame full width across parent, its top y pixels down (rows of a
+-- stacked list, a screen's empty state); height is optional.
+function Widgets.StackAt(frame, parent, y, height)
+  frame:ClearAllPoints()
+  frame:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -y)
+  frame:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, -y)
+  if height then frame:SetHeight(height) end
+end
+
 -- Centered "nothing here" state.
 function Widgets.EmptyState(parent, title, text)
   local frame = CreateFrame("Frame", nil, parent)

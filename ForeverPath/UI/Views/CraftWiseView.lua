@@ -46,7 +46,7 @@ end
 -- Strategy cards
 ---------------------------------------------------------------------------
 local function createCard(parent, key, title)
-  local card = Widgets.Frame(parent, nil, { bg = Theme.RGB("#1C1B18"), border = C.line })
+  local card = Widgets.Frame(parent, nil, { bg = C.sidebar, border = C.line })
   card.key = key
   card.title = Widgets.Text(card, "goalName", title)
   card.title:SetPoint("TOPLEFT", card, "TOPLEFT", 12, -10)
@@ -217,10 +217,10 @@ function CraftWiseView.Create(screen)
     card.footer:SetText(footerText or "")
     local recommended = result.recommended == card.key
     if recommended then
-      Widgets.SetBackdrop(card, Theme.RGB("#2B2619"), C.gold)
+      Widgets.SetBackdrop(card, C.cardBest, C.gold)
       card.badge:Show()
     else
-      Widgets.SetBackdrop(card, Theme.RGB("#1C1B18"), C.line)
+      Widgets.SetBackdrop(card, C.sidebar, C.line)
       card.badge:Hide()
     end
   end

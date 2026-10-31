@@ -230,7 +230,7 @@ local function createHeader(frame)
     ns.Compat.After(0.2, MainFrame.HideSuggestions)
   end)
   frame.search = search
-  MainFrame.linkTargets[#MainFrame.linkTargets + 1] = search
+  MainFrame.AddLinkTarget(search)
 
   local pill = Widgets.Frame(header, nil, { frameType = "Button", bg = Theme.RGB("#141412"), border = C.line })
   pill:SetSize(250, 30)
@@ -298,7 +298,7 @@ local function createSidebar(frame)
       if glyph.SetRotation then glyph:SetRotation(math.pi / 4) end
       glyph:SetPoint("LEFT", button, "LEFT", 12, 0)
       button.glyph = glyph
-      local label = Widgets.Text(button, "nav", entry.label, { color = entry.preview and C.text2 or Theme.RGB("#D2C9B4") })
+      local label = Widgets.Text(button, "nav", entry.label, { color = entry.preview and C.text2 or C.navText })
       label:SetPoint("LEFT", button, "LEFT", 28, 0)
       button.label = label
       button.entry = entry
@@ -426,7 +426,10 @@ end
 ---------------------------------------------------------------------------
 -- Screens
 ---------------------------------------------------------------------------
-function MainFrame.ShowScreen(key, silent)
+-- Shows a screen. focus (optional) is handed to the screen's Focus method:
+-- a quest id on Quests, a tab key on Crafting. Screens navigate to each
+-- other only through here, never by touching another screen's fields.
+function MainFrame.ShowScreen(key, silent, focus)
   local frame = MainFrame.Create()
   if not MainFrame.screens[key] then
     key = "dashboard"
@@ -444,7 +447,7 @@ function MainFrame.ShowScreen(key, silent)
     else
       Widgets.SetBackdrop(button, nil, nil)
       button.gradient:Hide()
-      Widgets.SetTextColor(button.label, button.entry.preview and C.text2 or Theme.RGB("#D2C9B4"))
+      Widgets.SetTextColor(button.label, button.entry.preview and C.text2 or C.navText)
       Widgets.SetColor(button.glyph, C.text3)
     end
   end
@@ -453,6 +456,14 @@ function MainFrame.ShowScreen(key, silent)
   if not silent then
     MainFrame.Refresh()
   end
+  local screen = MainFrame.screens[key]
+  if focus ~= nil and screen.Focus then screen:Focus(focus) end
+end
+
+-- Adds an edit box that Shift-clicked item links are inserted into while it
+-- has focus (the search box, the goal input).
+function MainFrame.AddLinkTarget(box)
+  MainFrame.linkTargets[#MainFrame.linkTargets + 1] = box
 end
 
 function MainFrame.Show()

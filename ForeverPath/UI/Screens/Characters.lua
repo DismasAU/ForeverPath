@@ -294,7 +294,7 @@ local function Create(parent)
   local screen = CreateFrame("Frame", nil, parent)
 
   -- Banner
-  local banner = Widgets.Frame(screen, nil, { bg = Theme.RGB("#1B222A"), border = Theme.RGB("#4A6A8A") })
+  local banner = Widgets.Frame(screen, nil, { bg = C.noticeBg, border = C.noticeBorder })
   banner:SetHeight(58)
   banner:SetPoint("TOPLEFT", screen, "TOPLEFT", 0, 0)
   banner:SetPoint("TOPRIGHT", screen, "TOPRIGHT", 0, 0)

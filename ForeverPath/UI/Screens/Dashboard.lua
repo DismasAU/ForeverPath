@@ -86,7 +86,7 @@ local function createCharacterStrip(screen)
 end
 
 local function createGoalRow(content, index)
-  local row = Widgets.ListRow(content, { height = GOAL_ROW - 8, index = index, step = GOAL_ROW, divider = false, bg = C.sidebar, border = Theme.RGB("#33302A") })
+  local row = Widgets.ListRow(content, { height = GOAL_ROW - 8, index = index, step = GOAL_ROW, divider = false, bg = C.sidebar, border = C.rowLine })
   local icon = Widgets.ItemIcon(row, 42)
   icon:SetPoint("TOPLEFT", row, "TOPLEFT", 12, -12)
   local name = Widgets.Text(row, "goalName", "")
@@ -225,13 +225,7 @@ local function Create(parent)
   local compare = Widgets.Button(craftwise.body, "Compare", { width = 90, onClick = function()
     if craftwise.goalID then
       ns.GoalService.Select(craftwise.goalID)
-      ns.UI.MainFrame.ShowScreen("crafting")
-      local crafting = ns.UI.MainFrame.screens.crafting
-      if crafting and crafting.tabs then
-        crafting.tabs:Select("craftwise")
-        crafting.tab = "craftwise"
-        crafting:Refresh()
-      end
+      ns.UI.MainFrame.ShowScreen("crafting", nil, "craftwise")
     end
   end })
   compare:SetPoint("BOTTOMRIGHT", craftwise.body, "BOTTOMRIGHT", -10, 10)
@@ -243,7 +237,6 @@ local function Create(parent)
   local recommended = Widgets.Panel(screen, "Recommended Next", { pad = 0 })
   recommended:SetHeight(28 + 3 * STEP_ROW + 8)
   recommended:SetPoint("BOTTOMLEFT", screen, "BOTTOMLEFT", 0, 0)
-  recommended:SetPoint("BOTTOMRIGHT", missingPanel, "BOTTOMLEFT", -10, 0)
   recommended:SetPoint("BOTTOMRIGHT", craftwise, "BOTTOMLEFT", -10, 0)
   local recommendedNote = Widgets.Text(recommended.header, "small", "Ordered by goal priority", { justify = "RIGHT" })
   recommendedNote:SetPoint("RIGHT", recommended.header, "RIGHT", -10, 0)
@@ -274,8 +267,19 @@ local function Create(parent)
   screen.goalsPanel = goalsPanel
 
   function screen:Refresh()
-    local MainFrame = ns.UI.MainFrame
-    local info = MainFrame.CharacterInfo()
+    local activeGoals = ns.GoalService.List({ status = ns.GoalModel.Statuses.ACTIVE })
+    local overview = ns.GoalService.Overview()
+    self:RefreshStrip()
+    self:RefreshGoals(activeGoals)
+    self:RefreshSteps(overview)
+    self:RefreshMissing(overview)
+    screen.lastOverview = overview
+    self:RefreshCraftWise(activeGoals)
+  end
+
+  -- Character strip: name, professions, gold, goal counts.
+  function screen:RefreshStrip()
+    local info = ns.UI.MainFrame.CharacterInfo()
     strip.name:SetText(info.name)
     Widgets.SetTextColor(strip.name, info.color)
     local parts = {}
@@ -333,9 +337,10 @@ local function Create(parent)
     local doneLine = string.format("%d done", completed)
     if lastCompleted then doneLine = doneLine .. " - last " .. Util.FormatAgo(lastCompleted) end
     goalsCell.sub:SetText(doneLine)
+  end
 
-    -- Active goals
-    local activeGoals = ns.GoalService.List({ status = ns.GoalModel.Statuses.ACTIVE })
+  -- Active goals with their progress and what they still need.
+  function screen:RefreshGoals(activeGoals)
     for index, goal in ipairs(activeGoals) do
       local view = ns.GoalService.Views()[goal.id]
       local row = goalsPanel.pool:Get(index)
@@ -372,8 +377,10 @@ local function Create(parent)
     goalsPanel.pool:HideFrom(#activeGoals + 1)
     goalsScroll:SetContentHeight(#activeGoals * GOAL_ROW)
     if #activeGoals == 0 then goalsPanel.empty:Show() else goalsPanel.empty:Hide() end
+  end
 
-    local overview = ns.GoalService.Overview()
+  -- Recommended next steps.
+  function screen:RefreshSteps(overview)
     for index, step in ipairs(overview.nextSteps) do
       local row = recommended.pool:Get(index)
       row.title:SetText(step.title)
@@ -387,7 +394,10 @@ local function Create(parent)
     end
     recommended.pool:HideFrom(#overview.nextSteps + 1)
     if #overview.nextSteps == 0 then recommended.empty:Show() else recommended.empty:Hide() end
+  end
 
+  -- Materials missing across the active goals.
+  function screen:RefreshMissing(overview)
     for index, material in ipairs(overview.missing) do
       local row = missingPanel.pool:Get(index)
       local item = ns.ItemProvider.GetItem(material.itemID)
@@ -408,8 +418,6 @@ local function Create(parent)
     missingScroll:SetContentHeight(#overview.missing * MATERIAL_ROW)
     missingPanel.count:SetText(#overview.missing > 0 and string.format("%d material%s", #overview.missing, #overview.missing == 1 and "" or "s") or "")
     if #overview.missing == 0 then missingPanel.empty:Show() else missingPanel.empty:Hide() end
-    screen.lastOverview = overview
-    self:RefreshCraftWise(activeGoals)
   end
 
   -- CraftWise panel: the selected goal when it is active, else the first
@@ -429,7 +437,7 @@ local function Create(parent)
     panel.goalID = goal and goal.id or nil
     panel.result = result
     local status = ns.PriceProvider.StatusInfo()
-    if not result or (not result.available and not result.buy.cost) then
+    if not result or not result.available then
       for _, w in ipairs(panel.content) do w:Hide() end
       panel.empty:Set(goal and "No price data" or "No active goal", goal and status.text or "Add a crafting goal to compare buying and crafting.")
       panel.empty:Show()

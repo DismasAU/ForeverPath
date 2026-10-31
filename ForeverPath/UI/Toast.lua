@@ -11,7 +11,7 @@ local Toast = { queue = {}, HOLD = 6, WIDTH = 340, HEIGHT = 76 }
 ns.UI.Toast = Toast
 
 local function build()
-  local frame = Widgets.Frame(UIParent, "ForeverPathToast", { frameType = "Button", bg = Theme.RGB("#1C1B18"), border = C.gold })
+  local frame = Widgets.Frame(UIParent, "ForeverPathToast", { frameType = "Button", bg = C.sidebar, border = C.gold })
   frame:SetSize(Toast.WIDTH, Toast.HEIGHT)
   frame:SetPoint("TOP", UIParent, "TOP", 0, -140)
   frame:SetFrameStrata("HIGH")

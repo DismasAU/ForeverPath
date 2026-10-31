@@ -126,7 +126,7 @@ local function Create(parent)
   wornMeta:SetPoint("BOTTOMLEFT", wornIcon, "BOTTOMRIGHT", 8, 0)
   wornMeta:SetPoint("RIGHT", body, "RIGHT", -12, 0)
 
-  local target = Widgets.Frame(body, nil, { bg = Theme.RGB("#2B2619"), border = C.gold })
+  local target = Widgets.Frame(body, nil, { bg = C.cardBest, border = C.gold })
   target:SetHeight(50)
   target:SetPoint("TOPLEFT", wornIcon, "BOTTOMLEFT", 0, -10)
   target:SetPoint("RIGHT", body, "RIGHT", -12, 0)
@@ -223,9 +223,7 @@ local function Create(parent)
   end
   screen.equipped = equipped
   screen.empty = Widgets.EmptyState(screen, "Equipment", "")
-  screen.empty:SetPoint("TOPLEFT", screen, "TOPLEFT", 0, -80)
-  screen.empty:SetPoint("TOPRIGHT", screen, "TOPRIGHT", 0, -80)
-  screen.empty:SetHeight(120)
+  Widgets.StackAt(screen.empty, screen, 80, 120)
   screen.empty:Hide()
 
   function screen:SourceFilter()

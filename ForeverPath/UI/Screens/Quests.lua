@@ -210,10 +210,13 @@ local function Create(parent)
   screen.list = list
 
   screen.empty = Widgets.EmptyState(screen, "Quests", "")
-  screen.empty:SetPoint("TOPLEFT", screen, "TOPLEFT", 0, -80)
-  screen.empty:SetPoint("TOPRIGHT", screen, "TOPRIGHT", 0, -80)
-  screen.empty:SetHeight(120)
+  Widgets.StackAt(screen.empty, screen, 80, 120)
   screen.empty:Hide()
+
+  -- MainFrame.ShowScreen("quests", nil, questID) lands here.
+  function screen:Focus(questID)
+    self:Select(questID)
+  end
 
   function screen:Select(questID)
     self.questID = questID
@@ -417,9 +420,7 @@ local function Create(parent)
     for _, g in ipairs(collected.groups) do
       groupIndex = groupIndex + 1
       local groupRow = self.groupPool:Get(groupIndex)
-      groupRow:ClearAllPoints()
-      groupRow:SetPoint("TOPLEFT", scroll.content, "TOPLEFT", 0, -y)
-      groupRow:SetPoint("TOPRIGHT", scroll.content, "TOPRIGHT", 0, -y)
+      Widgets.StackAt(groupRow, scroll.content, y)
       groupRow.label:SetText(Theme.Upper(g.label))
       groupRow.count:SetText(tostring(#g.rows))
       y = y + GROUP_ROW
@@ -427,9 +428,7 @@ local function Create(parent)
         rowIndex = rowIndex + 1
         firstQuest = firstQuest or r.questID
         local row = self.rowPool:Get(rowIndex)
-        row:ClearAllPoints()
-        row:SetPoint("TOPLEFT", scroll.content, "TOPLEFT", 0, -y)
-        row:SetPoint("TOPRIGHT", scroll.content, "TOPRIGHT", 0, -y)
+        Widgets.StackAt(row, scroll.content, y)
         y = y + ROW
         row.questID = r.questID
         local mark, markColor = MARKER[r.stateKey][1], MARKER[r.stateKey][2]

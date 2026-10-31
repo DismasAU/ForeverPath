@@ -74,7 +74,7 @@ end
 
 function Tracker.Create()
   if Tracker.frame then return Tracker.frame end
-  local frame = Widgets.Frame(UIParent, "ForeverPathTracker", { bg = Theme.RGB("#0E0E0C"), border = C.line, alpha = 0.86 })
+  local frame = Widgets.Frame(UIParent, "ForeverPathTracker", { bg = C.inset, border = C.line, alpha = 0.86 })
   Tracker.frame = frame
   frame:SetWidth(WIDTH)
   frame:SetFrameStrata("MEDIUM")
