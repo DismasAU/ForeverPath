@@ -52,6 +52,13 @@ describe("Bootstrap and slash commands", function()
     end
   end)
 
+  it("refuses data commands until loaded, but answers help before", function()
+    Mock.RunSlash("goals")
+    assert_output("Still loading, try again in a moment.")
+    Mock.RunSlash("help")
+    assert_output("Commands:")
+  end)
+
   it("ignores other addons' ADDON_LOADED", function()
     Mock.FireEvent("ADDON_LOADED", "SomethingElse")
     assert_false(ns.loaded)

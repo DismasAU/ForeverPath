@@ -508,7 +508,7 @@ describe("Reach-skill goals", function()
     crafting.tab = "tree"
     crafting:Refresh()
     assert_true(crafting.treeView:IsShown())
-    local firstRow = crafting.treeView.pool.rows[1]
+    local firstRow = H.ui.row(crafting.treeView, 1)
     assert_match(firstRow.name:GetText(), "Tailoring 160")
     assert_eq(firstRow.via:GetText(), "Craft for skill")
     crafting.tabs:Select("craftwise")

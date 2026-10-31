@@ -1,5 +1,9 @@
--- Application service shared by the UI and slash commands: owns the GoalStore
--- instance bound to the character database and turns player input into goals.
+-- Application service shared by the UI and slash commands, in four parts:
+-- goal input (text, links and ids into goals; Add*/Set* over the GoalStore
+-- bound to the character database), type-ahead (Suggest), attribution
+-- (which quests and equipment slots serve which goals, through
+-- Domain/GoalAttribution) and cross-goal summaries (evaluated views, the
+-- shopping list, the overview, needs).
 local _, ns = ...
 
 local GoalStore = ns.GoalStore

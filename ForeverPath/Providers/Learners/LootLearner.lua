@@ -242,6 +242,8 @@ function LootLearner.ItemHints(itemID)
   return out
 end
 
+-- Items seen, then the creatures, objects and fishing spots they came from
+-- (the record count first, like the other learners' Count).
 function LootLearner.Count()
   local sources, items = 0, {}
   for _, entry in pairs(LootLearner.Store() or {}) do
@@ -249,12 +251,12 @@ function LootLearner.Count()
     for itemID in pairs(entry.items or {}) do items[itemID] = true end
     for itemID in pairs(entry.skinned or {}) do items[itemID] = true end
   end
-  return sources, Util.Count(items)
+  return Util.Count(items), sources
 end
 
 function LootLearner.StatusLine()
   if not LootLearner.IsAvailable() then return "Loot learner: the loot window API is unavailable on this client." end
-  local sources, items = LootLearner.Count()
+  local items, sources = LootLearner.Count()
   return string.format("Loot learner: %d item%s seen from %d creature%s, object%s and fishing spot%s on this account.", items, items == 1 and "" or "s",
     sources, sources == 1 and "" or "s", sources == 1 and "" or "s", sources == 1 and "" or "s")
 end

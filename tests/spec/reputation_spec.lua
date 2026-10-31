@@ -251,7 +251,7 @@ describe("Reputation goals", function()
     MainFrame.ShowScreen("quests")
     Mock.RunTimers()
     local quests = MainFrame.screens.quests
-    quests.tabs.tabs.goal:Click()
+    H.ui.tab(quests, "goal"):Click()
     Mock.RunTimers()
     local labels = {}
     for _, row in ipairs(quests.groupPool.rows) do if row:IsShown() then labels[#labels + 1] = row.label:GetText() end end
@@ -259,7 +259,7 @@ describe("Reputation goals", function()
     assert_match(labels[1], "IRONFORGE %- HONORED")
     quests:Select(GRUDGE)
     assert_match(quests.side.feedsText:GetText(), "^%+250 Ironforge reputation for Ironforge %- Honored$")
-    quests.tabs.tabs.zone:Click()
+    H.ui.tab(quests, "zone"):Click()
     MainFrame.Hide()
     -- Defaults: no standing given means the next one up; "exalted argent dawn" also parses.
     local second = ns.GoalService.AddReputationFromInput("argent dawn")

@@ -166,6 +166,12 @@ function VendorProvider.Count()
   return items, vendors
 end
 
+function VendorProvider.StatusLine()
+  local items, vendors = VendorProvider.Count()
+  return string.format("Vendors: %d item%s from %d vendor%s recorded (whenever you open a merchant).",
+    items, items == 1 and "" or "s", vendors, vendors == 1 and "" or "s")
+end
+
 function VendorProvider.Init()
   ns.PriceProvider.RegisterSource("vendor", { IsAvailable = function() return true end, GetPrice = VendorProvider.GetPrice })
   if not VendorProvider.IsAvailable() then

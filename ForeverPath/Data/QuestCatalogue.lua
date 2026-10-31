@@ -11,7 +11,8 @@
 --   note   = "...",                          -- free text shown with the step (optional)
 -- }
 --
--- Sources (checked 2026-10-18, Forever beta build 1.60.1.70450):
+-- Sources (checked 2026-10-18 against the Forever beta, build 1.60.1.70450;
+-- not yet re-checked on the released client):
 --   Attune (AttuneClassQuests.lua, Forever class chains): quest ids, giver
 --     pins and turn-in notes for the shaman "Call of Air" chain, both factions.
 --   Wowhead Forever quest pages (quest=79360 ... quest=96016): objectives,
@@ -20,8 +21,9 @@
 --     NPC positions and where the Twisted Totems drop.
 -- Positions are map percent / 100 on the zone's uiMapID (Orgrimmar 1454,
 -- Thunder Bluff 1456, Thousand Needles 1441, Alterac Mountains 1416,
--- Ironforge 1455, Arathi Highlands 1417). Not yet verified on the beta: a
--- quest window opened in game overrides a row's position for the account.
+-- Ironforge 1455, Arathi Highlands 1417). Not yet verified on the released
+-- client: a quest window opened in game overrides a row's position for the
+-- account.
 local _, ns = ...
 
 ns.Data = ns.Data or {}

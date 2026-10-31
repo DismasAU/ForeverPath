@@ -320,7 +320,7 @@ describe("Quest goals", function()
     assert_true(ns.chardb.ui.questsFeedOnly)
     screen.feedOnly:Click()
     -- By goal tab lists the feeding quest under the goal's name.
-    screen.tabs.tabs.goal:Click()
+    H.ui.tab(screen, "goal"):Click()
     Mock.RunTimers()
     assert_eq(screen.tab, "goal")
     local labels = {}
@@ -329,7 +329,7 @@ describe("Quest goals", function()
     assert_match(labels[1], "DEVIATE HIDES")
     assert_match(labels[1], "SLICK DEVIATE LEGGINGS")
     -- Selecting a row and the log-only buttons.
-    screen.tabs.tabs.zone:Click()
+    H.ui.tab(screen, "zone"):Click()
     Mock.RunTimers()
     screen:Select(SMART_DRINKS)
     assert_eq(screen.side.title:GetText(), "Smart Drinks")
@@ -347,7 +347,7 @@ describe("Quest goals", function()
     -- Completed tab after a turn-in.
     Mock.CompleteQuest(HIDES)
     Mock.RunTimers()
-    screen.tabs.tabs.completed:Click()
+    H.ui.tab(screen, "completed"):Click()
     Mock.RunTimers()
     shown = 0
     for _, row in ipairs(screen.rowPool.rows) do if row:IsShown() then shown = shown + 1 end end

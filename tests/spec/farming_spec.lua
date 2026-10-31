@@ -76,7 +76,7 @@ describe("Farming estimates", function()
     ns.chardb.shopping = ns.chardb.shopping or {}
     ns.chardb.shopping.sort = "zone"
     shop:Refresh()
-    local row = shop.pool.rows[1]
+    local row = H.ui.row(shop, 1)
     assert_eq(row.itemID, LEATHER)
     assert_match(row.note:GetText(), "^Elwynn Forest %- ~16 kills of Wolf %- Light Leather")
   end)

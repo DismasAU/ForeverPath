@@ -322,10 +322,10 @@ describe("Enchant goals", function()
     assert_eq(crafting.hero.chips[1].label:GetText(), "Known")
     assert_eq(crafting.hero.chips[2].label:GetText(), "0 of 1 cast")
     assert_match(crafting.hero.reagents:GetText(), "^1 of 1 reagents in your bags %- 1 cast to do")
-    assert_match(crafting.pool.rows[1].name:GetText(), "Lesser Magic Essence")
+    assert_match(H.ui.row(crafting, 1).name:GetText(), "Lesser Magic Essence")
     crafting.tab = "tree"
     crafting:Refresh()
-    local treeRow = crafting.treeView.pool.rows[1]
+    local treeRow = H.ui.row(crafting.treeView, 1)
     assert_match(treeRow.name:GetText(), "Enchant Bracer %- Minor Deflect")
     assert_eq(treeRow.note:GetText(), "1 cast")
     assert_eq(treeRow.via:GetText(), "Cast - Enchanting")

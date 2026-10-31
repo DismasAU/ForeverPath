@@ -51,13 +51,9 @@ Commands.help = {
   { "/fp reset window", "Reset the window, tracker and minimap button positions." },
 }
 
-local function requireLoaded()
-  if not ns.loaded then
-    Log.Print("Still loading, try again in a moment.")
-    return false
-  end
-  return true
-end
+-- Commands that work before the saved variables load; every other one is
+-- refused until then (Commands.Dispatch checks).
+local BEFORE_LOAD = { help = true, debug = true, errors = true, reset = true, show = true, hide = true }
 
 local handlers = {}
 
@@ -74,16 +70,14 @@ function handlers.debug()
 end
 
 function handlers.scan(rest)
-  if not requireLoaded() then return end
   ns.ProfessionProvider.RequestScan(rest == "all")
 end
 
 -- Every data module /fp status reports on; each has StatusLine().
-local STATUS_MODULES = { "Recipes", "TrainerProvider", "QuestProvider", "QuestFactsProvider", "ClassicDB", "LootLearner",
+local STATUS_MODULES = { "Recipes", "VendorProvider", "TrainerProvider", "QuestProvider", "QuestFactsProvider", "ClassicDB", "LootLearner",
   "Share", "QuestieBridge", "AttuneProvider", "EquipmentProvider", "ReputationProvider", "SourceProvider", "PriceProvider" }
 
 function handlers.status()
-  if not requireLoaded() then return end
   Log.Print("Version %s", tostring(ns.VERSION))
   for _, row in ipairs(ns.Compat.Capabilities()) do
     Log.output(string.format("  %s: %s", row[1], row[2]))
@@ -112,7 +106,6 @@ function handlers.status()
 end
 
 function handlers.goals()
-  if not requireLoaded() then return end
   local goals = ns.GoalService.List({ open = true })
   if #goals == 0 then
     Log.Print("No open goals. Add one with /fp add <item id or link> [qty].")
@@ -130,7 +123,6 @@ end
 -- "add <item text> [qty]" - the quantity is the trailing integer token, if any,
 -- provided something precedes it (so "/fp add 2589" is an item, not a quantity).
 local function addGoal(rest, goalType)
-  if not requireLoaded() then return end
   rest = Util.Trim(rest or "")
   local itemText, quantity = rest, 1
   local head, tail = rest:match("^(.-)%s+(%d+)$")
@@ -161,18 +153,15 @@ local function addTypedGoal(goal, message)
 end
 
 function handlers.learn(rest)
-  if not requireLoaded() then return end
   addTypedGoal(ns.GoalService.AddRecipeFromInput(rest))
 end
 
 function handlers.skill(rest)
-  if not requireLoaded() then return end
   addTypedGoal(ns.GoalService.AddSkillFromInput(rest))
 end
 
 -- "enchant <name or link> [casts]" - the trailing integer is the cast count.
 function handlers.enchant(rest)
-  if not requireLoaded() then return end
   rest = Util.Trim(rest or "")
   local text, quantity = rest, 1
   local head, tail = rest:match("^(.-)%s+(%d+)$")
@@ -183,7 +172,6 @@ function handlers.enchant(rest)
 end
 
 function handlers.quest(rest)
-  if not requireLoaded() then return end
   local goal, message = ns.GoalService.AddQuestFromInput(rest)
   Log.Print("%s", message)
   if goal and ns.UI.MainFrame.IsShown() then
@@ -193,7 +181,6 @@ function handlers.quest(rest)
 end
 
 function handlers.rep(rest)
-  if not requireLoaded() then return end
   local goal, message = ns.GoalService.AddReputationFromInput(rest)
   Log.Print("%s", message)
   if goal and ns.UI.MainFrame.IsShown() then
@@ -203,7 +190,6 @@ function handlers.rep(rest)
 end
 
 function handlers.reps()
-  if not requireLoaded() then return end
   local RP = ns.ReputationProvider
   Log.Print("%s", RP.StatusLine())
   for _, record in ipairs(RP.List()) do
@@ -214,7 +200,6 @@ function handlers.reps()
 end
 
 function handlers.equipment()
-  if not requireLoaded() then return end
   local EP = ns.EquipmentProvider
   Log.Print("%s", EP.StatusLine())
   ns.GoalService.EvaluateViews()
@@ -230,7 +215,6 @@ function handlers.equipment()
 end
 
 function handlers.quests()
-  if not requireLoaded() then return end
   local QP = ns.QuestProvider
   Log.Print("%s", QP.StatusLine())
   local goals = ns.GoalService.List({ open = true })
@@ -266,7 +250,6 @@ local function resolveOrComplain(rest)
 end
 
 function handlers.remove(rest)
-  if not requireLoaded() then return end
   local goal = resolveOrComplain(rest)
   if not goal then return end
   ns.GoalService.Remove(goal.id)
@@ -274,7 +257,6 @@ function handlers.remove(rest)
 end
 
 function handlers.select(rest)
-  if not requireLoaded() then return end
   local goal = resolveOrComplain(rest)
   if not goal then return end
   ns.GoalService.Select(goal.id)
@@ -286,8 +268,7 @@ end
 
 local function setStatusCommand(status, verb)
   return function(rest)
-    if not requireLoaded() then return end
-    local goal = resolveOrComplain(rest)
+      local goal = resolveOrComplain(rest)
     if not goal then return end
     ns.GoalService.SetStatus(goal.id, status)
     Log.Print("%s %s", verb, ns.GoalService.Title(goal))
@@ -298,7 +279,6 @@ handlers.pause = setStatusCommand(ns.GoalModel.Statuses.PAUSED, "Paused")
 handlers.resume = setStatusCommand(ns.GoalModel.Statuses.ACTIVE, "Resumed")
 
 function handlers.tree(rest)
-  if not requireLoaded() then return end
   local goal
   if rest and Util.Trim(rest) ~= "" then
     goal = resolveOrComplain(rest)
@@ -322,7 +302,6 @@ function handlers.tree(rest)
 end
 
 function handlers.characters()
-  if not requireLoaded() then return end
   local list = ns.CharacterProvider.List()
   Log.Print("Characters (%d):", #list)
   for _, entry in ipairs(list) do
@@ -337,7 +316,6 @@ function handlers.characters()
 end
 
 function handlers.sources(rest)
-  if not requireLoaded() then return end
   local parsed = ns.ItemProvider.ParseInput(Util.Trim(rest or ""))
   local itemID = parsed and parsed.itemID
   if not itemID and parsed and parsed.kind == "name" then
@@ -359,15 +337,11 @@ function handlers.sources(rest)
 end
 
 function handlers.vendors()
-  if not requireLoaded() then return end
-  local items, vendors = ns.VendorProvider.Count()
   local status = ns.SourceProvider.StatusInfo()
-  Log.Print("Vendor data: %d item%s from %d vendor%s (recorded whenever you open a merchant). DungeonJournal: %s. AtlasLoot: %s.",
-    items, items == 1 and "" or "s", vendors, vendors == 1 and "" or "s", status.journal, status.atlasloot)
+  Log.Print("%s DungeonJournal: %s. AtlasLoot: %s.", ns.VendorProvider.StatusLine(), status.journal, status.atlasloot)
 end
 
 function handlers.recipe(rest)
-  if not requireLoaded() then return end
   local parsed = ns.ItemProvider.ParseInput(Util.Trim(rest or ""))
   local itemID = parsed and parsed.itemID
   if not itemID and parsed and parsed.kind == "name" then
@@ -387,7 +361,6 @@ function handlers.recipe(rest)
 end
 
 function handlers.catalogue()
-  if not requireLoaded() then return end
   Log.Print("%s", ns.Recipes.StatusLine())
   local info = ns.Recipes.Info()
   if info then
@@ -398,7 +371,6 @@ function handlers.catalogue()
 end
 
 function handlers.trainers()
-  if not requireLoaded() then return end
   Log.Print("%s", ns.TrainerProvider.StatusLine())
   local trainers = {}
   for name, record in pairs(ns.TrainerProvider.Trainers() or {}) do
@@ -416,7 +388,6 @@ function handlers.trainers()
 end
 
 function handlers.export()
-  if not requireLoaded() then return end
   local text, counts = ns.UI.ShareFrame.ShowExport()
   if text then
     Log.Print("Export ready (%s): copy it from the window with Ctrl+C.", ns.Share.CountsLabel(counts))
@@ -426,7 +397,6 @@ function handlers.export()
 end
 
 function handlers.import(rest)
-  if not requireLoaded() then return end
   local text = Util.Trim(rest or "")
   if text ~= "" then
     local ok, message = ns.Share.Import(text)
@@ -438,7 +408,6 @@ function handlers.import(rest)
 end
 
 function handlers.shared(rest)
-  if not requireLoaded() then return end
   local list = ns.Share.List()
   local index = tonumber((rest or ""):match("^%s*remove%s+(%d+)%s*$"))
   if index then
@@ -458,7 +427,6 @@ function handlers.shared(rest)
 end
 
 function handlers.train(rest)
-  if not requireLoaded() then return end
   local name = Util.Trim(rest or "")
   local plans = ns.Planner.Trainable(name ~= "" and name or nil)
   if #plans == 0 then
@@ -487,13 +455,12 @@ function handlers.train(rest)
 end
 
 function handlers.prices(rest)
-  if not requireLoaded() then return end
   local status = ns.PriceProvider.StatusInfo()
   rest = Util.Trim(rest or "")
   if rest == "" then
     Log.Print("%s", status.text)
     if status.lastScan then Log.output("  Last browse scan: " .. Util.FormatAgo(status.lastScan)) end
-    Log.output("  Vendor prices: " .. tostring((ns.VendorProvider.Count())) .. " items recorded")
+    Log.output("  " .. ns.VendorProvider.StatusLine())
     return
   end
   local parsed = ns.ItemProvider.ParseInput(rest)
@@ -513,7 +480,6 @@ function handlers.prices(rest)
 end
 
 function handlers.attunements()
-  if not requireLoaded() then return end
   local AP = ns.AttuneProvider
   if not AP.IsAvailable() then
     Log.Print("Attune is not installed; attunement goals need it.")
@@ -530,7 +496,6 @@ function handlers.attunements()
 end
 
 function handlers.attune(rest)
-  if not requireLoaded() then return end
   local goal, message = ns.GoalService.AddAttunementFromInput(rest)
   Log.Print("%s", message)
   if goal and ns.UI.MainFrame.IsShown() then
@@ -540,7 +505,6 @@ function handlers.attune(rest)
 end
 
 function handlers.celebrate(rest)
-  if not requireLoaded() then return end
   local DB = ns.Database
   rest = Util.Trim(rest or ""):lower()
   if rest == "test" then
@@ -561,7 +525,6 @@ function handlers.celebrate(rest)
 end
 
 function handlers.shopping()
-  if not requireLoaded() then return end
   ns.GoalService.EvaluateViews()
   local list = ns.GoalService.ShoppingList()
   for _, line in ipairs(ns.ShoppingList.Lines(list, ns.ItemProvider.GetName)) do
@@ -570,7 +533,6 @@ function handlers.shopping()
 end
 
 function handlers.snapshot()
-  if not requireLoaded() then return end
   local record, err = ns.CharacterProvider.Snapshot()
   if not record then
     Log.Print("Snapshot failed: %s", tostring(err))
@@ -587,17 +549,14 @@ function handlers.snapshot()
 end
 
 function handlers.alts()
-  if not requireLoaded() then return end
   Log.Print("%s", ns.GoalService.SetIncludeAlts(not ns.GoalService.IncludesAlts()))
 end
 
 function handlers.tracker()
-  if not requireLoaded() then return end
   ns.UI.Tracker.Toggle()
 end
 
 function handlers.minimap(rest)
-  if not requireLoaded() then return end
   local arg = Util.Trim(rest or ""):lower()
   local shown
   if arg == "show" or arg == "on" then shown = true
@@ -608,7 +567,6 @@ function handlers.minimap(rest)
 end
 
 function handlers.open(rest)
-  if not requireLoaded() then return end
   local key = Util.Trim(rest or ""):lower()
   if key == "mygoals" then key = "goals" end
   ns.UI.MainFrame.Show()
@@ -655,6 +613,10 @@ function Commands.Dispatch(message)
   local handler = handlers[command]
   if not handler then
     Log.Print("Unknown command '%s'. Type /fp help.", command)
+    return
+  end
+  if not ns.loaded and not BEFORE_LOAD[command] then
+    Log.Print("Still loading, try again in a moment.")
     return
   end
   handler(rest)

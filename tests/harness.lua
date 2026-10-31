@@ -211,6 +211,12 @@ Harness.ui = {
     return texts
   end,
   routeCard = function(tree, index) return tree.side.cards[index] end,
+  -- A list's index-th row (a Widgets.Pool owner: a screen, panel or view).
+  row = function(owner, index) return owner.pool.rows[index] end,
+  -- A stat strip's index-th cell (Widgets stat cells, left to right).
+  cell = function(owner, index) return owner.cells[index] end,
+  -- A tab strip's tab by key (owner.tabs is the Widgets.Tabs strip).
+  tab = function(owner, key) return owner.tabs.tabs[key] end,
 }
 
 -- Fresh client state plus a freshly loaded addon. opts.setup runs after the
