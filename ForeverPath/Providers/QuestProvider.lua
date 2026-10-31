@@ -296,6 +296,22 @@ function QuestProvider.LogCapacity()
   return 0, QuestProvider.MAX_LOG
 end
 
+-- The chat link of a quest in the log, or nil.
+function QuestProvider.Link(questID)
+  local logIndex = QuestProvider.State(questID).logIndex
+  local link = logIndex and call(_G.GetQuestLink, logIndex) or nil
+  return type(link) == "string" and link or nil
+end
+
+-- Adds a quest in the log to the objective tracker. Returns whether the
+-- client has the call (a quest not in the log is the caller's check).
+function QuestProvider.Watch(questID)
+  local log = questLog()
+  if not log or type(log.AddQuestWatch) ~= "function" then return false end
+  call(log.AddQuestWatch, questID)
+  return true
+end
+
 -- { completed, inLog, ready, logIndex, title, level, objectives = { { text, finished, numFulfilled, numRequired } }, fraction }
 function QuestProvider.State(questID)
   local state = { completed = false, inLog = false, ready = false, objectives = {}, fraction = 0 }

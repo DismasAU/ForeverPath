@@ -116,8 +116,11 @@ compartment click handler the TOC requires.
    modules that may fail without breaking the caller go through `Log.Try`
    (logged); client and third-party APIs go through `Util.SafeCall` (a
    failure reads as no answer). Plain `pcall` is left only where the caller
-   must tell a failure from a nil answer (ItemProvider's existence check and
-   load request, ClassicDB's LoadAddOn reason), and `Log.Capture` where it
+   must tell a failure from a nil answer or needs the error text
+   (ItemProvider's existence check and load request, ClassicDB's LoadAddOn
+   reason, Compat.SetWaypoint and Compat.RegisterEvent, LibDBIcon's
+   Register, the tooltip's SetItemByID, and Codec's encode/decode errors),
+   each marked with a comment, and `Log.Capture` where it
    handles a failure of its own code itself (index and migration states).
 6. Refreshes are event driven and debounced; nothing runs OnUpdate. Lower
    layers announce changes with `FP_*` messages and never call into the UI.

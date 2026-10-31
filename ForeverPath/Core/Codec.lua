@@ -8,6 +8,8 @@
 -- when it exists ("FPX1:z:" vs "FPX1:b:").
 local _, ns = ...
 
+local Util = ns.Util
+
 local Codec = {}
 ns.Codec = Codec
 
@@ -57,6 +59,7 @@ end
 
 function Codec.Serialize(value)
   local out = {}
+  -- Plain pcall here and in Deserialize: the error text is the reason returned.
   local ok, err = pcall(write, value, out, 0)
   if not ok then return nil, tostring(err) end
   return table.concat(out)
@@ -172,8 +175,8 @@ function Codec.Pack(value)
   if not text then return nil, err end
   local e = encoding()
   if e then
-    local ok, packed = pcall(function() return e.EncodeBase64(e.CompressString(text)) end)
-    if ok and type(packed) == "string" then return Codec.PREFIX .. "z:" .. packed end
+    local packed = Util.SafeCall(function() return e.EncodeBase64(e.CompressString(text)) end)
+    if type(packed) == "string" then return Codec.PREFIX .. "z:" .. packed end
   end
   return Codec.PREFIX .. "b:" .. Codec.Base64Encode(text)
 end
@@ -191,8 +194,8 @@ function Codec.Unpack(text)
   elseif mode == "z" then
     local e = encoding()
     if not e then return nil, "this export is compressed and this client cannot decompress it" end
-    local ok, result = pcall(function() return e.DecompressString(e.DecodeBase64(body)) end)
-    if not ok or type(result) ~= "string" then return nil, "damaged export" end
+    local result = Util.SafeCall(function() return e.DecompressString(e.DecodeBase64(body)) end)
+    if type(result) ~= "string" then return nil, "damaged export" end
     raw = result
   else
     return nil, "unknown export format"

@@ -12,6 +12,8 @@
 -- also degrades gracefully on other clients. See API_COMPATIBILITY.md.
 local _, ns = ...
 
+local Util = ns.Util
+
 local Compat = {}
 ns.Compat = Compat
 
@@ -27,12 +29,8 @@ end
 
 function Compat.Detect()
   local version, build, buildDate, interface = "unknown", "unknown", "unknown", 0
-  if type(GetBuildInfo) == "function" then
-    local ok, v, b, d, i = pcall(GetBuildInfo)
-    if ok then
-      version, build, buildDate, interface = v or version, b or build, d or buildDate, tonumber(i) or 0
-    end
-  end
+  local v, b, d, i = Util.SafeCall(_G.GetBuildInfo)
+  version, build, buildDate, interface = v or version, b or build, d or buildDate, tonumber(i) or 0
   Compat.client = {
     version = version,
     build = build,
@@ -136,12 +134,12 @@ end
 function Compat.PlayerPosition()
   local map = _G.C_Map
   if type(map) ~= "table" or type(map.GetBestMapForUnit) ~= "function" or type(map.GetPlayerMapPosition) ~= "function" then return nil end
-  local ok, mapID = pcall(map.GetBestMapForUnit, "player")
-  if not ok or type(mapID) ~= "number" then return nil end
-  local okPos, pos = pcall(map.GetPlayerMapPosition, mapID, "player")
-  if not okPos or type(pos) ~= "table" then return mapID end
-  local okXY, x, y = pcall(pos.GetXY, pos)
-  if not okXY or type(x) ~= "number" or type(y) ~= "number" then return mapID end
+  local mapID = Util.SafeCall(map.GetBestMapForUnit, "player")
+  if type(mapID) ~= "number" then return nil end
+  local pos = Util.SafeCall(map.GetPlayerMapPosition, mapID, "player")
+  if type(pos) ~= "table" then return mapID end
+  local x, y = Util.SafeCall(pos.GetXY, pos)
+  if type(x) ~= "number" or type(y) ~= "number" then return mapID end
   return mapID, x, y
 end
 
@@ -158,17 +156,17 @@ function Compat.SetWaypoint(mapID, x, y)
   mapID, x, y = tonumber(mapID), tonumber(x), tonumber(y)
   if not (mapID and x and y) then return false, "No map position recorded." end
   local map = _G.C_Map
-  if type(map.CanSetUserWaypointOnMap) == "function" then
-    local ok, can = pcall(map.CanSetUserWaypointOnMap, mapID)
-    if ok and can == false then return false, "The map does not allow waypoints here." end
+  if Util.SafeCall(map.CanSetUserWaypointOnMap, mapID) == false then
+    return false, "The map does not allow waypoints here."
   end
-  local okPoint, point = pcall(_G.UiMapPoint.CreateFromCoordinates, mapID, x, y)
-  if not okPoint or type(point) ~= "table" then return false, "Could not build the map point." end
+  local point = Util.SafeCall(_G.UiMapPoint.CreateFromCoordinates, mapID, x, y)
+  if type(point) ~= "table" then return false, "Could not build the map point." end
+  -- Plain pcall: the client's refusal text is the reason shown to the player.
   local okSet, err = pcall(map.SetUserWaypoint, point)
   if not okSet then return false, tostring(err) end
   local track = _G.C_SuperTrack
-  if type(track) == "table" and type(track.SetSuperTrackedUserWaypoint) == "function" then
-    pcall(track.SetSuperTrackedUserWaypoint, true)
+  if type(track) == "table" then
+    Util.SafeCall(track.SetSuperTrackedUserWaypoint, true)
   end
   return true
 end
@@ -179,6 +177,7 @@ function Compat.RegisterEvent(frame, event)
   if not frame or type(frame.RegisterEvent) ~= "function" then
     return false, "no frame"
   end
+  -- Plain pcall: RegisterEvent returns nothing, so only pcall tells a refusal apart.
   local ok, err = pcall(frame.RegisterEvent, frame, event)
   if not ok then
     ns.Log.Debug("Event %s is not available on this client: %s", tostring(event), tostring(err))
@@ -223,7 +222,7 @@ function Compat.InsertLink(link)
   local owner, name = insertLinkTarget()
   if not name then return false end
   local fn = owner and owner[name] or _G[name]
-  return ns.Util.SafeCall(fn, link) and true or false
+  return Util.SafeCall(fn, link) and true or false
 end
 
 -- Runs callback(link) after every chat link insertion (Shift-click). Returns
@@ -239,11 +238,11 @@ end
 -- the legacy GetItemStats(link, outTable); nil when neither answers.
 function Compat.GetItemStats(linkOrID)
   local cItem = type(C_Item) == "table" and C_Item or {}
-  local stats = ns.Util.SafeCall(cItem.GetItemStats, linkOrID)
+  local stats = Util.SafeCall(cItem.GetItemStats, linkOrID)
   if type(stats) == "table" then return stats end
   if type(_G.GetItemStats) ~= "function" then return nil end
   local legacy = {}
-  local result = ns.Util.SafeCall(_G.GetItemStats, linkOrID, legacy)
+  local result = Util.SafeCall(_G.GetItemStats, linkOrID, legacy)
   if type(result) == "table" then return result end
   return next(legacy) and legacy or nil
 end
@@ -253,20 +252,20 @@ end
 
 -- "Alliance" or "Horde".
 function Compat.PlayerFaction()
-  local faction = ns.Util.SafeCall(_G.UnitFactionGroup, "player")
+  local faction = Util.SafeCall(_G.UnitFactionGroup, "player")
   return type(faction) == "string" and faction or nil
 end
 
 -- The class token ("SHAMAN"), the numeric class id (7) and the client's
 -- localized class name ("Shaman").
 function Compat.PlayerClass()
-  local className, classFile, classID = ns.Util.SafeCall(_G.UnitClass, "player")
+  local className, classFile, classID = Util.SafeCall(_G.UnitClass, "player")
   classFile = type(classFile) == "string" and classFile ~= "" and string.upper(classFile) or nil
   return classFile, tonumber(classID), type(className) == "string" and className or nil
 end
 
 function Compat.PlayerLevel()
-  return tonumber((ns.Util.SafeCall(_G.UnitLevel, "player"))) or 0
+  return tonumber((Util.SafeCall(_G.UnitLevel, "player"))) or 0
 end
 
 Compat.Detect()

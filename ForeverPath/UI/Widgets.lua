@@ -1109,6 +1109,7 @@ function Widgets.SetItemTooltip(frame, getItemID, extraLines)
     GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
     local ok = false
     if type(GameTooltip.SetItemByID) == "function" then
+      -- Plain pcall: SetItemByID returns nothing, so only pcall tells a failure apart.
       ok = pcall(GameTooltip.SetItemByID, GameTooltip, itemID)
     end
     if not ok then
@@ -1138,8 +1139,8 @@ function Widgets.Money(copper, compact)
   copper = tonumber(copper) or 0
   local fn = (type(C_CurrencyInfo) == "table" and C_CurrencyInfo.GetCoinTextureString) or _G.GetCoinTextureString
   if not compact and type(fn) == "function" then
-    local ok, text = pcall(fn, copper)
-    if ok and text then return text end
+    local text = ns.Util.SafeCall(fn, copper)
+    if text then return text end
   end
   local gold = math.floor(copper / 10000)
   local silver = math.floor((copper % 10000) / 100)

@@ -51,9 +51,8 @@ end
 
 local function library(name)
   local LibStub = _G.LibStub
-  if type(LibStub) ~= "table" or type(LibStub.GetLibrary) ~= "function" then return nil end
-  local ok, lib = pcall(LibStub.GetLibrary, LibStub, name, true)
-  return ok and lib or nil
+  if type(LibStub) ~= "table" then return nil end
+  return ns.Util.SafeCall(LibStub.GetLibrary, LibStub, name, true)
 end
 
 local function dbIcon()
@@ -136,6 +135,7 @@ function MinimapButton.RegisterLibIcon(icon)
       OnTooltipShow = function(tooltip) if tooltip and tooltip.AddLine then MinimapButton.TooltipLines(tooltip) end end,
     })
   if not object then return false end
+  -- Plain pcall: Register returns nothing, so only pcall tells a failure apart.
   local ok = pcall(icon.Register, icon, MinimapButton.NAME, object, settings())
   if not ok then return false end
   MinimapButton.libIcon = icon

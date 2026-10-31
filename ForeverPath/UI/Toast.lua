@@ -106,7 +106,7 @@ function Toast.Dismiss()
   end
   if type(UIFrameFadeOut) == "function" and ns.Compat.hasTimer then
     Toast.fading = true
-    pcall(UIFrameFadeOut, frame, 0.4, 1, 0)
+    ns.Util.SafeCall(UIFrameFadeOut, frame, 0.4, 1, 0)
     ns.Compat.After(0.4, finish)
   else
     finish()

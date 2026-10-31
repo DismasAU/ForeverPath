@@ -22,8 +22,8 @@ function Log.Format(fmt, ...)
   if select("#", ...) == 0 then
     return tostring(fmt)
   end
-  local ok, text = pcall(string.format, tostring(fmt), ...)
-  if ok then
+  local text = ns.Util.SafeCall(string.format, tostring(fmt), ...)
+  if text then
     return text
   end
   local parts = { tostring(fmt) }

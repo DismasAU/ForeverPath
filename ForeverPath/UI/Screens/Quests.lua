@@ -6,7 +6,6 @@ local _, ns = ...
 
 local Widgets = ns.UI.Widgets
 local Theme = ns.UI.Theme
-local Util = ns.Util
 local C = Theme.Colors
 
 ns.UI.Screens = ns.UI.Screens or {}
@@ -226,12 +225,7 @@ local function Create(parent)
   end
 
   function screen:LinkQuest(questID)
-    local state = ns.QuestProvider.State(questID)
-    local link
-    if state.logIndex then
-      local result = Util.SafeCall(GetQuestLink, state.logIndex)
-      if type(result) == "string" then link = result end
-    end
+    local link = ns.QuestProvider.Link(questID)
     if not link then
       ns.UI.MainFrame.SetAlert("Only quests in your log can be linked.", "info")
       return false
@@ -246,12 +240,9 @@ local function Create(parent)
       ns.UI.MainFrame.SetAlert("Only quests in your log can be tracked.", "info")
       return false
     end
-    if type(C_QuestLog) == "table" and type(C_QuestLog.AddQuestWatch) == "function" then
-      Util.SafeCall(C_QuestLog.AddQuestWatch, questID)
-      ns.UI.MainFrame.SetAlert("Quest added to the objective tracker.", "ok")
-      return true
-    end
-    return false
+    if not ns.QuestProvider.Watch(questID) then return false end
+    ns.UI.MainFrame.SetAlert("Quest added to the objective tracker.", "ok")
+    return true
   end
 
   -- GoalService.QuestBoard for the selected tab, with each row's badge colour.

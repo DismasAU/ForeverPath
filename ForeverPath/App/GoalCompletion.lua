@@ -13,6 +13,7 @@ local _, ns = ...
 
 local Events = ns.Events
 local Log = ns.Log
+local Util = ns.Util
 local GoalModel = ns.GoalModel
 
 local GoalCompletion = { lastStatus = {} }
@@ -165,7 +166,7 @@ function GoalCompletion.Celebrate(goal)
   Log.Print("Goal complete: %s. %d goal%s done.", detail, doneCount, doneCount == 1 and "" or "s")
   if setting("completeSound", true) and type(PlaySound) == "function" then
     local kit = (type(SOUNDKIT) == "table" and SOUNDKIT.LEVELUP) or GoalCompletion.SOUND
-    pcall(PlaySound, kit, "Master")
+    Util.SafeCall(PlaySound, kit, "Master")
   end
   if setting("toasts", true) then
     local item = goal.target.itemID and ns.ItemProvider.GetItem(goal.target.itemID) or { icon = goal.target.icon, quality = 1 }
