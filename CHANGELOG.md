@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.25.0 (2026-10-31) - fixes and an internal clean-up
+
+### Fixed
+- With "Include alts' bags" on and the bank not counted, items already
+  claimed from alts no longer show as free again for the next goal or reagent.
+- A goal change that fails (a removed goal, settings not loaded yet) now says
+  why in the window's alert line instead of silently doing nothing.
+  `/fp remove`, `/fp select`, `/fp complete`, `/fp pause` and `/fp resume`
+  print the reason instead of claiming success, and `/fp alts` no longer
+  prints "nil".
+- Imported shared data (`/fp import`) range-checks numeric keys like it
+  already checked numeric values; imports saved earlier are re-checked once
+  at login.
+
+### Changed
+- ForeverPath_ClassicDB (the load-on-demand classic data) loads the first
+  time something needs it instead of at every login. The first use, often
+  opening the Quests screen, may take a moment.
+- Internal restructure with no intended change in behaviour: modules are
+  initialised in one fixed order (each failure is logged, the rest still
+  start), every goal change goes through one path, integrations are named
+  `*Bridge` and in-game recorders `*Learner`, and the slash commands and
+  start-up live in `Shell/`. The offline suite grew to 328 tests.
+
+### Removed
+- The unused "Recipe not learned" readiness state. Unlearned recipes are
+  still planned and labelled on the Crafting screen as before.
+
 ## 0.24.1 (2026-10-20) - minimap button works with button collectors
 
 ### Fixed

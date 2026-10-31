@@ -378,6 +378,17 @@ Needs two characters on the account. Log in on the alt first, then on your main.
 - [ ] `/fp minimap hide` removes it, `/fp minimap` brings it back; `/fp reset window` returns it to the lower left.
 - [ ] 0.24.1: with MinimapButtonButton (and EllesmereUI's minimap) running, the ForeverPath mark shows in the collected bar like the other addons' buttons, and left/right-click work from there.
 
+### 33. 0.25.0 Fixes and internal clean-up
+
+This release changed how every module starts and is named, so a broad pass matters more than usual.
+
+- [ ] `/reload` with `/fp debug` on: no Lua errors, and `/fp errors` is empty. `/fp status` lists every provider and integration (Attune, Questie, ClassicDB, AtlasLoot, DungeonJournal, Auctionator, GearQuest).
+- [ ] Every sidebar screen opens; clicking a goal, quest step or attunement step jumps to the right screen with it selected.
+- [ ] Goals added, edited, paused, completed and removed from the My Goals screen and with `/fp` behave as in 0.24.x; existing goals, routes and priorities survive the upgrade.
+- [ ] Classic data: login no longer loads ForeverPath_ClassicDB; the first Quests screen, `/fp quest <name>` or `/fp status` loads it, and classic quests and givers appear as before.
+- [ ] Include alts' bags on, bank off (Crafting screen checkbox and settings): an item held by an alt is counted once across two goals that need it.
+- [ ] `/fp remove <goal>` twice: the second prints why it could not, not "Removed".
+
 ### Reporting
 Include: client build (`/dump GetBuildInfo()`), `/fp status` output, the step
 that failed, chat output with `/fp debug` enabled, and `/fp errors`.
