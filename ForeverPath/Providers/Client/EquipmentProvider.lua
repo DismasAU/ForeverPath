@@ -16,6 +16,7 @@ local Compat = ns.Compat
 local Util = ns.Util
 local Log = ns.Log
 local Events = ns.Events
+local Routes = ns.DependencyResolver.Routes
 
 local EquipmentProvider = { factsCache = {} }
 ns.EquipmentProvider = EquipmentProvider
@@ -321,14 +322,14 @@ function EquipmentProvider.ItemHints(itemID)
   if not facts then return {} end
   local kind
   local t = facts.sourceType
-  if t == "vendor" then kind = "vendor"
-  elseif t == "quest_reward" then kind = "quest"
-  elseif t == "boss_drop" or t == "raid_trash" or t == "rare_npc" or t == "world_drop" then kind = "drop"
-  elseif t == "container" or t == "object_drop" or t == "fishing" then kind = "gather"
+  if t == "vendor" then kind = Routes.VENDOR
+  elseif t == "quest_reward" then kind = Routes.QUEST
+  elseif t == "boss_drop" or t == "raid_trash" or t == "rare_npc" or t == "world_drop" then kind = Routes.DROP
+  elseif t == "container" or t == "object_drop" or t == "fishing" then kind = Routes.GATHER
   else return {} end
   local label = EquipmentProvider.SourceLabels[t] or t
-  if kind == "vendor" and facts.npc then label = "Vendor: " .. facts.npc end
-  if kind == "quest" and facts.questName then label = "Quest reward: " .. facts.questName end
+  if kind == Routes.VENDOR and facts.npc then label = "Vendor: " .. facts.npc end
+  if kind == Routes.QUEST and facts.questName then label = "Quest reward: " .. facts.questName end
   local detail = facts.instructions
   if facts.zone and not (detail and detail:find(facts.zone, 1, true)) then detail = (detail and (detail .. " ") or "") .. "(" .. facts.zone .. ")" end
   return { { kind = kind, label = label, detail = detail, name = facts.npc, zone = facts.zone, quest = facts.questName, source = "GearQuest", gearQuest = true } }

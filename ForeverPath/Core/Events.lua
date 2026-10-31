@@ -29,6 +29,14 @@ local Events = {
 }
 ns.Events = Events
 
+-- Every FP_ message above, in that order; MainFrame refreshes on them.
+Events.MESSAGES = {
+  "FP_GOALS_CHANGED", "FP_RECIPES_UPDATED", "FP_INVENTORY_UPDATED", "FP_ITEM_LOADED", "FP_QUESTS_UPDATED",
+  "FP_QUEST_FACTS_UPDATED", "FP_LOOT_LEARNED", "FP_SOURCES_UPDATED", "FP_TRAINERS_UPDATED", "FP_SHARED_DATA_CHANGED",
+  "FP_EQUIPMENT_UPDATED", "FP_REPUTATION_UPDATED", "FP_CHARACTERS_UPDATED", "FP_PLAYER_CHANGED", "FP_SETTINGS_CHANGED",
+  "FP_GOAL_COMPLETED", "FP_READY",
+}
+
 function Events.On(message, fn)
   local list = Events.handlers[message]
   if not list then

@@ -783,12 +783,20 @@ function MainFrame.OnCharactersUpdated()
   end
 end
 
+-- Messages with their own listener instead of a full refresh.
+local OWN_LISTENER = {
+  FP_CHARACTERS_UPDATED = MainFrame.OnCharactersUpdated,
+  FP_GOAL_COMPLETED = false, -- the Toast shows it
+}
+
 function MainFrame.Init()
-  for _, message in ipairs({ "FP_GOALS_CHANGED", "FP_RECIPES_UPDATED", "FP_INVENTORY_UPDATED", "FP_ITEM_LOADED", "FP_QUESTS_UPDATED",
-    "FP_QUEST_FACTS_UPDATED", "FP_LOOT_LEARNED", "FP_SOURCES_UPDATED", "FP_TRAINERS_UPDATED", "FP_SHARED_DATA_CHANGED",
-    "FP_EQUIPMENT_UPDATED", "FP_REPUTATION_UPDATED", "FP_PLAYER_CHANGED", "FP_SETTINGS_CHANGED", "FP_READY" }) do
-    Events.On(message, MainFrame.RequestRefresh)
+  for _, message in ipairs(Events.MESSAGES) do
+    local own = OWN_LISTENER[message]
+    if own == nil then
+      Events.On(message, MainFrame.RequestRefresh)
+    elseif own then
+      Events.On(message, own)
+    end
   end
-  Events.On("FP_CHARACTERS_UPDATED", MainFrame.OnCharactersUpdated)
   MainFrame.InstallLinkHook()
 end

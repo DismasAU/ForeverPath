@@ -3,18 +3,22 @@
 -- goal.status; a provider's diagnostics line is Provider.StatusLine.)
 local _, ns = ...
 
-local Readiness = {
-  OK = "OK",
-  UNSUPPORTED_GOAL = "UNSUPPORTED_GOAL",         -- goal type this version does not know
-  ITEM_INVALID = "ITEM_INVALID",                 -- item ID does not exist on this client
-  ITEM_UNAVAILABLE = "ITEM_UNAVAILABLE",         -- server returned no data for the item
-  PROVIDER_UNAVAILABLE = "PROVIDER_UNAVAILABLE", -- required API missing on this client
-  RECIPES_NOT_SCANNED = "RECIPES_NOT_SCANNED",   -- no profession data captured yet
-  RECIPE_NOT_FOUND = "RECIPE_NOT_FOUND",         -- scanned data has no recipe for the item
-  RECIPE_NOT_LEARNED = "RECIPE_NOT_LEARNED",     -- a recipe exists, this character lacks it
-  RECIPE_DATA_INVALID = "RECIPE_DATA_INVALID",   -- cached recipe failed validation
-  PROFESSION_MISSING = "PROFESSION_MISSING",     -- a skill goal for a profession this character lacks
-}
+--   OK
+--   UNSUPPORTED_GOAL      goal type this version does not know
+--   ITEM_INVALID          item ID does not exist on this client
+--   ITEM_UNAVAILABLE      server returned no data for the item
+--   PROVIDER_UNAVAILABLE  required API missing on this client
+--   RECIPES_NOT_SCANNED   no profession data captured yet
+--   RECIPE_NOT_FOUND      scanned data has no recipe for the item
+--   RECIPE_NOT_LEARNED    a recipe exists, this character lacks it
+--   RECIPE_DATA_INVALID   cached recipe failed validation
+--   PROFESSION_MISSING    a skill goal for a profession this character lacks
+-- A misspelt name raises (Util.StrictNames) instead of reading as nil.
+local Readiness = ns.Util.StrictNames({
+  "OK", "UNSUPPORTED_GOAL", "ITEM_INVALID", "ITEM_UNAVAILABLE", "PROVIDER_UNAVAILABLE",
+  "RECIPES_NOT_SCANNED", "RECIPE_NOT_FOUND", "RECIPE_NOT_LEARNED", "RECIPE_DATA_INVALID",
+  "PROFESSION_MISSING",
+}, "readiness")
 ns.Readiness = Readiness
 
 -- Short labels for readiness indicators. Longer explanations come from the Planner.

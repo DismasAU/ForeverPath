@@ -11,6 +11,7 @@ local _, ns = ...
 local Util = ns.Util
 local Events = ns.Events
 local Log = ns.Log
+local Routes = ns.DependencyResolver.Routes
 
 local CharacterProvider = {}
 ns.CharacterProvider = CharacterProvider
@@ -331,14 +332,14 @@ function CharacterProvider.Sources(itemID)
   local includeBank = ns.Database.Setting("includeBank", true) ~= false
   for _, alt in ipairs(CharacterProvider.Alts(itemID, includeBank)) do
     options[#options + 1] = {
-      kind = "alt", name = alt.name, count = alt.total,
+      kind = Routes.ALT, name = alt.name, count = alt.total,
       label = "Mail from " .. alt.name,
       detail = string.format("%s has %d (%s)", alt.name, alt.total, alt.level),
     }
   end
   for _, crafter in ipairs(CharacterProvider.AltCrafters(itemID)) do
     options[#options + 1] = {
-      kind = "altcraft", name = crafter.name,
+      kind = Routes.ALTCRAFT, name = crafter.name,
       label = "Craft on " .. crafter.name,
       detail = string.format("%s - %s%s", crafter.recipe.name or "recipe", crafter.professionName or "?", crafter.skillLevel and (" " .. crafter.skillLevel) or ""),
     }

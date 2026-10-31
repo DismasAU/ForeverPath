@@ -28,6 +28,8 @@ local _, ns = ...
 
 local Compat = ns.Compat
 local Util = ns.Util
+local QuestStates = ns.Planner.QuestStates
+local StepStates = ns.AttuneProvider.StepStates
 local Log = ns.Log
 local Events = ns.Events
 
@@ -465,17 +467,28 @@ function QuestProvider.Search(text, limit)
   return Util.SortRankedHits(hits, "questID", limit)
 end
 
--- "Ready", "In log", "Available", "Locked", "Done" for a quest (entry optional).
-function QuestProvider.StateLabel(state, entry, playerLevel)
-  if state.completed then return "Done", "ok" end
-  if state.ready then return "Ready", "ok" end
-  if state.inLog then return "In log", "info" end
+-- Display text and colour kind per Planner.QuestStates key.
+local STATE_TEXT = {
+  done = { "Done", "ok" }, ready = { "Ready", "ok" }, in_log = { "In log", "info" },
+  available = { "Available", "partial" }, locked = { "Locked", "text" },
+}
+
+function QuestProvider.StateText(key)
+  local text = STATE_TEXT[key]
+  return text[1], text[2]
+end
+
+-- Where a quest stands for the player, a Planner.QuestStates key (entry optional).
+function QuestProvider.StateKey(state, entry, playerLevel)
+  if state.completed then return QuestStates.DONE end
+  if state.ready then return QuestStates.READY end
+  if state.inLog then return QuestStates.IN_LOG end
   playerLevel = playerLevel or QuestProvider.PlayerLevel()
-  if entry and entry.requires and entry.requires > playerLevel then return "Locked", "text" end
+  if entry and entry.requires and entry.requires > playerLevel then return QuestStates.LOCKED end
   if entry and entry.chain then
     for _, link in ipairs(entry.chain) do
       local id = tonumber(link.id)
-      if id and not QuestProvider.State(id).completed then return "Locked", "text" end
+      if id and not QuestProvider.State(id).completed then return QuestStates.LOCKED end
     end
   end
   -- Classic prerequisites: every group needs one completed member.
@@ -484,9 +497,16 @@ function QuestProvider.StateLabel(state, entry, playerLevel)
     for _, id in ipairs(group) do
       if QuestProvider.State(id).completed then met = true break end
     end
-    if not met then return "Locked", "text" end
+    if not met then return QuestStates.LOCKED end
   end
-  return "Available", "partial"
+  return QuestStates.AVAILABLE
+end
+
+-- "Done", "Ready", "In log", "Available" or "Locked", its colour kind and the key.
+function QuestProvider.StateLabel(state, entry, playerLevel)
+  local key = QuestProvider.StateKey(state, entry, playerLevel)
+  local text, kind = QuestProvider.StateText(key)
+  return text, kind, key
 end
 
 function QuestProvider.Count()
@@ -587,13 +607,13 @@ function QuestProvider.ClassicQuestline(questID)
   end
   for _, step in ipairs(line.steps) do
     if step.done then
-      step.state = "done"
+      step.state = StepStates.DONE
     else
       local ready = true
       for _, f in ipairs(follows[step.questID] or {}) do
         if not done[f] then ready = false end
       end
-      step.state = ready and "current" or "locked"
+      step.state = ready and StepStates.CURRENT or StepStates.LOCKED
       if ready and not line.next then line.next = step end
     end
   end
@@ -815,7 +835,7 @@ function QuestProvider.Describe(questID, nameOf)
   if line then
     lines[#lines + 1] = string.format("  Chain: %s - %d of %d steps done", line.attune.name, line.done, line.total)
     for index, step in ipairs(line.steps) do
-      lines[#lines + 1] = string.format("    %d. [%s] %s: %s%s", index, step.done and "x" or (step.state == "current" and ">" or " "), step.typeLabel, step.name,
+      lines[#lines + 1] = string.format("    %d. [%s] %s: %s%s", index, step.done and "x" or (step.state == StepStates.CURRENT and ">" or " "), step.typeLabel, step.name,
         step.location and (" - " .. step.location) or "")
     end
   end

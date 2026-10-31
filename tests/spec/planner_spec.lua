@@ -361,7 +361,9 @@ describe("Planner", function()
       Name = function() return "A Quest" end,
       Chain = function() local step = { questID = 5, state = completed } return { step }, nil end,
       PlayerLevel = function() return 20 end,
-      StateLabel = function() return "Completed", "ok" end,
+      StateKey = function() return "done" end,
+      StateText = function() return "Done", "ok" end,
+      StateLabel = function() return "Done", "ok", "done" end,
       QuestlineItems = function() return {} end,
     } })
     local view = Planner.Evaluate(questGoal, d)

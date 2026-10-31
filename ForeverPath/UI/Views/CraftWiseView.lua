@@ -268,7 +268,7 @@ function CraftWiseView.Create(screen)
     end
     self.icon:SetItem(item.icon, item.quality)
     self.title:SetText(Theme.QualityText(item.name or ("Item " .. tostring(result.itemID)), item.quality)
-      .. Theme.ColorText("text2", tree.root.step and (tree.root.step.kind == "skill" and ("  " .. tostring(result.quantity) .. " crafts") or "") or ("  x" .. tostring(result.quantity))))
+      .. Theme.ColorText("text2", tree.root.step and (tree.root.step.kind == ns.DependencyResolver.Steps.SKILL and ("  " .. tostring(result.quantity) .. " crafts") or "") or ("  x" .. tostring(result.quantity))))
     if status.lastScan then
       self.badge:SetBadge("Cached", status.freshness and status.freshness.kind or "info")
       self.scanText:SetText("AH scan " .. (status.freshness and status.freshness.label or "?"))

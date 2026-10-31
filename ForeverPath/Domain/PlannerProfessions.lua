@@ -8,6 +8,11 @@ local Util = ns.Util
 local Log = ns.Log
 local DependencyResolver = ns.DependencyResolver
 local Planner = ns.Planner
+
+-- How a recipe is learned (view.learn.kind, view.enchant.kind): plans (an
+-- item that teaches it), a trainer, or an item-use combine.
+Planner.LearnKinds = Util.StrictNames({ "plans", "trainer", "combine" }, "learn kind")
+local LearnKinds = Planner.LearnKinds
 local Shared = Planner.Shared
 local inventoryContext = Shared.inventoryContext
 local isLearned, buildCraftPlan = Shared.isLearned, Shared.buildCraftPlan
@@ -147,11 +152,11 @@ function Planner.EvaluateLearn(view, goal, deps)
     return view
   end
   local learn = recipeStanding(deps, recipe, target.spellID)
-  learn.kind = recipe.combine and "combine" or (recipe.teachItemID and "plans" or "trainer")
+  learn.kind = recipe.combine and LearnKinds.COMBINE or (recipe.teachItemID and LearnKinds.PLANS or LearnKinds.TRAINER)
   local learned, need, knownBy = learn.learned, learn.need, learn.knownBy
   view.learn = learn
   local name = recipe.name or "the recipe"
-  if learned or learn.kind == "combine" then
+  if learned or learn.kind == LearnKinds.COMBINE then
     view.plan = Planner.StepPlan(true)
     view.progress = Planner.Progress(view.plan)
     view.message = learned and string.format("%s is already learned.", name) or string.format("%s is an item-use combine: there is nothing to learn.", name)
@@ -228,7 +233,7 @@ function Planner.EvaluateEnchant(view, goal, deps)
   local learned, knownBy = enchant.learned, enchant.knownBy
   local quantity = target.quantity or 1
   local casts = math.min(tonumber(target.casts) or 0, quantity)
-  enchant.kind = recipe.teachItemID and "plans" or "trainer"
+  enchant.kind = recipe.teachItemID and LearnKinds.PLANS or LearnKinds.TRAINER
   enchant.casts, enchant.quantity, enchant.remaining = casts, quantity, quantity - casts
   view.enchant = enchant
   view.recipe = recipe
@@ -441,7 +446,7 @@ function Planner.EvaluateSkill(view, goal, deps)
     crafts[#crafts + 1] = { recipe = entry.recipe, crafts = entry.crafts, learned = entry.learned, from = entry.from, to = entry.to }
   end
   local ctx = inventoryContext(deps)
-  local step = { kind = "skill", name = string.format("%s %d", skill.professionName, rank), professionName = skill.professionName, professionID = professionID, icon = profession.icon }
+  local step = { kind = Steps.SKILL, name = string.format("%s %d", skill.professionName, rank), professionName = skill.professionName, professionID = professionID, icon = profession.icon }
   local tree = DependencyResolver.Resolve({ step = step, crafts = crafts, key = "skill:" .. tostring(professionID or skill.professionName) }, ctx.resolverOpts(goal.routes))
   view.tree = tree
   view.fullTree = Planner.FullTree({ step = step, crafts = crafts, key = tree.root.key }, goal, ctx)

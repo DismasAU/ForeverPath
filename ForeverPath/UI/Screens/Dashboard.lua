@@ -11,6 +11,8 @@ ns.UI.Screens = ns.UI.Screens or {}
 local GOAL_ROW = 84
 local STEP_ROW = 56
 local MATERIAL_ROW = 31
+-- How a learn goal's recipe is taught, by Planner.LearnKinds.
+local LEARN_LABEL = { plans = "Plans", trainer = "Trainer", combine = "Combine" }
 
 local function statCell(parent, label)
   local cell = CreateFrame("Frame", nil, parent)
@@ -366,7 +368,7 @@ local function Create(parent)
         elseif view.enchant then
           row.meta:SetText(string.format("%d of %d cast%s", view.enchant.casts, view.enchant.quantity, view.enchant.quantity == 1 and "" or "s"))
         elseif view.learn then
-          row.meta:SetText(view.learn.kind == "plans" and "Plans" or (view.learn.kind == "trainer" and "Trainer" or "Combine"))
+          row.meta:SetText(LEARN_LABEL[view.learn.kind])
         elseif view.plan.obtain then
           row.meta:SetText(view.hint and view.hint.label or "Source unknown")
         else

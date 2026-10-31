@@ -6,6 +6,7 @@ local Widgets = ns.UI.Widgets
 local C = Theme.Colors
 local Readiness = ns.Readiness
 local Util = ns.Util
+local LearnKinds = ns.Planner.LearnKinds
 
 ns.UI.Screens = ns.UI.Screens or {}
 
@@ -78,7 +79,7 @@ local function createMaterialRow(content, index)
       lines[#lines + 1] = "Price: no data (visit a vendor that sells it; AH prices arrive later)"
     end
     for _, hint in ipairs(ns.SourceProvider.Sources(m.itemID)) do
-      if hint.kind ~= "vendor" then lines[#lines + 1] = (hint.label or "?") .. (hint.detail and (" - " .. hint.detail) or "") end
+      if hint.kind ~= ns.DependencyResolver.Routes.VENDOR then lines[#lines + 1] = (hint.label or "?") .. (hint.detail and (" - " .. hint.detail) or "") end
     end
     return lines
   end)
@@ -196,11 +197,11 @@ local function heroMeta(goal, view)
   if enchant then
     return string.format("%s enchant%s - %s", enchant.recipe.professionName or "Profession",
       enchant.need > 1 and (" - needs " .. enchant.need) or "",
-      enchant.kind == "plans" and "taught by " .. ns.ItemProvider.GetName(enchant.teachItemID) or "taught by a trainer")
+      enchant.kind == LearnKinds.PLANS and "taught by " .. ns.ItemProvider.GetName(enchant.teachItemID) or "taught by a trainer")
   elseif learn then
     return string.format("%s recipe%s - %s", learn.recipe.professionName or "Profession",
       learn.need > 1 and (" - needs " .. learn.need) or "",
-      learn.kind == "plans" and "taught by " .. ns.ItemProvider.GetName(learn.teachItemID) or (learn.kind == "combine" and "item-use combine" or "taught by a trainer"))
+      learn.kind == LearnKinds.PLANS and "taught by " .. ns.ItemProvider.GetName(learn.teachItemID) or (learn.kind == LearnKinds.COMBINE and "item-use combine" or "taught by a trainer"))
   elseif skill then
     return string.format("Profession skill - you are at %d%s", skill.current, skill.max > 0 and (", cap " .. skill.max) or "")
   end
@@ -223,7 +224,7 @@ local function enchantChips(view, chips)
     chips[#chips + 1] = { "Not learned", "partial" }
   end
   if not enchant.learned then
-    if enchant.kind == "plans" then
+    if enchant.kind == LearnKinds.PLANS then
       chips[#chips + 1] = { view.plan and view.plan.stepsMissing == 0 and "Formula in bags" or "Needs the formula", "info" }
     else
       chips[#chips + 1] = { enchant.trainer and enchant.trainer.name and ("Trainer: " .. enchant.trainer.name) or "Trainer (not recorded yet)", "info" }
@@ -244,9 +245,9 @@ local function learnChips(view, chips)
   else
     chips[#chips + 1] = { string.format("%s %d", learn.recipe.professionName or "Profession", learn.have or 0), "ok" }
   end
-  if learn.kind == "plans" then
+  if learn.kind == LearnKinds.PLANS then
     chips[#chips + 1] = { view.plan and view.plan.isComplete and "Plans in bags" or "Needs the plans", "info" }
-  elseif learn.kind == "trainer" then
+  elseif learn.kind == LearnKinds.TRAINER then
     chips[#chips + 1] = { learn.trainer and learn.trainer.name and ("Trainer: " .. learn.trainer.name) or "Trainer (not recorded yet)", "info" }
   end
   if #learn.knownBy > 0 then chips[#chips + 1] = knownByChip(learn.knownBy) end

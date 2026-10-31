@@ -896,12 +896,12 @@ function GoalService.QuestBoard(tab, feedOnly)
       byLabel[groupLabel] = g
       groups[#groups + 1] = g
     end
-    local label, kind = QP.StateLabel(state, entry, playerLevel)
+    local label, kind, key = QP.StateLabel(state, entry, playerLevel)
     local goal = questGoals[questID]
     local feedNames = servedGoals(questID)
     if goal then feedNames[1] = "goal: " .. feedNames[1] end
     g.rows[#g.rows + 1] = {
-      questID = questID, name = name, level = level, label = label, kind = kind, state = state, entry = entry,
+      questID = questID, name = name, level = level, label = label, kind = kind, stateKey = key, state = state, entry = entry,
       feeds = feedNames, feed = feeds[questID], goal = goal,
     }
   end

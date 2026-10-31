@@ -41,6 +41,17 @@ describe("Bootstrap and slash commands", function()
     end
   end)
 
+  it("lists every message the addon fires or listens to", function()
+    local known = {}
+    for _, name in ipairs(ns.Events.MESSAGES) do known[name] = true end
+    for _, rel in ipairs(H.tocFiles(H.root .. "/ForeverPath/ForeverPath.toc")) do
+      local source = H.readFile(H.root .. "/ForeverPath/" .. rel)
+      for name in source:gmatch('"(FP_[A-Z_]+)"') do
+        assert_true(known[name], name .. " (" .. rel .. ") is not in Events.MESSAGES")
+      end
+    end
+  end)
+
   it("ignores other addons' ADDON_LOADED", function()
     Mock.FireEvent("ADDON_LOADED", "SomethingElse")
     assert_false(ns.loaded)

@@ -69,7 +69,7 @@ rule(function(c)
   local quest = c.view and c.view.quest
   if not quest then return false end
   local label, kind = quest.label, "info"
-  if quest.state.completed then kind = "ok" elseif quest.state.ready then kind = "ok" elseif label == "Locked" then kind = "partial" end
+  if quest.state.completed then kind = "ok" elseif quest.state.ready then kind = "ok" elseif quest.stateKey == ns.Planner.QuestStates.LOCKED then kind = "partial" end
   local where = quest.line and not quest.state.completed
     and string.format("%s - step %d of %d - ", quest.line.attune.name, math.min(quest.line.done + 1, quest.line.total), quest.line.total)
     or (quest.entry and quest.entry.instance and (quest.entry.instance .. " - ") or "")
@@ -86,13 +86,13 @@ rule(function(c)
   if not learn then return false end
   if learn.learned then
     return true, { title = string.format("Learned: %s", goalName), detail = "Mark the goal complete", badge = "Ready", badgeKind = "ok" }
-  elseif learn.kind == "combine" then
+  elseif learn.kind == ns.Planner.LearnKinds.COMBINE then
     return true, { title = string.format("%s needs no recipe", goalName), detail = "Combine the items whenever you have them", badge = "Combine", badgeKind = "ok" }
   elseif learn.blocked == "profession" then
     return true, { title = string.format("Learn %s", learn.recipe.professionName or "the profession"), detail = string.format("Needed before %s can be learned", goalName), badge = "Profession", badgeKind = "partial" }
   elseif learn.blocked == "skill" then
     return true, { title = string.format("Reach %s %d", learn.recipe.professionName or "skill", learn.need), detail = string.format("You have %d - needed for %s", learn.have or 0, goalName), badge = "Skill", badgeKind = "partial" }
-  elseif c.plan and c.plan.isComplete and learn.kind == "plans" then
+  elseif c.plan and c.plan.isComplete and learn.kind == ns.Planner.LearnKinds.PLANS then
     return true, { title = string.format("Read %s", c.nameOf(learn.teachItemID)), detail = string.format("Teaches %s - it is in your bags", goalName), badge = "Recipe", badgeKind = "ok" }
   end
   return false

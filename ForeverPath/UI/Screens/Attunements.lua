@@ -6,6 +6,7 @@ local _, ns = ...
 local Widgets = ns.UI.Widgets
 local Theme = ns.UI.Theme
 local C = Theme.Colors
+local StepStates = ns.AttuneProvider.StepStates
 
 ns.UI.Screens = ns.UI.Screens or {}
 
@@ -288,7 +289,7 @@ local function Create(parent)
       if step.type ~= "End" then number = number + 1 end
       row.number:SetText(step.type ~= "End" and tostring(number) or "")
       row.icon:SetItem(step.icon, 1)
-      row.name:SetText(step.state == "done" and Theme.ColorText("text2", step.name) or (step.state == "current" and Theme.ColorText("text", step.name) or Theme.ColorText("text3", step.name)))
+      row.name:SetText(step.state == StepStates.DONE and Theme.ColorText("text2", step.name) or (step.state == StepStates.CURRENT and Theme.ColorText("text", step.name) or Theme.ColorText("text3", step.name)))
       local detailParts = { step.typeLabel }
       if step.location then detailParts[#detailParts + 1] = step.location end
       if step.side then detailParts[#detailParts + 1] = "side quest" end
@@ -296,11 +297,11 @@ local function Create(parent)
       row.detail:SetText(table.concat(detailParts, " - "))
       local badge = STATE_BADGE[step.state] or STATE_BADGE.locked
       row.badge:SetBadge(badge[1], badge[2])
-      if step.state == "done" then
+      if step.state == StepStates.DONE then
         Widgets.SetBackdrop(row.node, C.ok, C.okDark)
         row.nodeMark:SetText("")
         Widgets.SetColor(row.connector, C.okDark, 1)
-      elseif step.state == "current" then
+      elseif step.state == StepStates.CURRENT then
         Widgets.SetBackdrop(row.node, C.panel, C.gold)
         row.nodeMark:SetText(Theme.ColorText("gold", "o"))
         Widgets.SetColor(row.connector, Theme.RGB("#4A4335"), 1)
@@ -309,7 +310,7 @@ local function Create(parent)
         row.nodeMark:SetText("")
         Widgets.SetColor(row.connector, Theme.RGB("#4A4335"), 1)
       end
-      row:SetAlpha(step.state == "locked" and 0.7 or 1)
+      row:SetAlpha(step.state == StepStates.LOCKED and 0.7 or 1)
       Widgets.SetColor(row.selected, C.gold, self.stepKey == step.key and 0.08 or 0)
       if index == 1 then row.connector:SetPoint("TOP", row, "LEFT", 22, 0) else row.connector:SetPoint("TOP", row, "TOPLEFT", 22, 0) end
       if index == #progress.steps then row.connector:SetPoint("BOTTOM", row, "LEFT", 22, 0) else row.connector:SetPoint("BOTTOM", row, "BOTTOMLEFT", 22, 0) end
@@ -341,7 +342,7 @@ local function Create(parent)
     for _, w in ipairs({ side.icon, side.title, side.meta, side.text, side.alsoLabel, side.alsoText }) do w:Show() end
     side.icon:SetItem(step.icon, 1)
     side.title:SetText(step.name)
-    side.meta:SetText(step.typeLabel .. (step.location and (" - " .. step.location) or "") .. (step.state == "done" and " - done" or (step.state == "locked" and " - locked" or "")))
+    side.meta:SetText(step.typeLabel .. (step.location and (" - " .. step.location) or "") .. (step.state == StepStates.DONE and " - done" or (step.state == StepStates.LOCKED and " - locked" or "")))
     local sideChips = {}
     if step.groupSize and step.groupSize > 1 then
       sideChips[#sideChips + 1] = { (step.groupSize > 5 and "Raid quest - " or "Group quest - ") .. step.groupSize .. " players", "info" }
@@ -385,9 +386,9 @@ local function Create(parent)
     if questID then
       local detail = QP.Detail(questID)
       local entry, state = detail.entry, detail.state
-      local label, kind = QP.StateLabel(state, entry)
+      local label, kind, key = QP.StateLabel(state, entry)
       -- The chain knows what the journal does not: earlier steps still block this one.
-      if label == "Available" and step.state == "locked" then label, kind = "Locked", "text" end
+      if key == ns.Planner.QuestStates.AVAILABLE and step.state == StepStates.LOCKED then label, kind = QP.StateText(ns.Planner.QuestStates.LOCKED) end
       add("State", Theme.ColorText(kind == "ok" and "ok" or (kind == "info" and "gold" or "text"), label))
       if state.inLog and #state.objectives > 0 then
         for _, o in ipairs(state.objectives) do

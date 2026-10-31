@@ -11,6 +11,7 @@ local _, ns = ...
 local Util = ns.Util
 local Log = ns.Log
 local Events = ns.Events
+local Routes = ns.DependencyResolver.Routes
 
 local ReputationProvider = { cache = nil, atlas = { state = "idle", tiers = {}, byItem = nil }, MODULE = "AtlasLootClassic_Factions" }
 ns.ReputationProvider = ReputationProvider
@@ -428,7 +429,7 @@ function ReputationProvider.ItemHints(itemID)
     local record = ReputationProvider.Get(sale.factionID)
     local faction = record and record.name or ("faction " .. sale.factionID)
     local label = ReputationProvider.StandingLabel(sale.standing)
-    local hint = { kind = "vendor", name = faction .. " quartermaster", label = "Reputation reward: " .. faction .. " (" .. label .. ")",
+    local hint = { kind = Routes.VENDOR, name = faction .. " quartermaster", label = "Reputation reward: " .. faction .. " (" .. label .. ")",
       detail = "Sold at " .. label .. " with " .. faction, faction = faction, factionID = sale.factionID, standing = sale.standing, reputation = true }
     if not record or (record.standing or 0) < sale.standing then
       hint.unavailable = true

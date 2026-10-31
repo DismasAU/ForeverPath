@@ -15,7 +15,7 @@
 --   deps.sources     Sources(itemID) -> vendor / drop / quest / gather hints, IsRawMaterial(itemID)
 --   deps.price       GetPrice(itemID) -> priceInfo (skill plans rank recipes by cost)
 --   deps.attune      IsAvailable(), Progress(attuneID), StepText(step)          (attunement goals)
---   deps.quest       IsAvailable(), Get, Name, State, StateLabel, ObjectiveText, Giver, Turnin,
+--   deps.quest       IsAvailable(), Get, Name, State, StateKey, StateText, StateLabel, ObjectiveText, Giver, Turnin,
 --                    Waypoint, RequiredItems, Questline, Chain, QuestsRewarding, Faction,
 --                    PlayerLevel, ICON, ICON_READY                              (quest goals, reward chains)
 --   deps.reputation  IsAvailable(), Progress(...), QuestsFor(name, id), Rewards(id), ICON   (reputation goals)
@@ -474,7 +474,7 @@ function Planner.EvaluateObtain(view, goal, deps, sources)
       end
       questline.items = items
       view.questline = questline
-      view.hint = view.hint or { kind = "quest", label = "Quest reward: " .. (quest.name or "?"), detail = quest.instance, questID = quest.id, quest = quest.name }
+      view.hint = view.hint or { kind = DependencyResolver.Routes.QUEST, label = "Quest reward: " .. (quest.name or "?"), detail = quest.instance, questID = quest.id, quest = quest.name }
       root.route, root.routeSource, root.noRoute = "quest", "quest", nil
       root.hint = root.hint or view.hint
       view.sourceText = Planner.SourceText(view.hint)

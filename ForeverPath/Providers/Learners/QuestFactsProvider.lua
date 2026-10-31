@@ -17,6 +17,7 @@ local _, ns = ...
 local Compat = ns.Compat
 local Log = ns.Log
 local Events = ns.Events
+local Routes = ns.DependencyResolver.Routes
 
 local QuestFactsProvider = { pending = {}, learnedThisSession = 0 }
 ns.QuestFactsProvider = QuestFactsProvider
@@ -132,7 +133,7 @@ function QuestFactsProvider.ItemHints(itemID)
     local QP = ns.QuestProvider
     local questName = QP and QP.Name and QP.Name(entry.questID) or ("Quest " .. tostring(entry.questID))
     out[#out + 1] = {
-      kind = "drop", questItem = true, questID = entry.questID, quest = questName,
+      kind = Routes.DROP, questItem = true, questID = entry.questID, quest = questName,
       label = "Drop: " .. entry.source,
       short = "Drop: " .. (entry.source:match("^([^,]+)") or entry.source),
       detail = entry.source .. " - for " .. questName .. " (quest catalogue)",

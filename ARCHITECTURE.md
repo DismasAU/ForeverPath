@@ -202,8 +202,9 @@ stored as a timestamped snapshot in `ForeverPathCharDB.bankCache`.
 | `FP_EQUIPMENT_UPDATED` | reason | EquipmentProvider |
 | `FP_REPUTATION_UPDATED` | reason | ReputationProvider |
 | `FP_PLAYER_CHANGED` | "skill" or "quest" | GoalCompletion after its skill-up and quest/level checks |
+| `FP_SETTINGS_CHANGED` | setting name | Database.SetSetting when a planning setting changes (includeAlts, toasts, sounds) |
 | `FP_GOAL_COMPLETED` | goal, toast `{ title, name, detail, sub, icon, quality, goalID }` | GoalCompletion when it completes a goal (Toast shows it) |
-| (listener) MainFrame | | `RequestRefresh` (the window and the tracker) on every message above except `FP_CHARACTERS_UPDATED` (Characters screen only) and `FP_GOAL_COMPLETED` (Toast) |
+| (listener) MainFrame | | `RequestRefresh` (the window and the tracker) on every message in `Events.MESSAGES` except `FP_CHARACTERS_UPDATED` (Characters screen only) and `FP_GOAL_COMPLETED` (Toast) |
 | (listener) `FP_INVENTORY_UPDATED`, `FP_GOALS_CHANGED` | | GoalCompletion checks open item goals after every bag change, baselines new goals and re-baselines reopened ones |
 
 ## Provider interfaces

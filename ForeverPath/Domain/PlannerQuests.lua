@@ -4,7 +4,13 @@ local _, ns = ...
 
 local Readiness = ns.Readiness
 local DependencyResolver = ns.DependencyResolver
+local Steps = DependencyResolver.Steps
 local Planner = ns.Planner
+
+-- Where a quest stands for the player (QuestProvider.StateKey); the display
+-- text comes from QuestProvider.StateText, so planning never branches on it.
+Planner.QuestStates = ns.Util.StrictNames({ "done", "ready", "in_log", "available", "locked" }, "quest state")
+local QuestStates = Planner.QuestStates
 local Shared = Planner.Shared
 local inventoryContext = Shared.inventoryContext
 
@@ -168,13 +174,15 @@ function Planner.EvaluateQuest(view, goal, deps)
   local quest = {
     questID = questID, entry = entry, state = state, chain = chain, next = nextStep, playerLevel = playerLevel,
     levelBlocked = requires ~= nil and requires > playerLevel, requires = requires,
-    label = QP.StateLabel(state, entry, playerLevel), line = line,
+    stateKey = QP.StateKey(state, entry, playerLevel), line = line,
   }
   view.quest = quest
   if state.ready then view.item.icon = QP.ICON_READY end
-  if line and line.next and line.next ~= line.target and not state.inLog and not state.completed and quest.label == "Available" then
-    quest.label = "Locked"
+  -- Attune's chain knows what the journal does not: an earlier step still blocks this one.
+  if line and line.next and line.next ~= line.target and quest.stateKey == QuestStates.AVAILABLE then
+    quest.stateKey = QuestStates.LOCKED
   end
+  quest.label = QP.StateText(quest.stateKey)
 
   -- Progress: the chain's steps when Attune knows it, else the journal chain.
   if line then
@@ -195,7 +203,7 @@ function Planner.EvaluateQuest(view, goal, deps)
   local items = (not state.completed) and Planner.QuestlineItems(QP, line, questID) or {}
   local ctx = inventoryContext(deps)
   local tree = DependencyResolver.Resolve({ key = "quest:" .. tostring(questID),
-    step = { kind = "quest", questID = questID, name = name, icon = view.item.icon, items = items } }, ctx.resolverOpts(goal.routes))
+    step = { kind = Steps.QUEST, questID = questID, name = name, icon = view.item.icon, items = items } }, ctx.resolverOpts(goal.routes))
   view.tree = tree
   view.plan = Planner.StepItemsPlan(tree, state.completed)
   view.inventoryNote = Planner.DescribeInventory(ctx.bankCounts, ctx.includeBank, ctx.includeAlts)

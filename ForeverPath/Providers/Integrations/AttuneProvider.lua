@@ -20,6 +20,10 @@ local Util = ns.Util
 local AttuneProvider = { cache = {} }
 ns.AttuneProvider = AttuneProvider
 
+-- A chain step's state (step.state), shared with QuestProvider's questlines.
+AttuneProvider.StepStates = Util.StrictNames({ "done", "current", "locked" }, "step state")
+local StepStates = AttuneProvider.StepStates
+
 AttuneProvider.TypeLabels = {
   Quest = "Quest", ["Pick Up"] = "Pick up", ["Turn In"] = "Turn in", Item = "Item", Kill = "Kill",
   Interact = "Talk to", Click = "Use", Level = "Level", Rep = "Reputation", Attune = "Attunement", End = "Attuned",
@@ -346,10 +350,10 @@ function AttuneProvider.Progress(id, ctx)
       for _, f in ipairs(step.follows) do
         if not followDone(byID, f) then ready = false end
       end
-      step.state = ready and "current" or "locked"
+      step.state = ready and StepStates.CURRENT or StepStates.LOCKED
       if ready and step.type ~= "End" then summary.current[#summary.current + 1] = step end
     else
-      step.state = "done"
+      step.state = StepStates.DONE
     end
   end
   summary.percent = summary.total > 0 and math.floor(summary.done * 100 / summary.total + 0.5) or 0
@@ -452,7 +456,7 @@ function AttuneProvider.QuestlineFor(questID, opts)
       line.steps[#line.steps + 1] = step
       line.total = line.total + 1
       if step.done then line.done = line.done + 1 end
-      if not line.next and step.state == "current" then line.next = step end
+      if not line.next and step.state == StepStates.CURRENT then line.next = step end
     end
   end
   line.percent = line.total > 0 and math.floor(line.done * 100 / line.total + 0.5) or 0

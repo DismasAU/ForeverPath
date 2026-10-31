@@ -18,15 +18,12 @@ local MAX_REWARDS = 4
 
 local TABS = { { key = "zone", label = "By zone" }, { key = "goal", label = "By goal" }, { key = "completed", label = "Completed" } }
 local DIFFICULTY_HEX = { trivial = "questTrivial", easy = "questEasy", standard = "questStandard", hard = "questHard", impossible = "questImpossible" }
-local BADGE_KIND = { Ready = "ok", ["In log"] = "info", Available = "partial", Locked = "text", Done = "ok" }
-
-local function markerFor(label)
-  if label == "Done" then return "+", "ok" end
-  if label == "Ready" then return "?", "questStandard" end
-  if label == "Locked" then return "!", "questTrivial" end
-  if label == "In log" then return "!", "text2" end
-  return "!", "questStandard"
-end
+-- Per Planner.QuestStates key: the badge colour and the row's marker.
+local BADGE_KIND = { ready = "ok", in_log = "info", available = "partial", locked = "text", done = "ok" }
+local MARKER = {
+  done = { "+", "ok" }, ready = { "?", "questStandard" }, locked = { "!", "questTrivial" },
+  in_log = { "!", "text2" }, available = { "!", "questStandard" },
+}
 
 local function createGroupRow(content)
   return Widgets.GroupHeaderRow(content, { height = GROUP_ROW })
@@ -249,7 +246,7 @@ local function Create(parent)
   function screen:Collect()
     local board = ns.GoalService.QuestBoard(self.tab, self.feedOnly:GetChecked())
     for _, g in ipairs(board.groups) do
-      for _, row in ipairs(g.rows) do row.kind = BADGE_KIND[row.label] or row.kind end
+      for _, row in ipairs(g.rows) do row.kind = BADGE_KIND[row.stateKey] or row.kind end
     end
     return board
   end
@@ -272,7 +269,7 @@ local function Create(parent)
     local detail = QP.Detail(questID)
     local entry, state = detail.entry, detail.state
     local playerLevel = ns.Compat.PlayerLevel()
-    local label, kind = QP.StateLabel(state, entry, playerLevel)
+    local label, kind, key = QP.StateLabel(state, entry, playerLevel)
     s.icon:SetItem(state.ready and QP.ICON_READY or QP.ICON, 1)
     s.title:SetText(QP.Name(questID))
     local metaParts = {}
@@ -285,7 +282,7 @@ local function Create(parent)
     if entry and entry.groupSize and entry.groupSize > 1 then metaParts[#metaParts + 1] = entry.groupSize .. " players" end
     if entry and entry.classic then metaParts[#metaParts + 1] = Theme.ColorText("text3", "classic data") end
     s.meta:SetText(table.concat(metaParts, " - "))
-    s.badge:SetBadge(label, BADGE_KIND[label] or kind)
+    s.badge:SetBadge(label, BADGE_KIND[key] or kind)
 
     -- Objectives: live ones when the quest is in the log, the text otherwise, then the chain.
     local lines = {}
@@ -304,7 +301,7 @@ local function Create(parent)
     local line = detail.questline
     if line then
       for index, step in ipairs(line.steps) do
-        local current = step.state == "current"
+        local current = step.state == ns.AttuneProvider.StepStates.CURRENT
         lines[#lines + 1] = { text = (step.done and Theme.Hex.text3 or (current and Theme.Hex.text or Theme.Hex.text2))
           .. string.format("%d. %s: %s%s%s|r", index, step.typeLabel, step.name, step.location and (" - " .. step.location) or "", step.done and " (done)" or ""),
           value = step.done and 1 or 0, done = step.done, chain = true }
@@ -437,13 +434,13 @@ local function Create(parent)
         row:SetPoint("TOPRIGHT", scroll.content, "TOPRIGHT", 0, -y)
         y = y + ROW
         row.questID = r.questID
-        local mark, markColor = markerFor(r.label)
+        local mark, markColor = MARKER[r.stateKey][1], MARKER[r.stateKey][2]
         row.marker:SetText(Theme.ColorText(markColor, mark))
         row.level:SetText(r.level and (Theme.Hex[DIFFICULTY_HEX[QP.Difficulty(r.level, ns.Compat.PlayerLevel())]] .. "[" .. r.level .. "]|r") or "")
         row.name:SetText(r.name)
         row.feeds:SetText(#r.feeds > 0 and ("Feeds " .. table.concat(r.feeds, ", ")) or Theme.ColorText("text3", r.entry and r.entry.instance and r.entry.source == "attune" and (r.entry.attunement or "Attunement") or ""))
         row.badge:SetBadge(r.label, r.kind)
-        row:SetAlpha(r.label == "Locked" and 0.6 or 1)
+        row:SetAlpha(r.stateKey == ns.Planner.QuestStates.LOCKED and 0.6 or 1)
         row:SetSelected(r.questID == questID)
       end
     end

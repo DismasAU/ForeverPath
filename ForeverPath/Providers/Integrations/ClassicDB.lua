@@ -30,6 +30,7 @@ local _, ns = ...
 local Compat = ns.Compat
 local Log = ns.Log
 local Util = ns.Util
+local Routes = ns.DependencyResolver.Routes
 
 local ClassicDB = { entries = {}, loadTried = false }
 ns.ClassicDB = ClassicDB
@@ -406,7 +407,7 @@ function ClassicDB.ItemHints(itemID, opts)
     for i, v in ipairs(ClassicDB.Vendors(itemID)) do
       if i > limits.vendor then break end
       local where = v.place and v.place.zone or "?"
-      out[#out + 1] = { kind = "vendor", name = v.npc.name, price = v.price, zone = v.place and v.place.zone, classic = true,
+      out[#out + 1] = { kind = Routes.VENDOR, name = v.npc.name, price = v.price, zone = v.place and v.place.zone, classic = true,
         mapID = v.place and v.place.mapID, x = v.place and v.place.x, y = v.place and v.place.y,
         label = "Buy from " .. v.npc.name,
         detail = string.format("%s - %s each%s (classic data)", where, v.price and v.price > 0 and ns.Util.Money(v.price) or "price unknown", v.limited and ", limited stock" or "") }
@@ -437,7 +438,7 @@ function ClassicDB.ItemHints(itemID, opts)
     if npc and not (opts.skipNames and opts.skipNames[string.lower(npc.name)]) then
       shown = shown + 1
       local place = ClassicDB.PlaceOf({ src.id })
-      out[#out + 1] = { kind = "drop", boss = npc.name, classic = true, chance = src.chance, quest = src.quest, npcID = src.id, rank = npc.rank,
+      out[#out + 1] = { kind = Routes.DROP, boss = npc.name, classic = true, chance = src.chance, quest = src.quest, npcID = src.id, rank = npc.rank,
         unavailable = src.chance < ClassicDB.ROUTE_MIN_CHANCE or nil, rare = src.chance < ClassicDB.ROUTE_MIN_CHANCE or nil,
         mapID = place and place.mapID, x = place and place.x, y = place and place.y, zone = place and place.zone,
         label = "Dropped by " .. npc.name, short = "Drop: " .. npc.name,
@@ -452,7 +453,7 @@ function ClassicDB.ItemHints(itemID, opts)
     local npc = ClassicDB.Npc(src.id)
     if npc then
       local place = ClassicDB.PlaceOf({ src.id })
-      out[#out + 1] = { kind = "gather", skill = "Skinning", classic = true, chance = src.chance, npcID = src.id, target = npc.name, zone = place and place.zone,
+      out[#out + 1] = { kind = Routes.GATHER, skill = "Skinning", classic = true, chance = src.chance, npcID = src.id, target = npc.name, zone = place and place.zone,
         mapID = place and place.mapID, x = place and place.x, y = place and place.y,
         label = "Skinned from " .. npc.name, short = "Skin: " .. npc.name,
         detail = string.format("%s - %s%s (classic data)", place and place.zone or "?", ClassicDB.ChanceText(src.chance), npcLevels(npc)) }
@@ -463,14 +464,14 @@ function ClassicDB.ItemHints(itemID, opts)
     if i > limits.fished then break end
     local d = data()
     local area = d.areas and d.areas[src.id] or ("area " .. src.id)
-    out[#out + 1] = { kind = "gather", skill = "Fishing", classic = true, chance = src.chance, target = area, zone = area,
+    out[#out + 1] = { kind = Routes.GATHER, skill = "Fishing", classic = true, chance = src.chance, target = area, zone = area,
       label = "Fished in " .. area, short = "Fish: " .. area, detail = string.format("%s (classic data)", ClassicDB.ChanceText(src.chance)) }
   end
   list = ClassicDB.Loot("contained", itemID)
   for i, src in ipairs(list) do
     if i > limits.contained then break end
     local name = ns.ItemProvider.GetName(src.id)
-    out[#out + 1] = { kind = "drop", classic = true, chance = src.chance, container = src.id,
+    out[#out + 1] = { kind = Routes.DROP, classic = true, chance = src.chance, container = src.id,
       label = "Found in " .. name, short = "Open: " .. name, detail = string.format("%s (classic data)", ClassicDB.ChanceText(src.chance)) }
   end
   if opts.classID == 4 then
@@ -479,7 +480,7 @@ function ClassicDB.ItemHints(itemID, opts)
       if i > limits.pickpocketed then break end
       local npc = ClassicDB.Npc(src.id)
       if npc then
-        out[#out + 1] = { kind = "drop", classic = true, chance = src.chance, npcID = src.id,
+        out[#out + 1] = { kind = Routes.DROP, classic = true, chance = src.chance, npcID = src.id,
           label = "Pickpocketed from " .. npc.name, short = "Pickpocket: " .. npc.name,
           detail = string.format("%s (classic data)", ClassicDB.ChanceText(src.chance)) }
       end
@@ -487,7 +488,7 @@ function ClassicDB.ItemHints(itemID, opts)
   end
   local world = ClassicDB.WorldDrop(itemID)
   if world then
-    out[#out + 1] = { kind = "drop", classic = true, world = true, unavailable = true, rare = true, label = "World drop", short = "World drop",
+    out[#out + 1] = { kind = Routes.DROP, classic = true, world = true, unavailable = true, rare = true, label = "World drop", short = "World drop",
       detail = string.format("mobs level %d-%d (classic data)", world.minLevel or 0, world.maxLevel or 0) }
   end
   return out

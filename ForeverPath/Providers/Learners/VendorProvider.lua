@@ -8,6 +8,7 @@ local Compat = ns.Compat
 local Util = ns.Util
 local Log = ns.Log
 local Events = ns.Events
+local Routes = ns.DependencyResolver.Routes
 
 local VendorProvider = { open = false }
 ns.VendorProvider = VendorProvider
@@ -126,7 +127,7 @@ function VendorProvider.ItemHints(itemID)
       cost = "price unknown"
     end
     options[#options + 1] = {
-      kind = "vendor", name = vendor.name, price = vendor.price, zone = vendor.zone,
+      kind = Routes.VENDOR, name = vendor.name, price = vendor.price, zone = vendor.zone,
       label = "Buy from " .. vendor.name,
       detail = string.format("%s - %s each%s", where, cost, vendor.limited and " (limited stock)" or ""),
     }
