@@ -63,7 +63,7 @@ local function createMaterialRow(content, index)
       lines[#lines + 1] = string.format("Bank: %d (%s)", m.ownedBank, m.bankSource == "live" and "live" or (m.bankSource == "cached" and "snapshot" or "client reported"))
     end
     for _, alt in ipairs(m.altSources or {}) do
-      lines[#lines + 1] = string.format("%s has %d (%s%s)", alt.name, alt.count, alt.freshness, ns.GoalService.IncludesAlts() and ", counted" or ", not counted")
+      lines[#lines + 1] = string.format("%s has %d (%s%s)", alt.name, alt.count, alt.level, ns.GoalService.IncludesAlts() and ", counted" or ", not counted")
     end
     if (m.reserved or 0) > 0 then
       lines[#lines + 1] = string.format("Reserved by higher-priority goals: %d", m.reserved)

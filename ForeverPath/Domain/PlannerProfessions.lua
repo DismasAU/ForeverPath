@@ -62,7 +62,7 @@ local function trainerStep(recipe)
   local trainer = recipe.trainer
   if trainer and trainer.name then
     return string.format("Train at %s%s%s.", trainer.name, trainer.zone and (", " .. trainer.zone) or "",
-      trainer.cost and trainer.cost > 0 and (" for " .. Util.FormatMoney(trainer.cost)) or ""), "Train at " .. trainer.name
+      trainer.cost and trainer.cost > 0 and (" for " .. Util.PlainMoney(trainer.cost)) or ""), "Train at " .. trainer.name
   end
   return string.format("Train at any %s trainer (the requirement is recorded on your next trainer visit).", recipe.professionName or "profession"),
     "Visit " .. article(recipe.professionName) .. " " .. (recipe.professionName or "profession") .. " trainer"

@@ -8,12 +8,13 @@
 --
 --   source = { GetPrice(itemID) -> priceInfo | nil, IsAvailable() -> boolean (optional),
 --              market = true for an Auction House source, label = "Auctionator",
---              Status() -> { installed, available, lastScan } (market sources) }
+--              StatusInfo() -> { installed, available, lastScan } (market sources) }
 --
 --   PriceProvider.IsAvailable() -> boolean
 --   PriceProvider.GetPrice(itemID) -> priceInfo | nil, reason
 --     priceInfo = { copper, source = "vendor"|"auctionator", kind = "vendor"|"market",
---                   scannedAt, ageDays, avg7, listings, vendor, alternatives = { priceInfo } }
+--                   scannedAt, ageDays, avg7, listings, vendor, classic (a classic-database
+--                   vendor price, not one seen here), alternatives = { priceInfo } }
 --
 -- An unknown price is nil, never zero. Engines must treat nil as "unknown" and
 -- surface it instead of silently pricing a material at 0.
@@ -102,7 +103,7 @@ function PriceProvider.GetMarket(itemID)
   local source, name = marketSource()
   if not source then return nil end
   local info = Log.Try(source.GetPrice, itemID)
-  if type(info) == "table" and type(info.copper) == "number" then
+  if type(info) == "table" and type(info.copper) == "number" and info.copper > 0 then
     info.source = info.source or name
     return info
   end
@@ -138,7 +139,7 @@ end
 function PriceProvider.StatusInfo(now)
   now = now or Util.Now()
   local source = marketSource()
-  local reported = source and Log.Try(source.Status or function() return nil end) or nil
+  local reported = source and Log.Try(source.StatusInfo) or nil
   local status = { installed = false, available = false }
   if type(reported) == "table" then
     status.installed = reported.installed == true

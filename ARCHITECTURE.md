@@ -218,7 +218,7 @@ inventory.GetCounts(itemID) -> { bags, bank|nil, bankSource = "live"|"cached"|"c
                                  alts|nil, altSources = { { name, count, freshness } } }   (alts never in total)
 characters.Sources(itemID)  -> { { kind = "alt"|"altcraft", name, count, label, detail } }
 sources.Sources(itemID)     -> { { kind = "vendor"|"drop"|"gather", name, price, label, detail, ... } }  (SourceProvider)
-price.GetPrice(itemID)      -> { copper, source, timestamp, kind, vendor? } | nil   (cheapest source; unknown is nil, never 0)
+price.GetPrice(itemID)      -> { copper, source, scannedAt, kind, vendor? } | nil   (cheapest source; unknown is nil, never 0)
 catalogue.Lookup(itemID)    -> static recipes or nil   (the recipe catalogue, Data/Recipes.lua)
 attune / quest / reputation -> AttuneProvider, QuestProvider, ReputationProvider (their own evaluators' needs)
 ```

@@ -139,7 +139,7 @@ function VendorProvider.GetPrice(itemID)
   local vendors = VendorProvider.VendorsFor(itemID)
   local best = vendors[1]
   if best and best.price then
-    return { copper = best.price, source = "vendor", timestamp = best.seenAt, kind = "vendor", vendor = best.name }
+    return { copper = best.price, source = "vendor", scannedAt = best.seenAt, kind = "vendor", vendor = best.name }
   end
   -- Nothing recorded on this client: the classic vendor price, if any vendor
   -- this faction can use sells it (a merchant window visit replaces it).

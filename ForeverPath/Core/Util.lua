@@ -207,8 +207,9 @@ function Util.IsPlainData(value, seen)
   return true
 end
 
--- "12g 34s 56c" without textures (chat and messages; the UI has Widgets.Money).
-function Util.FormatMoney(copper)
+-- The two largest units as plain text, "12g 34s", "34s 56c" or "56c" (no
+-- textures or colour). Util.Money renders through the UI when it can.
+function Util.PlainMoney(copper)
   copper = tonumber(copper) or 0
   local gold = math.floor(copper / 10000)
   local silver = math.floor((copper % 10000) / 100)
@@ -218,13 +219,13 @@ function Util.FormatMoney(copper)
   return string.format("%dc", bronze)
 end
 
--- Money text for hints, chat and messages: plain FormatMoney until the UI
+-- Money text for hints, chat and messages: Util.PlainMoney until the UI
 -- installs its coin-coloured renderer (Widgets.Money) through
 -- Util.SetMoneyRenderer, so lower layers never reach up into the UI.
 local moneyRenderer
 function Util.Money(copper)
   if moneyRenderer then return moneyRenderer(copper) end
-  return Util.FormatMoney(copper)
+  return Util.PlainMoney(copper)
 end
 
 function Util.SetMoneyRenderer(fn)

@@ -178,8 +178,9 @@ function CharacterProvider.Remove(key)
   return true
 end
 
--- "live" for the current character, "snapshot" under 24 h, "cached" beyond.
-function CharacterProvider.Freshness(record, now)
+-- How current a character's snapshot is (a Levels value): "live" for the
+-- current character, "snapshot" under 24 h, "cached" beyond.
+function CharacterProvider.SnapshotLevel(record, now)
   if record.key == CharacterProvider.CurrentKey() then
     return CharacterProvider.Levels.LIVE
   end
@@ -192,7 +193,7 @@ function CharacterProvider.Freshness(record, now)
 end
 
 -- All known characters, current first, then most recently seen. Each entry is
--- the stored record plus isCurrent / freshness (not persisted).
+-- the stored record plus isCurrent / level (not persisted).
 function CharacterProvider.List()
   local store = CharacterProvider.Store()
   local list = {}
@@ -208,7 +209,7 @@ function CharacterProvider.List()
   end)
   local out = {}
   for i, record in ipairs(list) do
-    out[i] = { record = record, key = record.key, isCurrent = record.key == current, freshness = CharacterProvider.Freshness(record) }
+    out[i] = { record = record, key = record.key, isCurrent = record.key == current, level = CharacterProvider.SnapshotLevel(record) }
   end
   return out
 end
@@ -225,14 +226,14 @@ local function recordCount(record, itemID, includeBank)
 end
 
 -- Alts (never the current character) holding itemID.
--- Returns list { { record, name, bags, bank, total, freshness } } sorted by total desc.
+-- Returns list { { record, name, bags, bank, total, level } } sorted by total desc.
 function CharacterProvider.Alts(itemID, includeBank)
   local out = {}
   for _, entry in ipairs(CharacterProvider.List()) do
     if not entry.isCurrent then
       local bags, bank = recordCount(entry.record, itemID, includeBank)
       if bags + bank > 0 then
-        out[#out + 1] = { record = entry.record, name = entry.record.name, key = entry.key, bags = bags, bank = bank, total = bags + bank, freshness = entry.freshness }
+        out[#out + 1] = { record = entry.record, name = entry.record.name, key = entry.key, bags = bags, bank = bank, total = bags + bank, level = entry.level }
       end
     end
   end
@@ -332,7 +333,7 @@ function CharacterProvider.Sources(itemID)
     options[#options + 1] = {
       kind = "alt", name = alt.name, count = alt.total,
       label = "Mail from " .. alt.name,
-      detail = string.format("%s has %d (%s)", alt.name, alt.total, alt.freshness),
+      detail = string.format("%s has %d (%s)", alt.name, alt.total, alt.level),
     }
   end
   for _, crafter in ipairs(CharacterProvider.AltCrafters(itemID)) do

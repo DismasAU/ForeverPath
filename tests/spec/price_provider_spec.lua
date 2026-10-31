@@ -87,6 +87,12 @@ describe("PriceProvider and the Auctionator adapter", function()
     assert_output("AH prices: cached scan")
   end)
 
+  it("never returns a zero market price", function()
+    PP.RegisterSource("zero", { market = true, label = "Zero", GetPrice = function() return { copper = 0, kind = "market" } end })
+    assert_nil((PP.GetMarket(2589)), "zero means unknown")
+    assert_nil((PP.GetPrice(2589)))
+  end)
+
   it("stays quiet without Auctionator, a scan, or its database object", function()
     assert_false(ns.AuctionPriceProvider.IsAvailable())
     assert_nil((PP.GetMarket(2589)))

@@ -331,7 +331,7 @@ function handlers.characters()
     for _, p in ipairs(r.professions or {}) do profs[#profs + 1] = string.format("%s %d", p.name, p.skillLevel or 0) end
     Log.output(string.format("  %s%s - level %d %s - %s - %d bag items%s - %s", r.name, entry.isCurrent and " (you)" or "", r.level or 0, r.class or "",
       #profs > 0 and table.concat(profs, ", ") or "no professions", Util.Count(r.bags and r.bags.items or {}), r.bank and " + bank" or "",
-      entry.isCurrent and "live" or (entry.freshness .. " " .. Util.FormatAgo(r.lastSeen))))
+      entry.isCurrent and "live" or (entry.level .. " " .. Util.FormatAgo(r.lastSeen))))
   end
   Log.Print("Alts' bags are %s as owned (/fp alts to toggle).", ns.GoalService.IncludesAlts() and "counted" or "not counted")
 end

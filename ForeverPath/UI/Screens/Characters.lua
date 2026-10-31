@@ -172,13 +172,13 @@ local function createCard(content, index, screen)
     if record.class and record.class ~= "" then parts[#parts + 1] = record.class end
     if record.gold then parts[#parts + 1] = Widgets.Money(record.gold, true) end
     meta:SetText(table.concat(parts, " "))
-    local fresh = FRESH_BADGE[entry.freshness] or FRESH_BADGE.cached
+    local fresh = FRESH_BADGE[entry.level] or FRESH_BADGE.cached
     badge:SetBadge(fresh[1], fresh[2])
     if entry.isCurrent then
       age:SetText("")
     else
       age:SetText(ageText(record))
-      Widgets.SetTextColor(age, entry.freshness == "cached" and C.partial or C.text3)
+      Widgets.SetTextColor(age, entry.level == "cached" and C.partial or C.text3)
     end
     if entry.isCurrent and type(SetPortraitTexture) == "function" then
       portraitTexture:SetTexCoord(0, 1, 0, 1)
@@ -192,7 +192,7 @@ local function createCard(content, index, screen)
         portraitTexture:SetTexCoord(0, 1, 0, 1)
       end
     end
-    self:SetAlpha(entry.freshness == "cached" and 0.8 or 1)
+    self:SetAlpha(entry.level == "cached" and 0.8 or 1)
 
     for i, row in ipairs(self.professions) do
       local p = record.professions and record.professions[i]
@@ -287,7 +287,7 @@ local function createCard(content, index, screen)
       note:SetText("")
       forget:Hide()
     else
-      note:SetText(entry.freshness == "cached" and string.format("Log in on %s to refresh", record.name) or "")
+      note:SetText(entry.level == "cached" and string.format("Log in on %s to refresh", record.name) or "")
       forget:Show()
     end
   end

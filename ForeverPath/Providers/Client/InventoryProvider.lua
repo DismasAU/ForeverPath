@@ -132,7 +132,7 @@ function InventoryProvider.GetBagCount(itemID)
 end
 
 -- Returns { bags, bank|nil, bankSource, bankScannedAt|nil, total,
---           alts|nil, altSources|nil = { { name, count, freshness } } }.
+--           alts|nil, altSources|nil = { { name, count, level } } }.
 -- bankSource: "live" (bank open), "cached" (snapshot), "client" (GetItemCount
 -- reported more with the bank included; unverified on Forever), or "none".
 -- total is bags + bank; alts are never in it (the ledger adds them only
@@ -162,7 +162,7 @@ function InventoryProvider.GetCounts(itemID)
     if total > 0 then
       result.alts = total
       result.altSources = {}
-      for i, alt in ipairs(alts) do result.altSources[i] = { name = alt.name, count = alt.total, freshness = alt.freshness } end
+      for i, alt in ipairs(alts) do result.altSources[i] = { name = alt.name, count = alt.total, level = alt.level } end
     end
   end
   result.total = bags + (result.bank or 0)

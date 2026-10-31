@@ -8,7 +8,7 @@
 --     (days since the item was last seen; nil when never seen or > 21 days)
 -- Its database object also has GetMeanPrice(dbKey, days) and
 -- GetPriceHistory(dbKey) (per-day lowest/highest/available); both are read
--- behind pcall because they are not part of the v1 contract.
+-- through Util.SafeCall because they are not part of the v1 contract.
 -- AUCTIONATOR_SAVEDVARS.TimeOfLastBrowseScan is the time of the last full
 -- browse scan on this account.
 --
@@ -82,7 +82,7 @@ function AuctionPriceProvider.Init()
     GetPrice = AuctionPriceProvider.GetPrice,
     market = true,
     label = "Auctionator",
-    Status = function()
+    StatusInfo = function()
       return { installed = _G.Auctionator ~= nil, available = AuctionPriceProvider.IsAvailable(), lastScan = AuctionPriceProvider.LastScan() }
     end,
   })
