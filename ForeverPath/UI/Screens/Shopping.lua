@@ -228,7 +228,7 @@ local function Create(parent)
       local item = ns.ItemProvider.GetItem(itemID)
       return item and item.link or nil
     end)) do
-      ns.Log.output(line)
+      ns.Log.Output(line)
     end
     ns.UI.MainFrame.SetAlert("Shopping list printed to your chat frame.", "ok")
   end

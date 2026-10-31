@@ -1,7 +1,7 @@
 -- Quest catalogue: curated facts about Forever quests the client cannot
 -- tell an addon ahead of time - who gives each quest and where, who takes
 -- it back, and the items it asks for. Read through
--- Providers/Learners/QuestFactsProvider.lua, which overlays what the account has
+-- Providers/Learners/QuestFactsLearner.lua, which overlays what the account has
 -- learned at quest windows on top of these rows.
 --
 -- [questID] = {

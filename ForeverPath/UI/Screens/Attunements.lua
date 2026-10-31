@@ -1,12 +1,12 @@
 -- Screen 06: Attunement planner. Picks an attunement (the selected goal's
 -- when it is one), shows the header with progress, the step timeline and
--- the current step. Data and progress come from AttuneProvider.
+-- the current step. Data and progress come from AttuneBridge.
 local _, ns = ...
 
 local Widgets = ns.UI.Widgets
 local Theme = ns.UI.Theme
 local C = Theme.Colors
-local StepStates = ns.AttuneProvider.StepStates
+local StepStates = ns.AttuneBridge.StepStates
 
 ns.UI.Screens = ns.UI.Screens or {}
 
@@ -71,7 +71,7 @@ local function Create(parent)
   local picker = Widgets.Dropdown(top, "Choose an attunement", 260, function(self)
     local items = {}
     local lastGroup
-    for _, attune in ipairs(ns.AttuneProvider.List()) do
+    for _, attune in ipairs(ns.AttuneBridge.List()) do
       if attune.group ~= lastGroup then
         items[#items + 1] = { text = Theme.ColorText("text3", string.upper(attune.group)), value = nil, header = true }
         lastGroup = attune.group
@@ -219,7 +219,7 @@ local function Create(parent)
   end
 
   function screen:Refresh()
-    local AP = ns.AttuneProvider
+    local AP = ns.AttuneBridge
     if not AP.IsAvailable() then
       picker:Hide()
       addGoal:Hide()
@@ -230,7 +230,7 @@ local function Create(parent)
     picker:Show()
     addGoal:Show()
     -- Which attunement: the selected goal's, the last picked, or the first listed.
-    local goal = ns.GoalService.GetSelected()
+    local goal = ns.GoalService.Selected()
     local goalAttune = goal and goal.type == ns.GoalModel.TypeIDs.COMPLETE_ATTUNEMENT and goal.target.attuneID or nil
     local attuneID = self.attuneID
     -- A newly selected attunement goal takes over; an explicit picker choice otherwise stays.

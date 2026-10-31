@@ -168,11 +168,11 @@ function GoalStore:Select(id)
   return true
 end
 
-function GoalStore:GetSelectedID()
+function GoalStore:SelectedID()
   return self.storage.selectedGoalId
 end
 
-function GoalStore:GetSelected()
+function GoalStore:Selected()
   return self:Get(self.storage.selectedGoalId)
 end
 

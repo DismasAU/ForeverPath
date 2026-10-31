@@ -97,7 +97,7 @@ describe("Enchant goals", function()
 
   it("adds enchant goals from a shift-clicked link, a name or the slash command, and refuses item recipes", function()
     local GS = ns.GoalService
-    local goal, message = GS.AddFromInput(CRUSADER_LINK, 2)
+    local goal, message = GS.AddItemFromInput(CRUSADER_LINK, 2)
     assert_not_nil(goal, message)
     assert_eq(goal.type, "APPLY_ENCHANT")
     assert_eq(goal.target.spellID, CRUSADER)
@@ -105,19 +105,19 @@ describe("Enchant goals", function()
     assert_eq(goal.target.casts, 0)
     assert_eq(goal.target.professionName, "Enchanting")
     assert_eq(message, "Added goal: Cast 2x Enchant Weapon - Crusader")
-    assert_eq(ns.goals:GetSelectedID(), goal.id)
+    assert_eq(ns.goals:SelectedID(), goal.id)
     -- An item recipe's link becomes a goal for the item it makes.
-    local bolt = GS.AddFromInput("|cffffffff|Henchant:2963|h[Bolt of Linen Cloth]|h|r", 3)
+    local bolt = GS.AddItemFromInput("|cffffffff|Henchant:2963|h[Bolt of Linen Cloth]|h|r", 3)
     assert_not_nil(bolt)
     assert_eq(bolt.target.itemID, LINEN_BOLT_ITEM)
     assert_eq(bolt.target.quantity, 3)
     -- Unknown spells are refused; a name finds the enchant and updates the existing goal.
-    local nope, why = GS.AddFromInput("|Hspell:1|h[Nothing]|h", 1)
+    local nope, why = GS.AddItemFromInput("|Hspell:1|h[Nothing]|h", 1)
     assert_nil(nope)
     assert_match(why, "No recipe with spell id 1")
     -- A recipe that makes no item becomes a goal to learn it.
     ns.db.recipes[990001] = { recipeID = 990001, name = "Smelt Nothing", professionName = "Mining", professionID = 186, reagents = {} }
-    local learnIt = GS.AddFromInput("|Hspell:990001|h[Smelt Nothing]|h", 1)
+    local learnIt = GS.AddItemFromInput("|Hspell:990001|h[Smelt Nothing]|h", 1)
     assert_eq(learnIt.type, "LEARN_RECIPE")
     assert_eq(learnIt.target.spellID, 990001)
     GS.Remove(learnIt.id)

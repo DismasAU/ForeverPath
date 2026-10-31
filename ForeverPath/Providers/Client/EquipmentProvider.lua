@@ -1,6 +1,6 @@
 -- Equipment: what is worn in every slot, the item stats and levels the client
 -- reports, and the upgrade hunts GearQuest Forever ships for the player's
--- class, spec, faction and level band (read through ns.GearQuest).
+-- class, spec, faction and level band (read through ns.GearQuestBridge).
 local _, ns = ...
 
 local Compat = ns.Compat
@@ -94,7 +94,7 @@ function EquipmentProvider.ItemLevel(linkOrID)
     if tonumber(ilvl) and ilvl > 0 then return ilvl end
   end
   local itemID = type(linkOrID) == "number" and linkOrID or tonumber(tostring(linkOrID):match("item:(%d+)"))
-  local facts = itemID and ns.GearQuest.Facts(itemID)
+  local facts = itemID and ns.GearQuestBridge.Facts(itemID)
   return facts and tonumber(facts.ilvl) or nil
 end
 
@@ -111,7 +111,7 @@ function EquipmentProvider.Stats(linkOrID)
   end
   if next(out) == nil then
     local itemID = type(linkOrID) == "number" and linkOrID or tonumber(tostring(linkOrID):match("item:(%d+)"))
-    for key, value in pairs(ns.GearQuest.ScoredStats(itemID) or {}) do
+    for key, value in pairs(ns.GearQuestBridge.ScoredStats(itemID) or {}) do
       if tonumber(value) then out[key] = tonumber(value) end
     end
   end
@@ -184,7 +184,7 @@ end
 -- opts.source = a SourceGroups key ("any" default), opts.limit.
 function EquipmentProvider.Candidates(slotKey, opts)
   opts = opts or {}
-  local GQ = ns.GearQuest
+  local GQ = ns.GearQuestBridge
   local slot = EquipmentProvider.SlotByKey[slotKey]
   local classFile = Compat.PlayerClass()
   local entries = slot and GQ.Entries(classFile)
@@ -242,8 +242,8 @@ end
 function EquipmentProvider.Analyze(opts)
   opts = opts or {}
   local byKey, list = EquipmentProvider.Equipped()
-  local hasGQ = ns.GearQuest.IsAvailable()
-  local spec, specLabel = ns.GearQuest.Spec()
+  local hasGQ = ns.GearQuestBridge.IsAvailable()
+  local spec, specLabel = ns.GearQuestBridge.Spec()
   local result = { slots = {}, averageIlvl = EquipmentProvider.AverageItemLevel(list), hasGearQuest = hasGQ, spec = spec, specLabel = specLabel }
   for _, slot in ipairs(EquipmentProvider.SLOTS) do
     local worn = byKey[slot.key]
@@ -272,20 +272,20 @@ function EquipmentProvider.StatusLine()
   local _, list = EquipmentProvider.Equipped()
   local worn = 0
   for _, entry in ipairs(list) do if entry.itemID then worn = worn + 1 end end
-  local _, label = ns.GearQuest.Spec()
+  local _, label = ns.GearQuestBridge.Spec()
   return string.format("Equipment: %d of %d slots filled, average item level %s; upgrade hunts %s.", worn, #list, tostring(EquipmentProvider.AverageItemLevel(list)),
-    ns.GearQuest.IsAvailable() and ("from GearQuest Forever" .. (label and (" (" .. label .. ")") or "")) or "unavailable (GearQuest Forever not installed)")
+    ns.GearQuestBridge.IsAvailable() and ("from GearQuest Forever" .. (label and (" (" .. label .. ")") or "")) or "unavailable (GearQuest Forever not installed)")
 end
 
 local function changed(reason)
-  ns.GearQuest.ResetCache()
+  ns.GearQuestBridge.ResetCache()
   Events.Debounce("equipment-updated", 0.5, function()
     Events.Fire("FP_EQUIPMENT_UPDATED", reason)
   end)
 end
 
 function EquipmentProvider.Init()
-  ns.ItemProvider.RegisterNameSource(ns.GearQuest.ItemNames)
+  ns.ItemProvider.RegisterNameSource(ns.GearQuestBridge.ItemNames)
   if not EquipmentProvider.IsAvailable() then
     Log.Debug("GetInventoryItemID missing; equipment provider disabled")
     return

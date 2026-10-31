@@ -17,18 +17,18 @@ local Compat = ns.Compat
 local Log = ns.Log
 local Util = ns.Util
 
-local AttuneProvider = { cache = {} }
-ns.AttuneProvider = AttuneProvider
+local AttuneBridge = { cache = {} }
+ns.AttuneBridge = AttuneBridge
 
 -- A chain step's state (step.state), shared with QuestProvider's questlines.
-AttuneProvider.StepStates = Util.StrictNames({ "done", "current", "locked" }, "step state")
-local StepStates = AttuneProvider.StepStates
+AttuneBridge.StepStates = Util.StrictNames({ "done", "current", "locked" }, "step state")
+local StepStates = AttuneBridge.StepStates
 
-AttuneProvider.TypeLabels = {
+AttuneBridge.TypeLabels = {
   Quest = "Quest", ["Pick Up"] = "Pick up", ["Turn In"] = "Turn in", Item = "Item", Kill = "Kill",
   Interact = "Talk to", Click = "Use", Level = "Level", Rep = "Reputation", Attune = "Attunement", End = "Attuned",
 }
-AttuneProvider.GroupOrder = { RAIDS = 1, DUNGEONS = 2 }
+AttuneBridge.GroupOrder = { RAIDS = 1, DUNGEONS = 2 }
 
 local function data()
   local d = _G.Attune_Data
@@ -36,7 +36,7 @@ local function data()
   return nil
 end
 
-function AttuneProvider.IsAvailable()
+function AttuneBridge.IsAvailable()
   return data() ~= nil
 end
 
@@ -55,7 +55,7 @@ end
 -- { { id, name, requires, groupSize, faction, attunement, location,
 --     giver = { mapID, x, y, label } | nil, rewards = <Attune's raw reward record> } }.
 -- Empty without Attune (or without its quest table).
-function AttuneProvider.QuestRecords()
+function AttuneBridge.QuestRecords()
   local d = data()
   if not d or type(d.quests) ~= "table" then return {} end
   local givers = type(d.questGivers) == "table" and d.questGivers or {}
@@ -114,7 +114,7 @@ local function classOK(raw, class)
 end
 
 -- Attunements for a faction ("Alliance"/"Horde"; nil = all), raids first.
-function AttuneProvider.List(faction)
+function AttuneBridge.List(faction)
   local d = data()
   local out = {}
   if not d then return out end
@@ -125,8 +125,8 @@ function AttuneProvider.List(faction)
     end
   end
   table.sort(out, function(a, b)
-    local ga = AttuneProvider.GroupOrder[string.upper(a.group)] or 9
-    local gb = AttuneProvider.GroupOrder[string.upper(b.group)] or 9
+    local ga = AttuneBridge.GroupOrder[string.upper(a.group)] or 9
+    local gb = AttuneBridge.GroupOrder[string.upper(b.group)] or 9
     if ga ~= gb then return ga < gb end
     local la = tonumber(string.match(a.levels or "", "^(%d+)")) or 0
     local lb = tonumber(string.match(b.levels or "", "^(%d+)")) or 0
@@ -136,7 +136,7 @@ function AttuneProvider.List(faction)
   return out
 end
 
-function AttuneProvider.Get(id)
+function AttuneBridge.Get(id)
   local d = data()
   if not d then return nil end
   id = tostring(id)
@@ -147,11 +147,11 @@ function AttuneProvider.Get(id)
 end
 
 -- Case-insensitive name match for the player's faction; exact name wins.
-function AttuneProvider.Find(text, faction)
+function AttuneBridge.Find(text, faction)
   if type(text) ~= "string" or text == "" then return nil end
   local needle = string.lower(text)
   local partial
-  for _, attune in ipairs(AttuneProvider.List(faction)) do
+  for _, attune in ipairs(AttuneBridge.List(faction)) do
     local name = string.lower(attune.name)
     if name == needle then return attune end
     if not partial and string.find(name, needle, 1, true) then partial = attune end
@@ -210,7 +210,7 @@ local function stepName(step)
 end
 
 -- Ordered steps of one attunement (Spacers dropped).
-function AttuneProvider.Steps(id)
+function AttuneBridge.Steps(id)
   local d = data()
   local out = {}
   if not d then return out end
@@ -221,7 +221,7 @@ function AttuneProvider.Steps(id)
         and d.quests[tonumber(string.match(tostring(raw.ID_WOWHEAD or ""), "^([^|]+)") or "")] or nil
       out[#out + 1] = {
         attuneID = id, id = tostring(raw.ID), key = id .. "-" .. tostring(raw.ID),
-        type = raw.TYPE, typeLabel = AttuneProvider.TypeLabels[raw.TYPE] or raw.TYPE,
+        type = raw.TYPE, typeLabel = AttuneBridge.TypeLabels[raw.TYPE] or raw.TYPE,
         name = stepName(raw), location = raw.LOCATION ~= "" and raw.LOCATION or nil,
         wowheadID = tostring(raw.ID_WOWHEAD or ""), icon = raw.ICON ~= "" and raw.ICON or nil,
         follows = splitFollows(raw.FOLLOWS), stage = tonumber(raw.STAGE) or 0, side = raw.SIDE == true,
@@ -265,7 +265,7 @@ local function attuneSurvey()
   return nil
 end
 
-function AttuneProvider.DefaultContext()
+function AttuneBridge.DefaultContext()
   local survey = attuneSurvey()
   return {
     completedQuest = function(questID)
@@ -284,11 +284,11 @@ end
 
 -- Marks each step done/inLog and returns the summary:
 --   { attune, steps, done, total, percent, current = { steps }, next = step, complete }
-function AttuneProvider.Progress(id, ctx)
-  local attune = AttuneProvider.Get(id)
+function AttuneBridge.Progress(id, ctx)
+  local attune = AttuneBridge.Get(id)
   if not attune then return nil, "unknown attunement" end
-  ctx = ctx or AttuneProvider.DefaultContext()
-  local steps = AttuneProvider.Steps(id)
+  ctx = ctx or AttuneBridge.DefaultContext()
+  local steps = AttuneBridge.Steps(id)
   local byID = {}
   for _, step in ipairs(steps) do byID[step.id] = step end
 
@@ -383,7 +383,7 @@ end
 -- class (both default to the character's): { { attune, stepID } }, the
 -- step being the last one that references the quest (its turn-in when the
 -- chain splits pick-up and turn-in). Class chains come first.
-function AttuneProvider.AttunementsWithQuest(questID, faction, class)
+function AttuneBridge.AttunementsWithQuest(questID, faction, class)
   local d = data()
   questID = tonumber(questID)
   if not d or not questID then return {} end
@@ -422,12 +422,12 @@ end
 -- (transitively) plus the step itself, in chain order, with live progress.
 -- { attune, steps, target, next, done, total, percent, complete }, or nil
 -- when no attunement for this faction and class includes the quest.
-function AttuneProvider.QuestlineFor(questID, opts)
+function AttuneBridge.QuestlineFor(questID, opts)
   opts = opts or {}
-  local hits = AttuneProvider.AttunementsWithQuest(questID, opts.faction, opts.class)
+  local hits = AttuneBridge.AttunementsWithQuest(questID, opts.faction, opts.class)
   local hit = hits[1]
   if not hit then return nil end
-  local progress = AttuneProvider.Progress(hit.attune.id, opts.ctx)
+  local progress = AttuneBridge.Progress(hit.attune.id, opts.ctx)
   if not progress then return nil end
   local byID = {}
   for _, step in ipairs(progress.steps) do byID[step.id] = step end
@@ -465,7 +465,7 @@ function AttuneProvider.QuestlineFor(questID, opts)
 end
 
 -- "Quest: Jail Break - Blackrock Depths"
-function AttuneProvider.StepText(step)
+function AttuneBridge.StepText(step)
   if not step then return nil end
   local text = step.typeLabel .. ": " .. step.name
   if step.type == "Item" and step.count > 1 then text = text .. " x" .. step.count end
@@ -473,11 +473,11 @@ function AttuneProvider.StepText(step)
   return text
 end
 
-function AttuneProvider.StatusLine()
-  if not AttuneProvider.IsAvailable() then return "Attune: not installed" end
-  return string.format("Attune: %d attunements for %s", #AttuneProvider.List(), Compat.PlayerFaction() or "all factions")
+function AttuneBridge.StatusLine()
+  if not AttuneBridge.IsAvailable() then return "Attune: not installed" end
+  return string.format("Attune: %d attunements for %s", #AttuneBridge.List(), Compat.PlayerFaction() or "all factions")
 end
 
-function AttuneProvider.Init()
-  Log.Debug("Attune bridge: %s", AttuneProvider.StatusLine())
+function AttuneBridge.Init()
+  Log.Debug("Attune bridge: %s", AttuneBridge.StatusLine())
 end

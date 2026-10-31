@@ -13,7 +13,7 @@ ns.Planner.SetDefaultDeps(function()
     characters = ns.CharacterProvider,
     sources = ns.SourceProvider,
     price = ns.PriceProvider,
-    attune = ns.AttuneProvider,
+    attune = ns.AttuneBridge,
     quest = ns.QuestProvider,
     reputation = ns.ReputationProvider,
     settings = {

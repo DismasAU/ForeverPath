@@ -160,9 +160,9 @@ end
 function GoalService.AddAttunementGoal(attuneID)
   local store = GoalService.Store()
   if not store then return nil, LOADING end
-  local attune = ns.AttuneProvider.Get(attuneID)
+  local attune = ns.AttuneBridge.Get(attuneID)
   if not attune then
-    return nil, ns.AttuneProvider.IsAvailable() and "Unknown attunement." or "Attunement goals need the Attune addon."
+    return nil, ns.AttuneBridge.IsAvailable() and "Unknown attunement." or "Attunement goals need the Attune addon."
   end
   local existing = GoalService.FindAttunementGoal(attune.id)
   if existing then return reuseGoal(store, existing) end
@@ -171,10 +171,10 @@ end
 
 -- Attunement goal from free text (name, for the player's faction).
 function GoalService.AddAttunementFromInput(text)
-  if not ns.AttuneProvider.IsAvailable() then
+  if not ns.AttuneBridge.IsAvailable() then
     return nil, "Attunement goals need the Attune addon installed and enabled."
   end
-  local attune = ns.AttuneProvider.Find(Util.Trim(text or ""))
+  local attune = ns.AttuneBridge.Find(Util.Trim(text or ""))
   if not attune then
     return nil, string.format("No attunement called \"%s\" for your faction. /fp attunements lists them.", Util.Trim(text or ""))
   end
@@ -473,7 +473,7 @@ end
 -- picked by TypeForItem unless given). An enchant or spell link becomes an
 -- enchant goal, or a crafting goal for the item the recipe makes.
 -- Returns goal, message, isNew.
-function GoalService.AddFromInput(text, quantity, goalType)
+function GoalService.AddItemFromInput(text, quantity, goalType)
   local spellID = GoalService.SpellIDFromText(text)
   if spellID then
     local recipe = ns.Planner.RecipeByID(spellID)
@@ -484,7 +484,7 @@ function GoalService.AddFromInput(text, quantity, goalType)
       return GoalService.AddEnchantGoal(spellID, quantity)
     end
     if recipe.outputItemID then
-      return GoalService.AddFromInput(tostring(recipe.outputItemID), quantity, goalType)
+      return GoalService.AddItemFromInput(tostring(recipe.outputItemID), quantity, goalType)
     end
     -- A recipe link that makes no item: the goal is to learn it.
     return GoalService.AddRecipeGoal(spellID)
@@ -520,7 +520,7 @@ end
 -- kinds that count one (items, enchants) and ignored by the rest, whose
 -- target sits in the text. Returns goal, message, isNew.
 local FROM_INPUT = {
-  item = function(text, amount) return GoalService.AddFromInput(text, amount) end,
+  item = function(text, amount) return GoalService.AddItemFromInput(text, amount) end,
   recipe = function(text) return GoalService.AddRecipeFromInput(text) end,
   enchant = function(text, amount) return GoalService.AddEnchantFromInput(text, amount) end,
   skill = function(text) return GoalService.AddSkillFromInput(text) end,
@@ -599,7 +599,7 @@ function GoalService.Suggest(kind, text, limit)
     end
   end
   local function attunements(n)
-    local AP = ns.AttuneProvider
+    local AP = ns.AttuneBridge
     if not AP.IsAvailable() then return end
     local needle = string.lower(text)
     local count = 0
@@ -650,7 +650,7 @@ function GoalService.Remove(id)
   return store:Remove(id)
 end
 
-local READERS = { List = {}, Count = 0, GetSelected = false, GetSelectedID = false, Get = false }
+local READERS = { List = {}, Count = 0, Selected = false, SelectedID = false, Get = false }
 for name, empty in pairs(READERS) do
   GoalService[name] = function(...)
     local store = GoalService.Store()
@@ -899,7 +899,7 @@ function GoalService.TrackedGoals()
 end
 
 -- Resolves "2" (index in the open list) or a goal id.
-function GoalService.Resolve(ref)
+function GoalService.FindByRef(ref)
   local store = GoalService.Store()
   if not store or ref == nil then return nil end
   local index = Util.ParseInt(ref)

@@ -32,12 +32,12 @@ local Log = ns.Log
 local Util = ns.Util
 local Routes = ns.DependencyResolver.Routes
 
-local ClassicDB = { entries = {}, loadTried = false }
-ns.ClassicDB = ClassicDB
+local ClassicDBBridge = { entries = {}, loadTried = false }
+ns.ClassicDBBridge = ClassicDBBridge
 
-ClassicDB.ADDON = "ForeverPath_ClassicDB"
-ClassicDB.ALLIANCE, ClassicDB.HORDE = 1, 2
-ClassicDB.CHAIN_LIMIT = 40
+ClassicDBBridge.ADDON = "ForeverPath_ClassicDB"
+ClassicDBBridge.ALLIANCE, ClassicDBBridge.HORDE = 1, 2
+ClassicDBBridge.CHAIN_LIMIT = 40
 
 -- Column positions in the generated rows (layouts in the header above).
 local QUEST = {
@@ -56,7 +56,7 @@ local VENDOR = { PRICE = 1, STACK = 2, FIRST_NPC = 3 }
 local TRAINER = { SKILL_LINE = 1, SKILL = 2, COST = 3, FIRST_NPC = 4 }
 -- The table layout this file reads; tools/ClassicDbExtract writes it into
 -- meta.format (FORMAT there). Data in any other format is ignored.
-ClassicDB.FORMAT = 1
+ClassicDBBridge.FORMAT = 1
 
 local function formatOf(d)
   return type(d.meta) == "table" and d.meta.format or nil
@@ -64,44 +64,44 @@ end
 
 local function data()
   local d = ns.ClassicData
-  if type(d) == "table" and type(d.quests) == "table" and formatOf(d) == ClassicDB.FORMAT then return d end
+  if type(d) == "table" and type(d.quests) == "table" and formatOf(d) == ClassicDBBridge.FORMAT then return d end
   return nil
 end
 
 -- Loads the data addon once (it is load-on-demand). True when the data is there.
-function ClassicDB.Load()
+function ClassicDBBridge.Load()
   if data() then return true end
-  if not ClassicDB.loadTried then
-    ClassicDB.loadTried = true
+  if not ClassicDBBridge.loadTried then
+    ClassicDBBridge.loadTried = true
     if Compat.LoadAddOn then
-      local ok, loaded, reason = pcall(Compat.LoadAddOn, ClassicDB.ADDON)
+      local ok, loaded, reason = pcall(Compat.LoadAddOn, ClassicDBBridge.ADDON)
       if not ok or not loaded then
-        ClassicDB.loadError = ok and tostring(reason or "not loaded") or tostring(loaded)
-        Log.Debug("%s not loaded: %s", ClassicDB.ADDON, ClassicDB.loadError)
+        ClassicDBBridge.loadError = ok and tostring(reason or "not loaded") or tostring(loaded)
+        Log.Debug("%s not loaded: %s", ClassicDBBridge.ADDON, ClassicDBBridge.loadError)
       end
     else
-      ClassicDB.loadError = "this client cannot load addons on demand"
+      ClassicDBBridge.loadError = "this client cannot load addons on demand"
     end
     local d = ns.ClassicData
-    if type(d) == "table" and formatOf(d) ~= ClassicDB.FORMAT then
-      ClassicDB.loadError = string.format("its data is format %s but this ForeverPath reads format %d; update both addons together",
-        tostring(formatOf(d) or "unknown"), ClassicDB.FORMAT)
-      Log.Debug("%s ignored: %s", ClassicDB.ADDON, ClassicDB.loadError)
+    if type(d) == "table" and formatOf(d) ~= ClassicDBBridge.FORMAT then
+      ClassicDBBridge.loadError = string.format("its data is format %s but this ForeverPath reads format %d; update both addons together",
+        tostring(formatOf(d) or "unknown"), ClassicDBBridge.FORMAT)
+      Log.Debug("%s ignored: %s", ClassicDBBridge.ADDON, ClassicDBBridge.loadError)
     end
   end
   return data() ~= nil
 end
 
-function ClassicDB.IsAvailable()
+function ClassicDBBridge.IsAvailable()
   return data() ~= nil
 end
 
 -- Forgets derived indexes (after the data changes, and in tests).
-function ClassicDB.Reset()
-  ClassicDB.entries = {}
-  ClassicDB.rewardIndex = nil
-  ClassicDB.reputationIndex = nil
-  ClassicDB.titleIndex = nil
+function ClassicDBBridge.Reset()
+  ClassicDBBridge.entries = {}
+  ClassicDBBridge.rewardIndex = nil
+  ClassicDBBridge.reputationIndex = nil
+  ClassicDBBridge.titleIndex = nil
   ns.Recipes.Invalidate()
 end
 
@@ -109,10 +109,10 @@ end
 -- Player context
 ---------------------------------------------------------------------------
 -- The player's faction as the classic-db side flag.
-function ClassicDB.PlayerSide()
+function ClassicDBBridge.PlayerSide()
   local faction = Compat.PlayerFaction()
-  if faction == "Alliance" then return ClassicDB.ALLIANCE end
-  if faction == "Horde" then return ClassicDB.HORDE end
+  if faction == "Alliance" then return ClassicDBBridge.ALLIANCE end
+  if faction == "Horde" then return ClassicDBBridge.HORDE end
   return nil
 end
 
@@ -121,7 +121,7 @@ end
 local function eligibleQuest(questID, side, classID)
   local row = data() and data().quests[questID]
   if not row then return false end
-  side = side or ClassicDB.PlayerSide()
+  side = side or ClassicDBBridge.PlayerSide()
   classID = classID or select(2, Compat.PlayerClass())
   local questSide = row[QUEST.SIDE] or 0
   if questSide ~= 0 and side and questSide ~= side then return false end
@@ -131,7 +131,7 @@ end
 -- The bridges' shared contract: can a character of this faction ("Alliance"
 -- or "Horde") and classID take the entry? nil faction or classID means the
 -- player's.
-function ClassicDB.Eligible(entry, faction, classID)
+function ClassicDBBridge.Eligible(entry, faction, classID)
   if not entry then return false end
   faction = faction or Compat.PlayerFaction()
   if entry.faction and entry.faction ~= "Both" and faction and entry.faction ~= faction then return false end
@@ -141,7 +141,7 @@ end
 ---------------------------------------------------------------------------
 -- Places
 ---------------------------------------------------------------------------
-function ClassicDB.ZoneName(uiMapID)
+function ClassicDBBridge.ZoneName(uiMapID)
   local d = data()
   uiMapID = tonumber(uiMapID)
   if not uiMapID then return nil end
@@ -157,45 +157,45 @@ function ClassicDB.ZoneName(uiMapID)
 end
 
 -- { { uiMapID, x, y, zone, instance } } with x, y as 0-1 fractions (nil inside instances).
-function ClassicDB.Spawns(flat)
+function ClassicDBBridge.Spawns(flat)
   local out = {}
   if type(flat) ~= "table" then return out end
   for i = 1, #flat, 3 do
     local ui = flat[i]
     if ui then
       if ui < 0 then
-        out[#out + 1] = { uiMapID = ui, zone = ClassicDB.ZoneName(ui), instance = true }
+        out[#out + 1] = { uiMapID = ui, zone = ClassicDBBridge.ZoneName(ui), instance = true }
       else
-        out[#out + 1] = { uiMapID = ui, x = (flat[i + 1] or 0) / 1000, y = (flat[i + 2] or 0) / 1000, zone = ClassicDB.ZoneName(ui) }
+        out[#out + 1] = { uiMapID = ui, x = (flat[i + 1] or 0) / 1000, y = (flat[i + 2] or 0) / 1000, zone = ClassicDBBridge.ZoneName(ui) }
       end
     end
   end
   return out
 end
 
-function ClassicDB.Npc(npcID)
+function ClassicDBBridge.Npc(npcID)
   local d = data()
   local row = d and d.npcs[tonumber(npcID) or 0]
   if not row then return nil end
   return { id = tonumber(npcID), name = row[NPC.NAME], subName = row[NPC.SUB_NAME], minLevel = row[NPC.MIN_LEVEL], maxLevel = row[NPC.MAX_LEVEL],
-    npcFlags = row[NPC.NPC_FLAGS], spawns = ClassicDB.Spawns(row[NPC.SPAWNS]), side = row[NPC.SIDE], rank = row[NPC.RANK] }
+    npcFlags = row[NPC.NPC_FLAGS], spawns = ClassicDBBridge.Spawns(row[NPC.SPAWNS]), side = row[NPC.SIDE], rank = row[NPC.RANK] }
 end
 
-ClassicDB.LOCK_SKILLS = { "Herbalism", "Mining", "Fishing", "Lockpicking" }
+ClassicDBBridge.LOCK_SKILLS = { "Herbalism", "Mining", "Fishing", "Lockpicking" }
 
-function ClassicDB.Object(objectID)
+function ClassicDBBridge.Object(objectID)
   local d = data()
   local row = d and d.objects and d.objects[tonumber(objectID) or 0]
   if not row then return nil end
   local lockSkill = row[OBJECT.LOCK_SKILL]
-  return { id = tonumber(objectID), name = row[OBJECT.NAME], type = row[OBJECT.TYPE], spawns = ClassicDB.Spawns(row[OBJECT.SPAWNS]),
-    skill = lockSkill and ClassicDB.LOCK_SKILLS[lockSkill] or nil, skillValue = row[OBJECT.SKILL_VALUE] }
+  return { id = tonumber(objectID), name = row[OBJECT.NAME], type = row[OBJECT.TYPE], spawns = ClassicDBBridge.Spawns(row[OBJECT.SPAWNS]),
+    skill = lockSkill and ClassicDBBridge.LOCK_SKILLS[lockSkill] or nil, skillValue = row[OBJECT.SKILL_VALUE] }
 end
 
 -- Can this character deal with the NPC (not hostile to its faction)?
-function ClassicDB.Friendly(npc, side)
+function ClassicDBBridge.Friendly(npc, side)
   if not npc or npc.side == nil then return true end
-  side = side or ClassicDB.PlayerSide()
+  side = side or ClassicDBBridge.PlayerSide()
   if npc.side == 3 then return false end
   return npc.side == 0 or not side or npc.side == side
 end
@@ -203,7 +203,7 @@ end
 -- A place for the first NPC (or object) in the list that has one:
 -- { name, mapID, x, y, zone, label, classic = true }. Zone-map spawns win
 -- over instance spawns.
-function ClassicDB.PlaceOf(npcIDs, objectIDs)
+function ClassicDBBridge.PlaceOf(npcIDs, objectIDs)
   local function from(thing)
     if not thing then return nil end
     local best
@@ -220,11 +220,11 @@ function ClassicDB.PlaceOf(npcIDs, objectIDs)
     return place
   end
   for _, id in ipairs(npcIDs or {}) do
-    local place = from(ClassicDB.Npc(id))
+    local place = from(ClassicDBBridge.Npc(id))
     if place then return place end
   end
   for _, id in ipairs(objectIDs or {}) do
-    local place = from(ClassicDB.Object(id))
+    local place = from(ClassicDBBridge.Object(id))
     if place then return place end
   end
   return nil
@@ -248,12 +248,12 @@ local function pairList(flat, fields)
 end
 
 -- A quest in QuestProvider's entry shape (cached), or nil.
-function ClassicDB.Quest(questID)
+function ClassicDBBridge.Quest(questID)
   questID = tonumber(questID)
   local d = data()
   local row = questID and d and d.quests[questID]
   if not row then return nil end
-  local cached = ClassicDB.entries[questID]
+  local cached = ClassicDBBridge.entries[questID]
   if cached then return cached end
   local rewards, choice = {}, false
   for _, r in ipairs(pairList(row[QUEST.REWARDS], { "itemID", "count" })) do
@@ -264,7 +264,7 @@ function ClassicDB.Quest(questID)
     rewards[#rewards + 1] = r
     choice = true
   end
-  local giver = ClassicDB.PlaceOf(row[QUEST.STARTER_NPCS], row[QUEST.STARTER_OBJECTS])
+  local giver = ClassicDBBridge.PlaceOf(row[QUEST.STARTER_NPCS], row[QUEST.STARTER_OBJECTS])
   local level, minLevel = row[QUEST.LEVEL], row[QUEST.MIN_LEVEL]
   local entry = {
     id = questID, name = row[QUEST.TITLE], level = level ~= 0 and level or nil, requires = minLevel ~= 0 and minLevel or nil,
@@ -279,14 +279,14 @@ function ClassicDB.Quest(questID)
     reputation = pairList(row[QUEST.REPUTATION], { "factionID", "value" }),
     groupSize = row[QUEST.GROUP_SIZE], skill = row[QUEST.SKILL], breadcrumbFor = row[QUEST.BREADCRUMB_FOR], questType = row[QUEST.TYPE],
   }
-  ClassicDB.entries[questID] = entry
+  ClassicDBBridge.entries[questID] = entry
   return entry
 end
 
-function ClassicDB.Giver(questID)
-  local entry = ClassicDB.Quest(questID)
+function ClassicDBBridge.Giver(questID)
+  local entry = ClassicDBBridge.Quest(questID)
   if not entry then return nil end
-  local place = ClassicDB.PlaceOf(entry.starterNpcs, entry.starterObjects)
+  local place = ClassicDBBridge.PlaceOf(entry.starterNpcs, entry.starterObjects)
   if not place and entry.starterItem then
     local name = ns.ItemProvider.GetName(entry.starterItem)
     place = { name = name, label = name .. " (item)", item = entry.starterItem, classic = true }
@@ -294,15 +294,15 @@ function ClassicDB.Giver(questID)
   return place
 end
 
-function ClassicDB.Turnin(questID)
-  local entry = ClassicDB.Quest(questID)
+function ClassicDBBridge.Turnin(questID)
+  local entry = ClassicDBBridge.Quest(questID)
   if not entry then return nil end
-  return ClassicDB.PlaceOf(entry.enderNpcs, entry.enderObjects)
+  return ClassicDBBridge.PlaceOf(entry.enderNpcs, entry.enderObjects)
 end
 
 -- The items a quest asks for: { { itemID, count } }.
-function ClassicDB.RequiredItems(questID)
-  local entry = ClassicDB.Quest(questID)
+function ClassicDBBridge.RequiredItems(questID)
+  local entry = ClassicDBBridge.Quest(questID)
   return entry and entry.items or {}
 end
 
@@ -310,7 +310,7 @@ end
 -- Items: where they drop, who sells them, who teaches a recipe
 ---------------------------------------------------------------------------
 -- "12%", "3.5%", "0.25%"
-function ClassicDB.ChanceText(chance)
+function ClassicDBBridge.ChanceText(chance)
   chance = math.abs(chance or 0) / 100
   if chance >= 10 then return string.format("%d%%", math.floor(chance + 0.5)) end
   if chance >= 1 then return (string.format("%.1f%%", chance):gsub("%.0%%", "%%")) end
@@ -327,12 +327,12 @@ local function sources(list)
   return out, list[1] or #out
 end
 
-function ClassicDB.Loot(kind, itemID)
+function ClassicDBBridge.Loot(kind, itemID)
   local d = data()
   return sources(d and d[kind] and d[kind][tonumber(itemID) or 0])
 end
 
-function ClassicDB.WorldDrop(itemID)
+function ClassicDBBridge.WorldDrop(itemID)
   local d = data()
   local row = d and d.worldDrops and d.worldDrops[tonumber(itemID) or 0]
   if not row then return nil end
@@ -341,31 +341,31 @@ end
 
 -- Vendors that sell itemID and deal with this character's faction:
 -- { { npc, place, price, stack, limited } }.
-function ClassicDB.Vendors(itemID, side)
+function ClassicDBBridge.Vendors(itemID, side)
   local d = data()
   local row = d and d.vendors and d.vendors[tonumber(itemID) or 0]
   local out = {}
   if not row then return out end
   for i = VENDOR.FIRST_NPC, #row, 2 do
-    local npc = ClassicDB.Npc(row[i])
-    if npc and ClassicDB.Friendly(npc, side) then
-      out[#out + 1] = { npc = npc, place = ClassicDB.PlaceOf({ row[i] }), price = row[VENDOR.PRICE], stack = row[VENDOR.STACK], limited = row[i + 1] == 1 }
+    local npc = ClassicDBBridge.Npc(row[i])
+    if npc and ClassicDBBridge.Friendly(npc, side) then
+      out[#out + 1] = { npc = npc, place = ClassicDBBridge.PlaceOf({ row[i] }), price = row[VENDOR.PRICE], stack = row[VENDOR.STACK], limited = row[i + 1] == 1 }
     end
   end
   return out
 end
 
 -- The cheapest classic vendor price this character can buy at, or nil.
-function ClassicDB.VendorPrice(itemID)
-  local vendors = ClassicDB.Vendors(itemID)
+function ClassicDBBridge.VendorPrice(itemID)
+  local vendors = ClassicDBBridge.Vendors(itemID)
   local best = vendors[1]
   if best and best.price and best.price > 0 then return best.price, best end
   return nil
 end
 
--- Trainer requirement for a recipe in TrainerProvider's record shape:
+-- Trainer requirement for a recipe in TrainerLearner's record shape:
 -- { skill (profession name), rank, cost, trainer, zone, classic = true }.
-function ClassicDB.Trainer(recipeSpellID, side)
+function ClassicDBBridge.Trainer(recipeSpellID, side)
   local d = data()
   local row = d and d.trainers and d.trainers[tonumber(recipeSpellID) or 0]
   if not row then return nil end
@@ -374,9 +374,9 @@ function ClassicDB.Trainer(recipeSpellID, side)
   local profession = catalogue and catalogue.professions and catalogue.professions[skillLine]
   local record = { skill = profession and profession[1] or nil, skillLine = skillLine, rank = row[TRAINER.SKILL], cost = row[TRAINER.COST], classic = true, trainers = {} }
   for i = TRAINER.FIRST_NPC, #row do
-    local npc = ClassicDB.Npc(row[i])
-    if npc and ClassicDB.Friendly(npc, side) then
-      local place = ClassicDB.PlaceOf({ row[i] })
+    local npc = ClassicDBBridge.Npc(row[i])
+    if npc and ClassicDBBridge.Friendly(npc, side) then
+      local place = ClassicDBBridge.PlaceOf({ row[i] })
       record.trainers[#record.trainers + 1] = place
       if not record.trainer then
         record.trainer, record.zone = npc.name, place and place.zone or nil
@@ -399,18 +399,18 @@ local RANKS = { [1] = "elite", [2] = "rare elite", [3] = "boss", [4] = "rare" }
 -- { kind, label, short, detail, ... , classic = true }), in the order they
 -- are worth trying: vendors, gathering nodes, creature drops, skinning,
 -- fishing, containers, world drops (pickpocketing for rogues only).
-ClassicDB.HINT_LIMITS = { vendor = 2, gathered = 2, drops = 3, skinned = 2, fished = 1, contained = 1, pickpocketed = 1 }
+ClassicDBBridge.HINT_LIMITS = { vendor = 2, gathered = 2, drops = 3, skinned = 2, fished = 1, contained = 1, pickpocketed = 1 }
 -- Drops rarer than this (1/100 %) are shown but never recommended as the
 -- route: farming a 0.2% drop is not a plan when the Auction House exists.
-ClassicDB.ROUTE_MIN_CHANCE = 100
+ClassicDBBridge.ROUTE_MIN_CHANCE = 100
 
-function ClassicDB.ItemHints(itemID, opts)
+function ClassicDBBridge.ItemHints(itemID, opts)
   opts = opts or {}
   local out = {}
   if not data() then return out end
-  local limits = ClassicDB.HINT_LIMITS
+  local limits = ClassicDBBridge.HINT_LIMITS
   if not opts.skipVendors then
-    for i, v in ipairs(ClassicDB.Vendors(itemID)) do
+    for i, v in ipairs(ClassicDBBridge.Vendors(itemID)) do
       if i > limits.vendor then break end
       local where = v.place and v.place.zone or "?"
       out[#out + 1] = { kind = Routes.VENDOR, name = v.npc.name, price = v.price, zone = v.place and v.place.zone, classic = true,
@@ -419,80 +419,80 @@ function ClassicDB.ItemHints(itemID, opts)
         detail = string.format("%s - %s each%s (classic data)", where, v.price and v.price > 0 and ns.Util.Money(v.price) or "price unknown", v.limited and ", limited stock" or "") }
     end
   end
-  local list, total = ClassicDB.Loot("gathered", itemID)
+  local list, total = ClassicDBBridge.Loot("gathered", itemID)
   for i, src in ipairs(list) do
     if i > limits.gathered then break end
-    local object = ClassicDB.Object(src.id)
+    local object = ClassicDBBridge.Object(src.id)
     if object then
-      local place = ClassicDB.PlaceOf(nil, { src.id })
+      local place = ClassicDBBridge.PlaceOf(nil, { src.id })
       local skill = object.skill
       local gather = skill == "Herbalism" or skill == "Mining" or skill == "Fishing"
       out[#out + 1] = { kind = gather and "gather" or "drop", skill = gather and skill or nil, classic = true, object = object.name, zone = place and place.zone,
         mapID = place and place.mapID, x = place and place.x, y = place and place.y, chance = src.chance,
         label = (gather and "Gathered from " or "Found in ") .. object.name,
         short = (gather and "Gather: " or "Chest: ") .. object.name,
-        detail = string.format("%s - %s%s%s (classic data)", place and place.zone or "?", ClassicDB.ChanceText(src.chance),
+        detail = string.format("%s - %s%s%s (classic data)", place and place.zone or "?", ClassicDBBridge.ChanceText(src.chance),
           object.skillValue and object.skillValue > 1 and string.format(", needs %s %d", skill or "skill", object.skillValue) or "",
           total > i and i == 1 and string.format(", %d sources", total) or "") }
     end
   end
-  list, total = ClassicDB.Loot("drops", itemID)
+  list, total = ClassicDBBridge.Loot("drops", itemID)
   local shown = 0
   for _, src in ipairs(list) do
     if shown >= limits.drops then break end
-    local npc = ClassicDB.Npc(src.id)
+    local npc = ClassicDBBridge.Npc(src.id)
     if npc and not (opts.skipNames and opts.skipNames[string.lower(npc.name)]) then
       shown = shown + 1
-      local place = ClassicDB.PlaceOf({ src.id })
+      local place = ClassicDBBridge.PlaceOf({ src.id })
       out[#out + 1] = { kind = Routes.DROP, boss = npc.name, classic = true, chance = src.chance, quest = src.quest, npcID = src.id, rank = npc.rank,
-        unavailable = src.chance < ClassicDB.ROUTE_MIN_CHANCE or nil, rare = src.chance < ClassicDB.ROUTE_MIN_CHANCE or nil,
+        unavailable = src.chance < ClassicDBBridge.ROUTE_MIN_CHANCE or nil, rare = src.chance < ClassicDBBridge.ROUTE_MIN_CHANCE or nil,
         mapID = place and place.mapID, x = place and place.x, y = place and place.y, zone = place and place.zone,
         label = "Dropped by " .. npc.name, short = "Drop: " .. npc.name,
-        detail = string.format("%s - %s%s%s%s%s (classic data)", place and place.zone or "?", ClassicDB.ChanceText(src.chance),
+        detail = string.format("%s - %s%s%s%s%s (classic data)", place and place.zone or "?", ClassicDBBridge.ChanceText(src.chance),
           src.quest and " while on the quest" or "", npcLevels(npc), RANKS[npc.rank or 0] and (", " .. RANKS[npc.rank]) or "",
           total > shown and shown == 1 and string.format(", %d mobs drop it", total) or "") }
     end
   end
-  list = ClassicDB.Loot("skinned", itemID)
+  list = ClassicDBBridge.Loot("skinned", itemID)
   for i, src in ipairs(list) do
     if i > limits.skinned then break end
-    local npc = ClassicDB.Npc(src.id)
+    local npc = ClassicDBBridge.Npc(src.id)
     if npc then
-      local place = ClassicDB.PlaceOf({ src.id })
+      local place = ClassicDBBridge.PlaceOf({ src.id })
       out[#out + 1] = { kind = Routes.GATHER, skill = "Skinning", classic = true, chance = src.chance, npcID = src.id, target = npc.name, zone = place and place.zone,
         mapID = place and place.mapID, x = place and place.x, y = place and place.y,
         label = "Skinned from " .. npc.name, short = "Skin: " .. npc.name,
-        detail = string.format("%s - %s%s (classic data)", place and place.zone or "?", ClassicDB.ChanceText(src.chance), npcLevels(npc)) }
+        detail = string.format("%s - %s%s (classic data)", place and place.zone or "?", ClassicDBBridge.ChanceText(src.chance), npcLevels(npc)) }
     end
   end
-  list = ClassicDB.Loot("fished", itemID)
+  list = ClassicDBBridge.Loot("fished", itemID)
   for i, src in ipairs(list) do
     if i > limits.fished then break end
     local d = data()
     local area = d.areas and d.areas[src.id] or ("area " .. src.id)
     out[#out + 1] = { kind = Routes.GATHER, skill = "Fishing", classic = true, chance = src.chance, target = area, zone = area,
-      label = "Fished in " .. area, short = "Fish: " .. area, detail = string.format("%s (classic data)", ClassicDB.ChanceText(src.chance)) }
+      label = "Fished in " .. area, short = "Fish: " .. area, detail = string.format("%s (classic data)", ClassicDBBridge.ChanceText(src.chance)) }
   end
-  list = ClassicDB.Loot("contained", itemID)
+  list = ClassicDBBridge.Loot("contained", itemID)
   for i, src in ipairs(list) do
     if i > limits.contained then break end
     local name = ns.ItemProvider.GetName(src.id)
     out[#out + 1] = { kind = Routes.DROP, classic = true, chance = src.chance, container = src.id,
-      label = "Found in " .. name, short = "Open: " .. name, detail = string.format("%s (classic data)", ClassicDB.ChanceText(src.chance)) }
+      label = "Found in " .. name, short = "Open: " .. name, detail = string.format("%s (classic data)", ClassicDBBridge.ChanceText(src.chance)) }
   end
   if opts.classID == 4 then
-    list = ClassicDB.Loot("pickpocketed", itemID)
+    list = ClassicDBBridge.Loot("pickpocketed", itemID)
     for i, src in ipairs(list) do
       if i > limits.pickpocketed then break end
-      local npc = ClassicDB.Npc(src.id)
+      local npc = ClassicDBBridge.Npc(src.id)
       if npc then
         out[#out + 1] = { kind = Routes.DROP, classic = true, chance = src.chance, npcID = src.id,
           label = "Pickpocketed from " .. npc.name, short = "Pickpocket: " .. npc.name,
-          detail = string.format("%s (classic data)", ClassicDB.ChanceText(src.chance)) }
+          detail = string.format("%s (classic data)", ClassicDBBridge.ChanceText(src.chance)) }
       end
     end
   end
-  local world = ClassicDB.WorldDrop(itemID)
+  local world = ClassicDBBridge.WorldDrop(itemID)
   if world then
     out[#out + 1] = { kind = Routes.DROP, classic = true, world = true, unavailable = true, rare = true, label = "World drop", short = "World drop",
       detail = string.format("mobs level %d-%d (classic data)", world.minLevel or 0, world.maxLevel or 0) }
@@ -501,7 +501,7 @@ function ClassicDB.ItemHints(itemID, opts)
 end
 
 -- Does classic-db know this item at all? (itemRanges: sorted first/last pairs)
-function ClassicDB.KnowsItem(itemID)
+function ClassicDBBridge.KnowsItem(itemID)
   local d = data()
   local ranges = d and d.itemRanges
   itemID = tonumber(itemID)
@@ -518,10 +518,10 @@ function ClassicDB.KnowsItem(itemID)
 end
 
 -- An item the Forever client lists that classic-db has never heard of.
-function ClassicDB.IsNewInForever(itemID)
+function ClassicDBBridge.IsNewInForever(itemID)
   local index = ns.Data.ItemIndex
   if type(index) ~= "table" or not index[tonumber(itemID) or 0] then return false end
-  return ClassicDB.KnowsItem(itemID) == false
+  return ClassicDBBridge.KnowsItem(itemID) == false
 end
 
 local function buildIndexes()
@@ -559,29 +559,29 @@ local function buildIndexes()
       end)
     end
   end
-  ClassicDB.rewardIndex, ClassicDB.reputationIndex, ClassicDB.titleIndex = rewards, reputation, titles
+  ClassicDBBridge.rewardIndex, ClassicDBBridge.reputationIndex, ClassicDBBridge.titleIndex = rewards, reputation, titles
 end
 
 -- Quests this character can take that reward itemID (entries).
-function ClassicDB.QuestsRewarding(itemID, side, classID)
+function ClassicDBBridge.QuestsRewarding(itemID, side, classID)
   if not data() then return {} end
-  if not ClassicDB.rewardIndex then buildIndexes() end
+  if not ClassicDBBridge.rewardIndex then buildIndexes() end
   local out = {}
-  for _, questID in ipairs(ClassicDB.rewardIndex[tonumber(itemID) or 0] or {}) do
-    if eligibleQuest(questID, side, classID) then out[#out + 1] = ClassicDB.Quest(questID) end
+  for _, questID in ipairs(ClassicDBBridge.rewardIndex[tonumber(itemID) or 0] or {}) do
+    if eligibleQuest(questID, side, classID) then out[#out + 1] = ClassicDBBridge.Quest(questID) end
   end
   return out
 end
 
 -- Quests this character can take that give reputation with factionID:
 -- { { questID, amount, entry } }, largest first.
-function ClassicDB.ReputationQuests(factionID, side, classID)
+function ClassicDBBridge.ReputationQuests(factionID, side, classID)
   if not data() then return {} end
-  if not ClassicDB.reputationIndex then buildIndexes() end
+  if not ClassicDBBridge.reputationIndex then buildIndexes() end
   local out = {}
-  for _, source in ipairs(ClassicDB.reputationIndex[tonumber(factionID) or 0] or {}) do
+  for _, source in ipairs(ClassicDBBridge.reputationIndex[tonumber(factionID) or 0] or {}) do
     if eligibleQuest(source.questID, side, classID) then
-      out[#out + 1] = { questID = source.questID, amount = source.amount, entry = ClassicDB.Quest(source.questID) }
+      out[#out + 1] = { questID = source.questID, amount = source.amount, entry = ClassicDBBridge.Quest(source.questID) }
     end
   end
   return out
@@ -590,16 +590,16 @@ end
 -- Quests this character can take whose title matches text, like the other
 -- Search functions: { { questID, name, rank } }, best rank (Util.MatchRank)
 -- first, at most `limit`.
-function ClassicDB.Search(text, limit, side, classID)
+function ClassicDBBridge.Search(text, limit, side, classID)
   if not data() or type(text) ~= "string" then return {} end
   local needle = string.lower(Util.Trim(text))
   if needle == "" then return {} end
-  if not ClassicDB.titleIndex then buildIndexes() end
+  if not ClassicDBBridge.titleIndex then buildIndexes() end
   local hits = {}
-  for _, t in ipairs(ClassicDB.titleIndex) do
+  for _, t in ipairs(ClassicDBBridge.titleIndex) do
     local rank = Util.MatchRank(t.lower, needle)
     if rank and eligibleQuest(t.questID, side, classID) then
-      hits[#hits + 1] = { questID = t.questID, name = ClassicDB.Quest(t.questID).name, rank = rank }
+      hits[#hits + 1] = { questID = t.questID, name = ClassicDBBridge.Quest(t.questID).name, rank = rank }
     end
   end
   return Util.SortRankedHits(hits, "questID", limit)
@@ -608,14 +608,14 @@ end
 -- The quests to do before questID, then questID, in order. For an "any of"
 -- prerequisite group the member already completed is taken, else the first
 -- this character can take. isCompleted(questID) -> bool.
-function ClassicDB.ChainTo(questID, isCompleted, side, classID)
+function ClassicDBBridge.ChainTo(questID, isCompleted, side, classID)
   local order, seen, follows = {}, {}, {}
   local depth = 0
   local function visit(id)
-    if seen[id] or depth > ClassicDB.CHAIN_LIMIT then return end
+    if seen[id] or depth > ClassicDBBridge.CHAIN_LIMIT then return end
     seen[id] = true
     depth = depth + 1
-    local entry = ClassicDB.Quest(id)
+    local entry = ClassicDBBridge.Quest(id)
     follows[id] = {}
     for _, group in ipairs(entry and entry.prerequisites or {}) do
       local pick
@@ -628,7 +628,7 @@ function ClassicDB.ChainTo(questID, isCompleted, side, classID)
         end
       end
       pick = pick or group[1]
-      if pick and ClassicDB.Quest(pick) then
+      if pick and ClassicDBBridge.Quest(pick) then
         visit(pick)
         table.insert(follows[id], pick)
       end
@@ -639,17 +639,17 @@ function ClassicDB.ChainTo(questID, isCompleted, side, classID)
   return order, follows
 end
 
-function ClassicDB.Counts()
+function ClassicDBBridge.Counts()
   local d = data()
   local count = Util.Count
   return d and count(d.quests) or 0, d and count(d.npcs) or 0, d and count(d.objects) or 0
 end
 
-function ClassicDB.StatusLine()
+function ClassicDBBridge.StatusLine()
   if not data() then
-    return string.format("Classic data: %s is not loaded (%s); classic-era quests, givers and spawns are unavailable.", ClassicDB.ADDON, ClassicDB.loadError or "not installed")
+    return string.format("Classic data: %s is not loaded (%s); classic-era quests, givers and spawns are unavailable.", ClassicDBBridge.ADDON, ClassicDBBridge.loadError or "not installed")
   end
-  local quests, npcs, objects = ClassicDB.Counts()
+  local quests, npcs, objects = ClassicDBBridge.Counts()
   local meta = data().meta or {}
   local extra = ""
   if meta.dropItems or meta.vendorItems or meta.trainerRecipes then
@@ -658,9 +658,9 @@ function ClassicDB.StatusLine()
   return string.format("Classic data: %d quests, %d NPCs, %d objects%s from %s %s.", quests, npcs, objects, extra, meta.source or "CMaNGOS classic-db", string.sub(tostring(meta.commit or "?"), 1, 8))
 end
 
-function ClassicDB.Init()
-  local loaded = ClassicDB.Load()
-  ClassicDB.Reset()
-  Log.Debug("%s", ClassicDB.StatusLine())
+function ClassicDBBridge.Init()
+  local loaded = ClassicDBBridge.Load()
+  ClassicDBBridge.Reset()
+  Log.Debug("%s", ClassicDBBridge.StatusLine())
   return loaded
 end

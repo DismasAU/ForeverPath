@@ -46,20 +46,20 @@ ForeverPath/
       InventoryProvider.lua  bag index, bank snapshot, counts (plus alts' totals), owned count
       ProfessionProvider.lua C_TradeSkillUI scanning, recipe cache, learned flags, /fp scan
       CharacterProvider.lua  account-wide character snapshots, alt stock / crafters / coverage
-      EquipmentProvider.lua  worn gear per slot, item stats, upgrade picks per slot (through GearQuest.lua)
+      EquipmentProvider.lua  worn gear per slot, item stats, upgrade picks per slot (through GearQuestBridge.lua)
     Integrations/            other addons' data, read at runtime; one adapter per addon, each with IsAvailable()
-      AtlasLoot.lua          AtlasLoot Classic: detection, on-demand module loads (always call back), loot table walks
-      DungeonJournal.lua     ForeverDungeonJournal: its namespace and item names
-      GearQuest.lua          GearQuest Forever: spec, upgrade entries, item facts, source hints
-      AttuneProvider.lua     attunement chains from the Attune addon, progress from quest flags / log / level / bags / survey; questlines
-      AuctionPriceProvider.lua Auctionator v1 API adapter (lowest buyout, age, 7-day mean, listings)
+      AtlasLootBridge.lua          AtlasLoot Classic: detection, on-demand module loads (always call back), loot table walks
+      DungeonJournalBridge.lua     ForeverDungeonJournal: its namespace and item names
+      GearQuestBridge.lua          GearQuest Forever: spec, upgrade entries, item facts, source hints
+      AttuneBridge.lua     attunement chains from the Attune addon, progress from quest flags / log / level / bags / survey; questlines
+      AuctionatorBridge.lua Auctionator v1 API adapter (lowest buyout, age, 7-day mean, listings)
       QuestieBridge.lua      Questie's quest database read at runtime (QuestieLoader modules), ranked between Forever data and classic data
-      ClassicDB.lua          classic-era quests, NPCs, objects and spawns (ForeverPath_ClassicDB, CMaNGOS classic-db): places, eligibility, indexes, chains
+      ClassicDBBridge.lua          classic-era quests, NPCs, objects and spawns (ForeverPath_ClassicDB, CMaNGOS classic-db): places, eligibility, indexes, chains
     Learners/                what this account records as it plays
       LootLearner.lua        what this account loots on Forever (LOOT_READY, GetLootSourceInfo), per creature / object / fishing zone; first in item sources
-      QuestFactsProvider.lua quest givers, turn-ins and item objectives learned at quest windows (account-wide) + the shipped catalogue
-      TrainerProvider.lua    trainer recorder (required skill, cost, trainer and zone per recipe; feeds the catalogue)
-      VendorProvider.lua     merchant recorder (account-wide vendor stock + prices), vendor price source
+      QuestFactsLearner.lua quest givers, turn-ins and item objectives learned at quest windows (account-wide) + the shipped catalogue
+      TrainerLearner.lua    trainer recorder (required skill, cost, trainer and zone per recipe; feeds the catalogue)
+      VendorLearner.lua     merchant recorder (account-wide vendor stock + prices), vendor price source
   App/                       application services over the layers above; the UI depends on them, never the reverse
     PlannerDeps.lua          the Planner's composition root: installs Planner.SetDefaultDeps over the providers
     Share.lua                /fp export / import of learned data, sanitised against per-kind schemas
@@ -145,7 +145,12 @@ compartment click handler the TOC requires.
    whether the Planner could plan a goal is `view.readiness`, what the
    inventory covers of a tree node is `node.coverage`, an equipment slot's
    upgrade state is `entry.upgrade`, and the window's message line is
-   `MainFrame.SetAlert`.
+   `MainFrame.SetAlert`. A function that changes state is named for the
+   change (`GoalCompletion.CompleteFinished`, `GoalService.ApplyRoutePreset`),
+   never like a query. Module suffixes follow the folder: `Providers/Client`
+   and the root aggregators are `*Provider`, `Providers/Learners` are
+   `*Learner`, and `Providers/Integrations` are `*Bridge` (one per other
+   addon, so `ns.AtlasLootBridge` never shadows the addon's own `AtlasLoot`).
 
 ## Data flow
 
@@ -153,7 +158,7 @@ compartment click handler the TOC requires.
 player input ("2996", item link, "Linen Bag")
    |  SearchBox / slash command
    v
-GoalService.AddFromInput  --ItemProvider.ParseInput / SearchByName / Exists-->  itemID
+GoalService.AddItemFromInput  --ItemProvider.ParseInput / SearchByName / Exists-->  itemID
    |  GoalStore:Create / SetQuantity / Select      (writes ForeverPathCharDB.goals)
    v
 FP_GOALS_CHANGED (or any other FP_* message)  ---->  MainFrame.RequestRefresh (debounced)
@@ -199,11 +204,11 @@ stored as a timestamped snapshot in `ForeverPathCharDB.bankCache`.
 | `FP_INVENTORY_UPDATED` | - | InventoryProvider |
 | `FP_ITEM_LOADED` | itemID, success | ItemProvider |
 | `FP_CHARACTERS_UPDATED` | key | CharacterProvider after a snapshot or removal |
-| `FP_SOURCES_UPDATED` | "vendor" + npc, or "atlasloot" | VendorProvider after a merchant scan; SourceProvider when the AtlasLoot index is ready |
+| `FP_SOURCES_UPDATED` | "vendor" + npc, or "atlasloot" | VendorLearner after a merchant scan; SourceProvider when the AtlasLoot index is ready |
 | `FP_QUESTS_UPDATED` | reason | QuestProvider when the quest log changes |
-| `FP_QUEST_FACTS_UPDATED` | - | QuestFactsProvider after learning a giver, turn-in or item list |
+| `FP_QUEST_FACTS_UPDATED` | - | QuestFactsLearner after learning a giver, turn-in or item list |
 | `FP_LOOT_LEARNED` | - | LootLearner after a loot window |
-| `FP_TRAINERS_UPDATED` | npc | TrainerProvider after a trainer window |
+| `FP_TRAINERS_UPDATED` | npc | TrainerLearner after a trainer window |
 | `FP_SHARED_DATA_CHANGED` | - | Share after an import or removal (LootLearner and decoded recipes drop their caches) |
 | `FP_EQUIPMENT_UPDATED` | reason | EquipmentProvider |
 | `FP_REPUTATION_UPDATED` | reason | ReputationProvider |
@@ -230,7 +235,7 @@ characters.Sources(itemID)  -> { { kind = "alt"|"altcraft", name, count, label, 
 sources.Sources(itemID)     -> { { kind = "vendor"|"drop"|"gather", name, price, label, detail, ... } }  (SourceProvider)
 price.GetPrice(itemID)      -> { copper, source, scannedAt, kind, vendor? } | nil   (cheapest source; unknown is nil, never 0)
 catalogue.Lookup(itemID)    -> static recipes or nil   (the recipe catalogue, Data/Recipes.lua)
-attune / quest / reputation -> AttuneProvider, QuestProvider, ReputationProvider (their own evaluators' needs)
+attune / quest / reputation -> AttuneBridge, QuestProvider, ReputationProvider (their own evaluators' needs)
 ```
 
 ## Normalized models
@@ -382,7 +387,7 @@ by class, `Spec:GetDisplaySpec`, faction and the level band, best rank per
 item, with the facts from the `<class>ItemFacts` tables), `ItemHints(itemID)`
 (resolver source hints from those facts, merged into
 `SourceProvider.Sources` after the journal and AtlasLoot; the GearQuest
-reads live in `Providers/Integrations/GearQuest.lua`) and `Analyze({ source
+reads live in `Providers/Integrations/GearQuestBridge.lua`) and `Analyze({ source
 })` (per slot: equipped, candidates, best, status bis / upgrade / empty /
 none). `GoalService.Equipment(source)` places the open item goals on the
 slots their items fit (`GoalAttribution.PlaceOnSlots`) and is what the
@@ -414,7 +419,7 @@ objective fraction of the one in the log. The quest events (accepted,
 turned in, removed, log update) fire `FP_QUESTS_UPDATED` (debounced);
 `GoalCompletion` completes the goal when the flag is set.
 
-**Questlines.** `AttuneProvider.QuestlineFor(questID)` picks the
+**Questlines.** `AttuneBridge.QuestlineFor(questID)` picks the
 attunement (class chains first) whose steps include the quest, for this
 faction and class (`AttunementsWithQuest`), runs `Progress` and keeps the
 steps the quest's step follows transitively (`FOLLOWS` parts split on `&`,
@@ -422,9 +427,9 @@ each part "a|b" either-of; once one alternative of a stage is done the
 others leave the line): `{ attune, steps, target, next, done, total,
 percent, complete }`. `QuestProvider.Questline` adds each quest step's
 entry and live state. `QuestProvider.Giver / Turnin` read
-`QuestFactsProvider.Get` (learned facts over the shipped catalogue), then
+`QuestFactsLearner.Get` (learned facts over the shipped catalogue), then
 the journal/Attune start pin, then the pickup text; `RequiredItems` are the
-live item objectives (`QuestFactsProvider.LiveItems`: `ParseObjective`
+live item objectives (`QuestFactsLearner.LiveItems`: `ParseObjective`
 then an exact name match through `ItemProvider.SearchByName`) or the
 recorded ones; `Waypoint` is the giver (not yet taken) or the turn-in
 (ready). `Planner.QuestStepText` phrases a step ("Pick up X from Y in Z",
@@ -436,11 +441,11 @@ quest, a quest-step tree whose children are the items) and `EvaluateObtain`
 attaches the items below the reward (`DependencyResolver.AttachItems`;
 the reward stays a missing leaf through `questParent`) and sets
 `view.questline`, `view.nextStep` and `view.waypoint`. The learner
-(`QuestFactsProvider.Init`) records on `QUEST_DETAIL`, `QUEST_ACCEPTED`
+(`QuestFactsLearner.Init`) records on `QUEST_DETAIL`, `QUEST_ACCEPTED`
 (retrying unresolved names on `QUEST_LOG_UPDATE` / `BAG_UPDATE_DELAYED`
 after asking the client for every bag item's name) and `QUEST_COMPLETE`,
 and fires `FP_QUEST_FACTS_UPDATED`. Catalogue items carry `source`
-text; `QuestFactsProvider.ItemHints(itemID)` turns it into `drop` hints
+text; `QuestFactsLearner.ItemHints(itemID)` turns it into `drop` hints
 (label "Drop: <source>") that `SourceProvider.Sources` appends after the
 journal and AtlasLoot, so the resolver routes a curated quest item as a
 drop with that label.
@@ -513,33 +518,33 @@ recipes are never under-provisioned.
 ForeverPath`, `## LoadOnDemand: 1`) generated by `tools/ClassicDbExtract`
 from CMaNGOS classic-db. Its files write `ForeverPath.ClassicData.quests /
 npcs / objects / zones / instances / meta` (compact positional rows; layouts
-in `Providers/Integrations/ClassicDB.lua`). `ClassicDB.Init` (before the quest
+in `Providers/Integrations/ClassicDBBridge.lua`). `ClassicDBBridge.Init` (before the quest
 providers) calls `Compat.LoadAddOn` once; without the addon every classic
 call returns nothing and `Status` says why.
 
 Precedence for a quest fact, highest first: learned at a quest window
-(QuestFactsProvider, then shared imports), the shipped quest catalogue,
+(QuestFactsLearner, then shared imports), the shipped quest catalogue,
 ForeverDungeonJournal / Attune, Questie (when installed; read through
 `QuestieLoader:ImportModule("QuestieDB" / "ZoneDB")`, never stored),
 classic data. `QuestProvider.ChainTo` builds prerequisite chains over
-`QuestProvider.Get`, so a chain mixes Questie and classic entries. `QuestProvider.Get` falls back to `ClassicDB.Quest`;
+`QuestProvider.Get`, so a chain mixes Questie and classic entries. `QuestProvider.Get` falls back to `ClassicDBBridge.Quest`;
 `Giver`, `Turnin`, `RequiredItems`, `QuestsRewarding`, `Search`,
 `StateLabel` and `Questline` consult it last (a journal pickup named like
 the classic NPC borrows the classic position; a journal chain suppresses the
 classic one). `QuestProvider.ClassicQuestline` builds an Attune-shaped line
-from `ClassicDB.ChainTo` (post-order over prerequisite groups; an "any of"
+from `ClassicDBBridge.ChainTo` (post-order over prerequisite groups; an "any of"
 group takes the completed member, else the first eligible), so the planner,
 the overview, the Quests and Attunements side panels and the waypoint code
 need no classic-specific paths. Eligibility is the quest's side (Alliance,
 Horde or both, from the classic race mask) and class mask against
 `UnitFactionGroup` and `UnitClass`. `ReputationProvider.QuestsFor(name,
-factionID)` adds `ClassicDB.ReputationQuests`.
+factionID)` adds `ClassicDBBridge.ReputationQuests`.
 
 Source order for an item (`SourceProvider.Sources`): recorded vendors,
 the loot learner's observations, ForeverDungeonJournal, AtlasLoot, journal
 quest rewards, GearQuest, reputation vendors, classic data, the item-class
 heuristic, and "New in Forever" when nothing else knows an item the client
-lists but classic-db does not (`ClassicDB.IsNewInForever`: the client item
+lists but classic-db does not (`ClassicDBBridge.IsNewInForever`: the client item
 index against classic-db's item id ranges).
 
 Farming: `Farming.Estimate(hint, missing)` (pure) turns a hint's `chance`
@@ -549,15 +554,15 @@ on each missing leaf (`farm`) and `ShoppingList.Build` on each row (with
 show. `Planner.Trainable` walks `Recipes.ForProfession` for each of the
 character's professions and keeps unlearned recipes with a trainer record.
 
-Items: `ClassicDB.ItemHints(itemID)` turns `vendors`, `gathered`,
+Items: `ClassicDBBridge.ItemHints(itemID)` turns `vendors`, `gathered`,
 `drops`, `skinned`, `fished`, `contained`, `pickpocketed` (rogues) and
 `worldDrops` into resolver hints (`classic = true`, a `short` label for
 tags) that `SourceProvider.Sources` appends after the journal and
 AtlasLoot: gathering hints go through `QualifyGatherHint`, a recorded vendor
 suppresses the classic ones, bosses already named are skipped, drops under
 `ROUTE_MIN_CHANCE` (1%) and world drops are `unavailable` (shown, never
-routed). `VendorProvider.GetPrice` and `TrainerProvider.Requirement` fall
-back to `ClassicDB.VendorPrice` / `ClassicDB.Trainer`, so the price
+routed). `VendorLearner.GetPrice` and `TrainerLearner.Requirement` fall
+back to `ClassicDBBridge.VendorPrice` / `ClassicDBBridge.Trainer`, so the price
 boundary and the catalogue's `Recipes.trainerLookup` pick classic data up
 without new paths. NPC `side` (from `FactionTemplate.EnemyGroup`) decides
 which vendors and trainers a character can use.
@@ -576,7 +581,7 @@ and `trainerNPCs` with an account token and imports into
 `ForeverPathDB.imported[token]` (replace on re-import). Providers read
 imports behind their own data: `LootLearner.Combined` sums own and imported
 counts per source, `QuestFacts.Get` uses `QuestFacts.Imported` for missing
-fields, `VendorProvider.VendorsFor` and `TrainerProvider.Requirement` fill
+fields, `VendorLearner.VendorsFor` and `TrainerLearner.Requirement` fill
 unvisited NPCs. `Share.Changed` drops the learner index and decoded recipes.
 `UI/ShareFrame.lua` is the copy / paste window.
 
@@ -624,7 +629,7 @@ count.
   record with `unmet = true`, and `Get` / `Search` fall back to it.
 - **Links**: `MainFrame.InstallLinkHook` accepts item, enchant and spell
   links; `GoalService.SpellIDFromText` reads the spell id and
-  `AddFromInput` routes an enchant to `AddEnchantGoal` and an item recipe
+  `AddItemFromInput` routes an enchant to `AddEnchantGoal` and an item recipe
   to the item it makes.
 - **Recipe catalogue**: `Data/RecipeCatalogue.lua` is generated from the
   client's own tables (`tools/DbExtract`, see its README) and decoded by
@@ -655,7 +660,7 @@ count.
   hybrid; the Overview never lists it as a missing material). The planner no longer
   returns `RECIPE_NOT_LEARNED`: an unlearned recipe is planned as an obtain
   tree with `view.recipeStatus = "unlearned"` so the whole path is visible.
-  Trainer requirements are not in the client's tables: `TrainerProvider`
+  Trainer requirements are not in the client's tables: `TrainerLearner`
   records them from trainer windows (`ForeverPathDB.trainers[spellID]`) and
   sets `Recipes.trainerLookup`; `Recipes.ApplyTrainer` raises `skill.min`
   to the recorded rank and attaches `recipe.trainer` when a recipe is
@@ -697,7 +702,7 @@ count.
   rest, `Mode` tells which preset the goal's overrides match. The planner
   supplies `view.fullTree` (routes ignored, private ledger) when overrides
   exist so a bought subtree can still be compared.
-- **Attunements**: `AttuneProvider.Progress(id)` resolves Attune's steps
+- **Attunements**: `AttuneBridge.Progress(id)` resolves Attune's steps
   (Spacers dropped, ordered by STAGE then ID) and marks each done: Quest /
   Turn In from `Compat.IsQuestFlaggedCompleted`, Pick Up also from
   `Compat.IsOnQuest`, Level from `UnitLevel`, Item from bag + bank counts

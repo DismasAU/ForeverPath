@@ -10,14 +10,14 @@ local Log = ns.Log
 local Events = ns.Events
 local Routes = ns.DependencyResolver.Routes
 
-local VendorProvider = { open = false }
-ns.VendorProvider = VendorProvider
+local VendorLearner = { open = false }
+ns.VendorLearner = VendorLearner
 
-function VendorProvider.IsAvailable()
+function VendorLearner.IsAvailable()
   return Compat.GetMerchantNumItems ~= nil and Compat.GetMerchantItemLink ~= nil and Compat.GetMerchantItem ~= nil
 end
 
-function VendorProvider.Store()
+function VendorLearner.Store()
   if not ns.Database.IsLoaded() then return nil end
   return ns.db.vendors
 end
@@ -42,9 +42,9 @@ local function currentZone()
 end
 
 -- Records the open merchant. Returns the number of items recorded.
-function VendorProvider.ScanMerchant()
-  local store = VendorProvider.Store()
-  if not store or not VendorProvider.IsAvailable() or not VendorProvider.open then
+function VendorLearner.ScanMerchant()
+  local store = VendorLearner.Store()
+  if not store or not VendorLearner.IsAvailable() or not VendorLearner.open then
     return 0
   end
   local npc = currentNPC()
@@ -87,8 +87,8 @@ end
 
 -- Vendors known to sell itemID: { { name, price (copper per unit or nil), stack, zone, subzone, seenAt, limited, extended } }
 -- sorted by price, cheapest first.
-function VendorProvider.VendorsFor(itemID)
-  local store = VendorProvider.Store()
+function VendorLearner.VendorsFor(itemID)
+  local store = VendorLearner.Store()
   local out = {}
   local seen = {}
   local function add(byNPC, shared)
@@ -113,9 +113,9 @@ function VendorProvider.VendorsFor(itemID)
 end
 
 -- Resolver hints.
-function VendorProvider.ItemHints(itemID)
+function VendorLearner.ItemHints(itemID)
   local options = {}
-  for _, vendor in ipairs(VendorProvider.VendorsFor(itemID)) do
+  for _, vendor in ipairs(VendorLearner.VendorsFor(itemID)) do
     local where = vendor.zone or "?"
     if vendor.subzone then where = where .. " (" .. vendor.subzone .. ")" end
     local cost
@@ -136,15 +136,15 @@ function VendorProvider.ItemHints(itemID)
 end
 
 -- Cheapest known vendor price for the PriceProvider boundary.
-function VendorProvider.GetPrice(itemID)
-  local vendors = VendorProvider.VendorsFor(itemID)
+function VendorLearner.GetPrice(itemID)
+  local vendors = VendorLearner.VendorsFor(itemID)
   local best = vendors[1]
   if best and best.price then
     return { copper = best.price, source = "vendor", scannedAt = best.seenAt, kind = "vendor", vendor = best.name }
   end
   -- Nothing recorded on this client: the classic vendor price, if any vendor
   -- this faction can use sells it (a merchant window visit replaces it).
-  local CDB = ns.ClassicDB
+  local CDB = ns.ClassicDBBridge
   if CDB.IsAvailable() then
     local price, vendor = CDB.VendorPrice(itemID)
     if price then
@@ -154,8 +154,8 @@ function VendorProvider.GetPrice(itemID)
   return nil, "no vendor recorded"
 end
 
-function VendorProvider.Count()
-  local store = VendorProvider.Store()
+function VendorLearner.Count()
+  local store = VendorLearner.Store()
   local items, vendors, seen = 0, 0, {}
   for _, byNPC in pairs(store or {}) do
     items = items + 1
@@ -166,30 +166,30 @@ function VendorProvider.Count()
   return items, vendors
 end
 
-function VendorProvider.StatusLine()
-  local items, vendors = VendorProvider.Count()
+function VendorLearner.StatusLine()
+  local items, vendors = VendorLearner.Count()
   return string.format("Vendors: %d item%s from %d vendor%s recorded (whenever you open a merchant).",
     items, items == 1 and "" or "s", vendors, vendors == 1 and "" or "s")
 end
 
-function VendorProvider.Init()
-  ns.PriceProvider.RegisterSource("vendor", { IsAvailable = function() return true end, GetPrice = VendorProvider.GetPrice })
-  if not VendorProvider.IsAvailable() then
+function VendorLearner.Init()
+  ns.PriceProvider.RegisterSource("vendor", { IsAvailable = function() return true end, GetPrice = VendorLearner.GetPrice })
+  if not VendorLearner.IsAvailable() then
     Log.Debug("Merchant API unavailable; vendor recording disabled")
     return
   end
   Events.RegisterWoW("MERCHANT_SHOW", function()
-    VendorProvider.open = true
-    VendorProvider.ScanMerchant()
+    VendorLearner.open = true
+    VendorLearner.ScanMerchant()
     -- Item data for merchant slots can arrive a moment after the frame opens.
-    Compat.After(0.5, function() Log.Call(VendorProvider.ScanMerchant) end)
+    Compat.After(0.5, function() Log.Call(VendorLearner.ScanMerchant) end)
   end)
   Events.RegisterWoW("MERCHANT_UPDATE", function()
-    if VendorProvider.open then
-      Events.Debounce("merchant-scan", 0.3, VendorProvider.ScanMerchant)
+    if VendorLearner.open then
+      Events.Debounce("merchant-scan", 0.3, VendorLearner.ScanMerchant)
     end
   end)
   Events.RegisterWoW("MERCHANT_CLOSED", function()
-    VendorProvider.open = false
+    VendorLearner.open = false
   end)
 end

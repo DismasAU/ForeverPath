@@ -10,12 +10,12 @@ local Bootstrap = {}
 ns.Bootstrap = Bootstrap
 
 -- Init order: providers first, then the services that install hooks into
--- them (TrainerProvider -> Recipes.SetTrainerLookup, GoalService ->
+-- them (TrainerLearner -> Recipes.SetTrainerLookup, GoalService ->
 -- CharacterProvider.SetGoalSource, the UI -> Util.SetMoneyRenderer at load).
 Bootstrap.INIT_ORDER = {
   "Share", "ItemProvider", "ProfessionProvider", "InventoryProvider", "CharacterProvider",
-  "VendorProvider", "TrainerProvider", "AuctionPriceProvider", "SourceProvider",
-  "AttuneProvider", "ClassicDB", "LootLearner", "QuestieBridge", "QuestFactsProvider",
+  "VendorLearner", "TrainerLearner", "AuctionatorBridge", "SourceProvider",
+  "AttuneBridge", "ClassicDBBridge", "LootLearner", "QuestieBridge", "QuestFactsLearner",
   "QuestProvider", "EquipmentProvider", "ReputationProvider",
   "GoalService", "GoalCompletion",
   "UI.MainFrame", "UI.Tracker", "UI.MinimapButton", "UI.Toast",

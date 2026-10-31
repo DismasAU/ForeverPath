@@ -16,12 +16,12 @@ local function services()
   }
 end
 
-describe("TrainerProvider", function()
+describe("TrainerLearner", function()
   local ns, TP
   before_each(function()
     ns = H.fresh()
     H.login(ns)
-    TP = ns.TrainerProvider
+    TP = ns.TrainerLearner
   end)
 
   it("is absent until a trainer window exists, then records every recipe on offer with its requirement", function()

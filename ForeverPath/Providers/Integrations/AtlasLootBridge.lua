@@ -13,17 +13,17 @@ local _, ns = ...
 
 local Util = ns.Util
 
-local AtlasLoot = {}
-ns.AtlasLoot = AtlasLoot
+local AtlasLootBridge = {}
+ns.AtlasLootBridge = AtlasLootBridge
 
-function AtlasLoot.IsAvailable()
+function AtlasLootBridge.IsAvailable()
   local atlas = _G.AtlasLoot
   return type(atlas) == "table" and type(atlas.ItemDB) == "table" and type(atlas.ItemDB.Storage) == "table"
 end
 
 -- The loaded data of a module, or nil.
-function AtlasLoot.Storage(moduleName)
-  if not AtlasLoot.IsAvailable() then return nil end
+function AtlasLootBridge.Storage(moduleName)
+  if not AtlasLootBridge.IsAvailable() then return nil end
   local storage = _G.AtlasLoot.ItemDB.Storage[moduleName]
   return type(storage) == "table" and storage or nil
 end
@@ -33,25 +33,25 @@ end
 -- failed, or a background load finished without data. Returns "ready"
 -- (onDone ran with data), "loading" (onDone runs later) or "missing"
 -- (onDone ran with nil).
-function AtlasLoot.Load(moduleName, onDone)
-  local storage = AtlasLoot.Storage(moduleName)
-  if storage or not AtlasLoot.IsAvailable() then
+function AtlasLootBridge.Load(moduleName, onDone)
+  local storage = AtlasLootBridge.Storage(moduleName)
+  if storage or not AtlasLootBridge.IsAvailable() then
     onDone(storage)
     return storage and "ready" or "missing"
   end
   local loader = _G.AtlasLoot.Loader
   local result = type(loader) == "table" and Util.SafeCall(loader.LoadModule, loader, moduleName, function()
-    onDone(AtlasLoot.Storage(moduleName))
+    onDone(AtlasLootBridge.Storage(moduleName))
   end, true) or nil
   if result == true or result == "InCombat" then return "loading" end
   -- The loader answered at once: the module is either there now or not at all.
-  storage = AtlasLoot.Storage(moduleName)
+  storage = AtlasLootBridge.Storage(moduleName)
   onDone(storage)
   return storage and "ready" or "missing"
 end
 
--- Iterator over a module's content tables: for key, content in AtlasLoot.Contents(storage).
-function AtlasLoot.Contents(storage)
+-- Iterator over a module's content tables: for key, content in AtlasLootBridge.Contents(storage).
+function AtlasLootBridge.Contents(storage)
   local key
   return function()
     repeat
@@ -66,14 +66,14 @@ function AtlasLoot.Contents(storage)
 end
 
 -- A content table's display name (an instance, a faction).
-function AtlasLoot.ContentName(content)
+function AtlasLootBridge.ContentName(content)
   local name = Util.SafeCall(content.GetName, content, true)
   if type(name) == "string" then return name end
   return type(content.name) == "string" and content.name or "?"
 end
 
 -- Item ids of one group (a boss, a reputation tier) across its difficulties.
-function AtlasLoot.ItemIDs(group)
+function AtlasLootBridge.ItemIDs(group)
   local out = {}
   if type(group) ~= "table" then return out end
   for difficulty, entries in pairs(group) do

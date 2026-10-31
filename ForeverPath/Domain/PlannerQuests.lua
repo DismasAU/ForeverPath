@@ -15,7 +15,7 @@ local Shared = Planner.Shared
 local inventoryContext = Shared.inventoryContext
 
 -- Attunement goals: progress through the Attune bridge. The view carries
--- `attunement` (AttuneProvider.Progress), a synthetic `item` for icons and
+-- `attunement` (AttuneBridge.Progress), a synthetic `item` for icons and
 -- names, `progress.percent`, and the next step as the message.
 function Planner.EvaluateAttunement(view, goal, deps)
   local attune = deps.attune

@@ -365,7 +365,7 @@ local function Create(parent)
         row.meta:SetText(summary.meta)
       elseif view and view.attunement then
         local a = view.attunement
-        row.detail:SetText(a.complete and "Attuned" or (a.next and ("Next: " .. ns.AttuneProvider.StepText(a.next)) or ""))
+        row.detail:SetText(a.complete and "Attuned" or (a.next and ("Next: " .. ns.AttuneBridge.StepText(a.next)) or ""))
         Widgets.SetTextColor(row.detail, a.complete and C.ok or C.text2)
         row.meta:SetText(string.format("%d of %d steps", a.done, a.total))
       else
@@ -423,7 +423,7 @@ local function Create(parent)
   -- CraftWise panel: the selected goal when it is active, else the first
   -- active goal with a dependency tree.
   function screen:RefreshCraftWise(activeGoals)
-    local goal = ns.GoalService.GetSelected()
+    local goal = ns.GoalService.Selected()
     local view = goal and ns.GoalService.Views()[goal.id]
     if not (goal and goal.status == ns.GoalModel.Statuses.ACTIVE and view and view.tree) then
       goal, view = nil, nil

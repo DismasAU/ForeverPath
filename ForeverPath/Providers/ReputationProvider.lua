@@ -325,7 +325,7 @@ function ReputationProvider.QuestsFor(factionName, factionID)
       label = QP.StateLabel(state, source.entry), classic = source.entry.classic or nil }
   end
   for _, source in ipairs(list) do add(source) end
-  local CDB = ns.ClassicDB
+  local CDB = ns.ClassicDBBridge
   if factionID and CDB.IsAvailable() then
     for _, source in ipairs(CDB.ReputationQuests(factionID)) do add(source) end
   end
@@ -346,14 +346,14 @@ end
 -- Reads the loaded factions module into tiers[factionID] = { { standing, label, items } } and byItem.
 function ReputationProvider.IndexAtlas(storage)
   local tiers, byItem, added = {}, {}, 0
-  for _, content in ns.AtlasLoot.Contents(storage) do
+  for _, content in ns.AtlasLootBridge.Contents(storage) do
     local factionID = tonumber(content.FactionID)
     if factionID then
       local list = {}
       for position, tier in ipairs(content.items) do
         if type(tier) == "table" then
           local standing = tierStanding(tier.name, position, #content.items)
-          local items = ns.AtlasLoot.ItemIDs(tier)
+          local items = ns.AtlasLootBridge.ItemIDs(tier)
           for _, itemID in ipairs(items) do
             local sales = byItem[itemID]
             if not sales then sales = {} byItem[itemID] = sales end
@@ -375,9 +375,9 @@ end
 -- Loads the factions module once per session (on demand).
 function ReputationProvider.EnsureAtlas()
   local atlas = ReputationProvider.atlas
-  if atlas.state ~= "idle" or not ns.AtlasLoot.IsAvailable() then return atlas.state end
+  if atlas.state ~= "idle" or not ns.AtlasLootBridge.IsAvailable() then return atlas.state end
   atlas.state = "loading"
-  ns.AtlasLoot.Load(ReputationProvider.MODULE, function(storage)
+  ns.AtlasLootBridge.Load(ReputationProvider.MODULE, function(storage)
     if not storage then
       atlas.state = "missing"
       return
@@ -400,7 +400,7 @@ end
 -- "failed" (the tables could not be read; see /fp errors).
 function ReputationProvider.RewardsState()
   local state = ReputationProvider.atlas.state
-  if state == "idle" and not ns.AtlasLoot.IsAvailable() then return "missing" end
+  if state == "idle" and not ns.AtlasLootBridge.IsAvailable() then return "missing" end
   return state
 end
 
@@ -445,7 +445,7 @@ function ReputationProvider.StatusLine()
   for _, entries in pairs(ReputationProvider.QuestRewards()) do quests = quests + #entries end
   return string.format("Reputations: %d faction%s listed, %d in the client's faction table; %d quest reward%s known; faction rewards %s.", #list, #list == 1 and "" or "s",
     ReputationProvider.CatalogueCount(), quests, quests == 1 and "" or "s",
-    ns.AtlasLoot.IsAvailable() and "from AtlasLoot" or "unavailable (AtlasLoot Factions not installed)")
+    ns.AtlasLootBridge.IsAvailable() and "from AtlasLoot" or "unavailable (AtlasLoot Factions not installed)")
 end
 
 -- Chat lines for one faction.

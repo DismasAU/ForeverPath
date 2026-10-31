@@ -100,7 +100,7 @@ local function place(thing)
       end
       if uiMapID then
         result.mapID, result.x, result.y = uiMapID, first[1] / 100, first[2] / 100
-        result.zone = ns.ClassicDB.ZoneName(uiMapID) or result.zone
+        result.zone = ns.ClassicDBBridge.ZoneName(uiMapID) or result.zone
         if not result.zone and type(C_Map) == "table" and type(C_Map.GetMapInfo) == "function" then
           local info = Util.SafeCall(C_Map.GetMapInfo, uiMapID)
           result.zone = type(info) == "table" and info.name or nil
@@ -182,7 +182,7 @@ function QuestieBridge.Turnin(questID)
   return entry and QuestieBridge.PlaceOf(entry.enderNpcs, entry.enderObjects) or nil
 end
 
--- The bridges' shared contract (as ClassicDB.Eligible): can a character of
+-- The bridges' shared contract (as ClassicDBBridge.Eligible): can a character of
 -- this faction and classID take the entry? nil means the player's.
 function QuestieBridge.Eligible(entry, faction, classID)
   if not entry then return false end
@@ -192,7 +192,7 @@ function QuestieBridge.Eligible(entry, faction, classID)
 end
 
 -- Quests Questie says reward itemID that a character of this faction and
--- class can take (entries), like ClassicDB.QuestsRewarding.
+-- class can take (entries), like ClassicDBBridge.QuestsRewarding.
 function QuestieBridge.QuestsRewarding(itemID, faction, classID)
   local q = db()
   local item = q and callQuestie(q, "GetItem", tonumber(itemID))

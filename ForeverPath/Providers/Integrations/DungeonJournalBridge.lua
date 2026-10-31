@@ -8,28 +8,28 @@
 --   SHARED_BY_BOSS[dungeonName][bossName] = { { itemID, name, slot, quality } }
 local _, ns = ...
 
-local DungeonJournal = {}
-ns.DungeonJournal = DungeonJournal
+local DungeonJournalBridge = {}
+ns.DungeonJournalBridge = DungeonJournalBridge
 
-DungeonJournal.GLOBAL = "ForeverDungeonJournal_NS"
+DungeonJournalBridge.GLOBAL = "ForeverDungeonJournal_NS"
 
 -- The journal's namespace, or nil when it is not installed.
-function DungeonJournal.Get()
-  local fdj = _G[DungeonJournal.GLOBAL]
+function DungeonJournalBridge.Get()
+  local fdj = _G[DungeonJournalBridge.GLOBAL]
   if type(fdj) == "table" and type(fdj.DB) == "table" then return fdj end
   return nil
 end
 
-function DungeonJournal.IsAvailable()
-  return DungeonJournal.Get() ~= nil
+function DungeonJournalBridge.IsAvailable()
+  return DungeonJournalBridge.Get() ~= nil
 end
 
 -- Every item name the journal carries (boss and trash loot, shared loot,
 -- quest rewards), for name search; built once per session.
-function DungeonJournal.ItemNames()
-  if DungeonJournal.names then return DungeonJournal.names end
+function DungeonJournalBridge.ItemNames()
+  if DungeonJournalBridge.names then return DungeonJournalBridge.names end
   local names = {}
-  local fdj = DungeonJournal.Get()
+  local fdj = DungeonJournalBridge.Get()
   local function take(entry)
     if type(entry) == "table" and tonumber(entry[1]) and type(entry[2]) == "string" and entry[2] ~= "" then
       names[tonumber(entry[1])] = entry[2]
@@ -49,6 +49,6 @@ function DungeonJournal.ItemNames()
       end
     end
   end
-  DungeonJournal.names = names
+  DungeonJournalBridge.names = names
   return names
 end

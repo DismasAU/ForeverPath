@@ -80,7 +80,7 @@ local DONE_CHECKS = {
   CRAFT_ITEM = itemDone,
   OBTAIN_ITEM = itemDone,
   COMPLETE_ATTUNEMENT = function(goal)
-    local AP = ns.AttuneProvider
+    local AP = ns.AttuneBridge
     local progress = AP.IsAvailable() and AP.Progress(goal.target.attuneID) or nil
     return progress ~= nil and progress.complete == true
   end,
@@ -107,7 +107,7 @@ local DONE_CHECKS = {
 
 -- Checks every open goal; completes and celebrates the finished ones.
 -- Returns the list of goals completed by this call.
-function GoalCompletion.Check(reason)
+function GoalCompletion.CompleteFinished(reason)
   local completed = {}
   if not setting("autoComplete", true) then return completed end
   for _, goal in ipairs(ns.GoalService.List({ open = true })) do
@@ -136,7 +136,7 @@ function GoalCompletion.RecordCast(spellID)
     end
   end
   if touched > 0 then
-    GoalCompletion.Check("cast")
+    GoalCompletion.CompleteFinished("cast")
   end
   return touched
 end
@@ -195,21 +195,21 @@ function GoalCompletion.Init()
     GoalCompletion.lastStatus[goal.id] = goal.status
   end)
   Events.On("FP_INVENTORY_UPDATED", function()
-    GoalCompletion.Check("inventory")
+    GoalCompletion.CompleteFinished("inventory")
   end)
   -- Recipes learned and skill-ups complete learn-recipe and reach-skill goals.
   Events.On("FP_RECIPES_UPDATED", function()
-    Events.Debounce("recipe-goal-check", 0.5, function() GoalCompletion.Check("recipes") end)
+    Events.Debounce("recipe-goal-check", 0.5, function() GoalCompletion.CompleteFinished("recipes") end)
   end)
   Events.RegisterWoW("SKILL_LINES_CHANGED", function()
     Events.Debounce("skill-goal-check", 1, function()
-      GoalCompletion.Check("skill")
+      GoalCompletion.CompleteFinished("skill")
       Events.Fire("FP_PLAYER_CHANGED", "skill")
     end)
   end)
   Events.RegisterWoW("UPDATE_FACTION", function()
     Events.Debounce("reputation-goal-check", 1, function()
-      GoalCompletion.Check("reputation")
+      GoalCompletion.CompleteFinished("reputation")
     end)
   end)
   -- Enchant goals count the player's own successful casts of the spell.
@@ -222,7 +222,7 @@ function GoalCompletion.Init()
   for _, event in ipairs({ "QUEST_TURNED_IN", "QUEST_LOG_UPDATE", "PLAYER_LEVEL_UP", "QUEST_ACCEPTED" }) do
     Events.RegisterWoW(event, function()
       Events.Debounce("attunement-check", 1, function()
-        GoalCompletion.Check("quest")
+        GoalCompletion.CompleteFinished("quest")
         Events.Fire("FP_PLAYER_CHANGED", "quest")
       end)
     end)
@@ -234,6 +234,6 @@ function GoalCompletion.Init()
       GoalCompletion.lastStatus[goal.id] = goal.status
       if goal.type == GoalModel.TypeIDs.CRAFT_ITEM then GoalCompletion.Baseline(goal) end
     end
-    ns.Compat.After(3, function() GoalCompletion.Check("login") end)
+    ns.Compat.After(3, function() GoalCompletion.CompleteFinished("login") end)
   end)
 end

@@ -52,7 +52,7 @@ end
 
 
 function MainFrame.ActiveGoal()
-  local selected = ns.GoalService.GetSelected()
+  local selected = ns.GoalService.Selected()
   if selected and ns.GoalModel.IsOpen(selected) then
     return selected
   end
@@ -599,7 +599,7 @@ function MainFrame.OpenGoalSwitcher(anchor)
     MainFrame.SetAlert("Add a goal from My Goals or the search box.", "info")
     return
   end
-  local selected = ns.GoalService.GetSelected()
+  local selected = ns.GoalService.Selected()
   local items = {}
   for _, goal in ipairs(goals) do
     local view = ns.GoalService.Views()[goal.id]
@@ -646,7 +646,7 @@ function MainFrame.SubmitSearch(box)
     return
   end
   MainFrame.HideSuggestions()
-  local goal, message = ns.GoalService.AddFromInput(text, 1)
+  local goal, message = ns.GoalService.AddItemFromInput(text, 1)
   MainFrame.SetAlert(message, goal and "ok" or "error")
   if goal then
     box:SetText("")

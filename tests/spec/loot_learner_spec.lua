@@ -102,8 +102,8 @@ describe("LootLearner", function()
       itemRanges = { 1, 100000 },
     }
     Mock.addOnLoaders.ForeverPath_ClassicDB = function() ns.ClassicData = data end
-    ns.ClassicDB.loadTried = false
-    ns.ClassicDB.Init()
+    ns.ClassicDBBridge.loadTried = false
+    ns.ClassicDBBridge.Init()
     local before = ns.SourceProvider.Sources(LINEN)
     assert_eq(before[1].label, "Dropped by Mangy Wolf")
     assert_true(before[1].classic)
@@ -117,10 +117,10 @@ describe("LootLearner", function()
     assert_true(after[2].classic)
     assert_eq(ns.LootLearner.ItemHints(LINEN)[1].label, "Dropped by Mangy Wolf", "named from classic data when no target was selected")
     -- New in Forever: the client lists it, classic-db does not.
-    assert_true(ns.ClassicDB.KnowsItem(LINEN))
-    assert_false(ns.ClassicDB.KnowsItem(RAGE))
-    assert_true(ns.ClassicDB.IsNewInForever(RAGE))
-    assert_false(ns.ClassicDB.IsNewInForever(LINEN))
+    assert_true(ns.ClassicDBBridge.KnowsItem(LINEN))
+    assert_false(ns.ClassicDBBridge.KnowsItem(RAGE))
+    assert_true(ns.ClassicDBBridge.IsNewInForever(RAGE))
+    assert_false(ns.ClassicDBBridge.IsNewInForever(LINEN))
     local fresh = ns.SourceProvider.Sources(RAGE)
     assert_eq(#fresh, 1)
     assert_eq(fresh[1].label, "New in Forever")

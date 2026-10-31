@@ -310,7 +310,7 @@ describe("Questlines", function()
 
   it("learns givers, items and turn-ins at quest windows and keeps them on the account", function()
     shaman()
-    local QF = ns.QuestFactsProvider
+    local QF = ns.QuestFactsLearner
     assert_match(QF.StatusLine(), "^Quest facts: 0 quests shipped, 0 learned")
     -- Objective parsing.
     local name, have, need, kill = QF.ParseObjective("Twisted Fire Totem: 0/5")
@@ -410,7 +410,7 @@ describe("Questlines", function()
     local shipped = H.fresh()
     H.login(shipped)
     local rows = shipped.Data.QuestCatalogue
-    local QF = shipped.QuestFactsProvider
+    local QF = shipped.QuestFactsLearner
     assert_eq(QF.ShippedCount(), 12)
     for questID, row in pairs(rows) do
       assert_true(type(questID) == "number" and questID > 0, "quest id")

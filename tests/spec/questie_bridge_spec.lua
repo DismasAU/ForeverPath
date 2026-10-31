@@ -115,8 +115,8 @@ describe("Questie bridge", function()
       npcs = { [999] = { "Classic Giver", nil, 30, 30, 2, { 1454, 100, 100 } } }, objects = {},
     }
     Mock.addOnLoaders.ForeverPath_ClassicDB = function() ns.ClassicData = classic end
-    ns.ClassicDB.loadTried = false
-    ns.ClassicDB.Init()
+    ns.ClassicDBBridge.loadTried = false
+    ns.ClassicDBBridge.Init()
     assert_eq(QP.Get(CALL_A).name, "Call of Air", "Questie's entry")
     assert_eq(QP.Giver(CALL_A).name, "Searn Firewarder")
     -- Without Questie the classic entry takes over.

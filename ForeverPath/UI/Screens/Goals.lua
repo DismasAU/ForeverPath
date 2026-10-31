@@ -435,7 +435,7 @@ local function Create(parent)
     local sortKey = ns.chardb.ui.goalSort
     sort:SetLabel(Widgets.SortLabel(SORTS, sortKey))
 
-    local selected = ns.GoalService.GetSelected()
+    local selected = ns.GoalService.Selected()
     local y = 0
     local rowIndex, groupIndex = 0, 0
     local groups

@@ -16,7 +16,7 @@ local function output(text)
     print(text)
   end
 end
-Log.output = output -- tests replace this to capture chat output
+Log.Output = output -- tests replace this to capture chat output
 
 function Log.Format(fmt, ...)
   if select("#", ...) == 0 then
@@ -34,12 +34,12 @@ function Log.Format(fmt, ...)
 end
 
 function Log.Print(fmt, ...)
-  Log.output(ns.PREFIX .. ": " .. Log.Format(fmt, ...))
+  Log.Output(ns.PREFIX .. ": " .. Log.Format(fmt, ...))
 end
 
 function Log.Debug(fmt, ...)
   if Log.debugEnabled then
-    Log.output("|cff888888FP debug|r: " .. Log.Format(fmt, ...))
+    Log.Output("|cff888888FP debug|r: " .. Log.Format(fmt, ...))
   end
 end
 
@@ -65,11 +65,11 @@ function Log.Error(fmt, ...)
   if message == lastMessage and now - lastTime < 5 then
     repeatCount = repeatCount + 1
     if repeatCount == 1 then
-      Log.output("|cffff4040ForeverPath error|r: repeated error suppressed, see /fp errors")
+      Log.Output("|cffff4040ForeverPath error|r: repeated error suppressed, see /fp errors")
     end
   else
     repeatCount = 0
-    Log.output("|cffff4040ForeverPath error|r: " .. firstLine)
+    Log.Output("|cffff4040ForeverPath error|r: " .. firstLine)
   end
   lastMessage, lastTime = message, now
 end

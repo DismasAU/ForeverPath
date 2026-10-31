@@ -19,27 +19,27 @@ local Log = ns.Log
 local Events = ns.Events
 local Routes = ns.DependencyResolver.Routes
 
-local QuestFactsProvider = { pending = {}, learnedThisSession = 0 }
-ns.QuestFactsProvider = QuestFactsProvider
+local QuestFactsLearner = { pending = {}, learnedThisSession = 0 }
+ns.QuestFactsLearner = QuestFactsLearner
 
-QuestFactsProvider.RETRY_LIMIT = 20
+QuestFactsLearner.RETRY_LIMIT = 20
 
 local call = ns.Util.SafeCall
 
-function QuestFactsProvider.Store()
+function QuestFactsLearner.Store()
   if not ns.Database.IsLoaded() then return nil end
   return ns.db.questFacts
 end
 
-function QuestFactsProvider.Shipped(questID)
+function QuestFactsLearner.Shipped(questID)
   local catalogue = ns.Data.QuestCatalogue
   if type(catalogue) ~= "table" then return nil end
   local entry = catalogue[tonumber(questID) or 0]
   return type(entry) == "table" and entry or nil
 end
 
-function QuestFactsProvider.Learned(questID)
-  local store = QuestFactsProvider.Store()
+function QuestFactsLearner.Learned(questID)
+  local store = QuestFactsLearner.Store()
   local entry = store and store[tonumber(questID) or 0]
   return type(entry) == "table" and entry or nil
 end
@@ -60,7 +60,7 @@ end
 -- Shipped and learned facts merged: a learned position wins (it was seen on
 -- this build), item lists prefer whichever has every item id resolved.
 -- The first imported copy (App/Share.lua) of a quest's facts, or nil.
-function QuestFactsProvider.Imported(questID)
+function QuestFactsLearner.Imported(questID)
   local found
   ns.Database.EachImported("questFacts", function(_, store)
     local entry = store[tonumber(questID) or 0]
@@ -69,9 +69,9 @@ function QuestFactsProvider.Imported(questID)
   return found
 end
 
-function QuestFactsProvider.Get(questID)
-  local shipped, learned = QuestFactsProvider.Shipped(questID), QuestFactsProvider.Learned(questID)
-  local imported = QuestFactsProvider.Imported(questID)
+function QuestFactsLearner.Get(questID)
+  local shipped, learned = QuestFactsLearner.Shipped(questID), QuestFactsLearner.Learned(questID)
+  local imported = QuestFactsLearner.Imported(questID)
   if imported then
     -- Shared facts fill what this account has not learned itself.
     if not learned then
@@ -104,7 +104,7 @@ end
 -- questName(questID) names the quest; the aggregator that asks passes it,
 -- so this learner never reaches up into QuestProvider.
 local hintIndex
-function QuestFactsProvider.ItemHints(itemID, questName)
+function QuestFactsLearner.ItemHints(itemID, questName)
   itemID = tonumber(itemID)
   if not itemID then return {} end
   if not hintIndex then
@@ -148,7 +148,7 @@ end
 ---------------------------------------------------------------------------
 -- "Twisted Fire Totem: 0/5", "0/5 Twisted Fire Totem" or "Deviate Dreadfang
 -- slain: 0/7" -> name, have, need, kill. Pure.
-function QuestFactsProvider.ParseObjective(text)
+function QuestFactsLearner.ParseObjective(text)
   if type(text) ~= "string" then return nil end
   local name, have, need
   local a, b, rest = text:match("^%s*(%d+)%s*/%s*(%d+)%s+(.-)%s*$")
@@ -170,7 +170,7 @@ function QuestFactsProvider.ParseObjective(text)
 end
 
 -- The item id for a name the client has shown us (exact match only).
-function QuestFactsProvider.ItemIDByName(name)
+function QuestFactsLearner.ItemIDByName(name)
   if type(name) ~= "string" then return nil end
   local hits = Log.Try(ns.ItemProvider.SearchByName, name, 3)
   if type(hits) ~= "table" then return nil end
@@ -182,7 +182,7 @@ end
 
 -- Asks the client for the name of everything in the bags, so objective
 -- names resolve to ids once the item has dropped.
-function QuestFactsProvider.ScanBagNames()
+function QuestFactsLearner.ScanBagNames()
   local IP = ns.ItemProvider
   if not (IP and Compat.GetContainerNumSlots and Compat.GetContainerSlot) then return 0 end
   local seen = 0
@@ -202,15 +202,15 @@ end
 -- Item objectives of a quest in the log: { { name, count, have, itemID } }.
 -- Objectives the client types as items count; untyped ones only when the
 -- name is a known item (kill counters never are).
-function QuestFactsProvider.LiveItems(questID)
+function QuestFactsLearner.LiveItems(questID)
   local ql = _G.C_QuestLog
   local objectives = ql and call(ql.GetQuestObjectives, questID) or nil
   local out = {}
   for _, o in ipairs(type(objectives) == "table" and objectives or {}) do
     if type(o) == "table" and (tonumber(o.numRequired) or 0) > 0 and (o.type == nil or o.type == "item") then
-      local name, _, _, kill = QuestFactsProvider.ParseObjective(o.text)
+      local name, _, _, kill = QuestFactsLearner.ParseObjective(o.text)
       if name and not kill then
-        local itemID = QuestFactsProvider.ItemIDByName(name)
+        local itemID = QuestFactsLearner.ItemIDByName(name)
         if o.type == "item" or itemID then
           out[#out + 1] = { name = name, count = tonumber(o.numRequired) or 1, have = tonumber(o.numFulfilled) or 0, itemID = itemID }
         end
@@ -242,18 +242,18 @@ local function npcName()
 end
 
 local function entryFor(questID)
-  local store = QuestFactsProvider.Store()
+  local store = QuestFactsLearner.Store()
   if not store then return nil end
   store[questID] = store[questID] or {}
   return store[questID]
 end
 
 local function changed()
-  QuestFactsProvider.learnedThisSession = QuestFactsProvider.learnedThisSession + 1
+  QuestFactsLearner.learnedThisSession = QuestFactsLearner.learnedThisSession + 1
   Events.Debounce("quest-facts", 0.5, function() Events.Fire("FP_QUEST_FACTS_UPDATED") end)
 end
 
-function QuestFactsProvider.RecordGiver(questID, name)
+function QuestFactsLearner.RecordGiver(questID, name)
   questID = tonumber(questID)
   if not questID or questID <= 0 or not name then return false end
   local entry = entryFor(questID)
@@ -264,7 +264,7 @@ function QuestFactsProvider.RecordGiver(questID, name)
   return true
 end
 
-function QuestFactsProvider.RecordTurnin(questID, name)
+function QuestFactsLearner.RecordTurnin(questID, name)
   questID = tonumber(questID)
   if not questID or questID <= 0 or not name then return false end
   local entry = entryFor(questID)
@@ -276,16 +276,16 @@ end
 
 -- Records the item objectives of a quest in the log; retried while names
 -- are still unresolved (the item may only become known once it drops).
-function QuestFactsProvider.RecordItems(questID)
+function QuestFactsLearner.RecordItems(questID)
   questID = tonumber(questID)
   if not questID or questID <= 0 then return false end
-  QuestFactsProvider.ScanBagNames()
-  local items = QuestFactsProvider.LiveItems(questID)
+  QuestFactsLearner.ScanBagNames()
+  local items = QuestFactsLearner.LiveItems(questID)
   local entry = entryFor(questID)
   if not entry then return false end
   if #items == 0 then
     if type(entry.items) ~= "table" then entry.items = {} entry.itemsAt = ns.Util.Now() end
-    QuestFactsProvider.pending[questID] = nil
+    QuestFactsLearner.pending[questID] = nil
     return true
   end
   local stored = {}
@@ -296,66 +296,66 @@ function QuestFactsProvider.RecordItems(questID)
   end
   entry.items, entry.itemsAt = stored, ns.Util.Now()
   if unresolved then
-    local tries = (QuestFactsProvider.pending[questID] or 0) + 1
-    QuestFactsProvider.pending[questID] = tries <= QuestFactsProvider.RETRY_LIMIT and tries or nil
+    local tries = (QuestFactsLearner.pending[questID] or 0) + 1
+    QuestFactsLearner.pending[questID] = tries <= QuestFactsLearner.RETRY_LIMIT and tries or nil
   else
-    QuestFactsProvider.pending[questID] = nil
+    QuestFactsLearner.pending[questID] = nil
   end
   changed()
   return true
 end
 
 local function retryPending()
-  for questID in pairs(QuestFactsProvider.pending) do
+  for questID in pairs(QuestFactsLearner.pending) do
     if call(ns.Compat.IsOnQuest, questID) then
-      QuestFactsProvider.RecordItems(questID)
+      QuestFactsLearner.RecordItems(questID)
     else
-      QuestFactsProvider.pending[questID] = nil
+      QuestFactsLearner.pending[questID] = nil
     end
   end
 end
 
-function QuestFactsProvider.Count()
+function QuestFactsLearner.Count()
   local n = 0
-  n = n + ns.Util.Count(QuestFactsProvider.Store())
+  n = n + ns.Util.Count(QuestFactsLearner.Store())
   return n
 end
 
-function QuestFactsProvider.ShippedCount()
+function QuestFactsLearner.ShippedCount()
   local catalogue = ns.Data.QuestCatalogue
   local n = 0
   n = n + ns.Util.Count(catalogue)
   return n
 end
 
-function QuestFactsProvider.StatusLine()
-  return string.format("Quest facts: %d quests shipped, %d learned at quest windows on this account.", QuestFactsProvider.ShippedCount(), QuestFactsProvider.Count())
+function QuestFactsLearner.StatusLine()
+  return string.format("Quest facts: %d quests shipped, %d learned at quest windows on this account.", QuestFactsLearner.ShippedCount(), QuestFactsLearner.Count())
 end
 
-function QuestFactsProvider.Init()
+function QuestFactsLearner.Init()
   Events.RegisterWoW("QUEST_DETAIL", function()
     local questID = call(_G.GetQuestID)
-    QuestFactsProvider.RecordGiver(questID, npcName())
+    QuestFactsLearner.RecordGiver(questID, npcName())
   end)
   Events.RegisterWoW("QUEST_ACCEPTED", function(questID)
-    QuestFactsProvider.RecordItems(questID)
+    QuestFactsLearner.RecordItems(questID)
   end)
   Events.RegisterWoW("QUEST_COMPLETE", function()
     local questID = call(_G.GetQuestID)
-    QuestFactsProvider.RecordTurnin(questID, npcName())
+    QuestFactsLearner.RecordTurnin(questID, npcName())
   end)
   Events.RegisterWoW("QUEST_TURNED_IN", function(questID)
-    local entry = QuestFactsProvider.Learned(questID)
+    local entry = QuestFactsLearner.Learned(questID)
     if not (entry and entry.turnin) then
       local name = npcName()
-      if name then QuestFactsProvider.RecordTurnin(questID, name) end
+      if name then QuestFactsLearner.RecordTurnin(questID, name) end
     end
-    QuestFactsProvider.pending[tonumber(questID) or 0] = nil
+    QuestFactsLearner.pending[tonumber(questID) or 0] = nil
   end)
   for _, event in ipairs({ "QUEST_LOG_UPDATE", "BAG_UPDATE_DELAYED" }) do
     Events.RegisterWoW(event, function()
-      if next(QuestFactsProvider.pending) then Events.Debounce("quest-facts-retry", 1, retryPending) end
+      if next(QuestFactsLearner.pending) then Events.Debounce("quest-facts-retry", 1, retryPending) end
     end)
   end
-  Log.Debug("%s", QuestFactsProvider.StatusLine())
+  Log.Debug("%s", QuestFactsLearner.StatusLine())
 end

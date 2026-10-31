@@ -19,8 +19,8 @@ local _, ns = ...
 local Log = ns.Log
 local Util = ns.Util
 
-local AuctionPriceProvider = { CALLER = "ForeverPath" }
-ns.AuctionPriceProvider = AuctionPriceProvider
+local AuctionatorBridge = { CALLER = "ForeverPath" }
+ns.AuctionatorBridge = AuctionatorBridge
 
 local function api()
   local a = _G.Auctionator
@@ -28,13 +28,13 @@ local function api()
   return a.API.v1
 end
 
-function AuctionPriceProvider.IsAvailable()
+function AuctionatorBridge.IsAvailable()
   local v1 = api()
   return v1 ~= nil and type(v1.GetAuctionPriceByItemID) == "function"
 end
 
 -- Time of the last browse scan, or nil.
-function AuctionPriceProvider.LastScan()
+function AuctionatorBridge.LastScan()
   local vars = _G.AUCTIONATOR_SAVEDVARS
   local t = type(vars) == "table" and tonumber(vars.TimeOfLastBrowseScan) or nil
   if t and t > 0 then return t end
@@ -47,16 +47,16 @@ local function database()
 end
 
 -- { copper, kind = "market", ageDays, scannedAt, avg7, listings } | nil
-function AuctionPriceProvider.GetPrice(itemID)
+function AuctionatorBridge.GetPrice(itemID)
   local v1 = api()
   if not v1 or type(itemID) ~= "number" then return nil end
-  local copper = Util.SafeCall(v1.GetAuctionPriceByItemID, AuctionPriceProvider.CALLER, itemID)
+  local copper = Util.SafeCall(v1.GetAuctionPriceByItemID, AuctionatorBridge.CALLER, itemID)
   if type(copper) ~= "number" or copper <= 0 then return nil end
   local info = { copper = copper, kind = "market", source = "auctionator" }
-  local days = Util.SafeCall(v1.GetAuctionAgeByItemID, AuctionPriceProvider.CALLER, itemID)
+  local days = Util.SafeCall(v1.GetAuctionAgeByItemID, AuctionatorBridge.CALLER, itemID)
   if type(days) == "number" then info.ageDays = days end
   local now = Util.Now()
-  local lastScan = AuctionPriceProvider.LastScan()
+  local lastScan = AuctionatorBridge.LastScan()
   if info.ageDays == 0 and lastScan then
     info.scannedAt = lastScan
   elseif info.ageDays then
@@ -76,15 +76,15 @@ function AuctionPriceProvider.GetPrice(itemID)
   return info
 end
 
-function AuctionPriceProvider.Init()
+function AuctionatorBridge.Init()
   ns.PriceProvider.RegisterSource("auctionator", {
-    IsAvailable = AuctionPriceProvider.IsAvailable,
-    GetPrice = AuctionPriceProvider.GetPrice,
+    IsAvailable = AuctionatorBridge.IsAvailable,
+    GetPrice = AuctionatorBridge.GetPrice,
     market = true,
     label = "Auctionator",
     StatusInfo = function()
-      return { installed = _G.Auctionator ~= nil, available = AuctionPriceProvider.IsAvailable(), lastScan = AuctionPriceProvider.LastScan() }
+      return { installed = _G.Auctionator ~= nil, available = AuctionatorBridge.IsAvailable(), lastScan = AuctionatorBridge.LastScan() }
     end,
   })
-  Log.Debug("Auctionator price source: %s", AuctionPriceProvider.IsAvailable() and "available" or "not available")
+  Log.Debug("Auctionator price source: %s", AuctionatorBridge.IsAvailable() and "available" or "not available")
 end

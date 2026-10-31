@@ -2,7 +2,7 @@
 -- without any external service: recorded vendors and loot (the learners),
 -- ForeverDungeonJournal and AtlasLoot (read at runtime, never copied), the
 -- quest catalogue, GearQuest Forever, reputation vendors, CMaNGOS classic-db
--- (ns.ClassicDB) and the item class heuristic (Data/ItemClasses.lua).
+-- (ns.ClassicDBBridge) and the item class heuristic (Data/ItemClasses.lua).
 -- Everything is returned as resolver hints: { kind, label, detail, ... }, in
 -- the order the comment on SourceProvider.Sources gives - that order is the
 -- contract.
@@ -23,7 +23,7 @@ ns.SourceProvider = SourceProvider
 SourceProvider.MAX_ATLAS_ENTRIES = 3
 SourceProvider.MAX_JOURNAL_ENTRIES = 3
 ---------------------------------------------------------------------------
--- ForeverDungeonJournal sources (read through ns.DungeonJournal)
+-- ForeverDungeonJournal sources (read through ns.DungeonJournalBridge)
 ---------------------------------------------------------------------------
 local function addJournalEntry(index, itemID, entry, cap)
   if type(itemID) ~= "number" or itemID <= 0 then return false end
@@ -48,7 +48,7 @@ end
 
 -- Walks the journal's tables into journal.index[itemID] = { entries }.
 function SourceProvider.IndexDungeonJournal()
-  local fdj = ns.DungeonJournal.Get()
+  local fdj = ns.DungeonJournalBridge.Get()
   local index, added = {}, 0
   local cap = SourceProvider.MAX_JOURNAL_ENTRIES
   for dungeonName, dungeon in pairs(fdj.DB) do
@@ -103,7 +103,7 @@ end
 function SourceProvider.BuildJournalIndex()
   local journal = SourceProvider.journal
   if journal.state ~= "idle" then return journal.state end
-  if not ns.DungeonJournal.IsAvailable() then return journal.state end
+  if not ns.DungeonJournalBridge.IsAvailable() then return journal.state end
   local ok, added = Log.Capture(SourceProvider.IndexDungeonJournal)
   if ok then
     journal.state = "ready"
@@ -251,10 +251,10 @@ end
 function SourceProvider.IndexAtlasModule(storage)
   local index = SourceProvider.atlas.index
   local added = 0
-  for _, content in ns.AtlasLoot.Contents(storage) do
-    local instance = ns.AtlasLoot.ContentName(content)
+  for _, content in ns.AtlasLootBridge.Contents(storage) do
+    local instance = ns.AtlasLootBridge.ContentName(content)
     for _, boss in ipairs(content.items) do
-      for _, itemID in ipairs(ns.AtlasLoot.ItemIDs(boss)) do
+      for _, itemID in ipairs(ns.AtlasLootBridge.ItemIDs(boss)) do
         if addAtlasEntry(index, itemID, instance, boss) then added = added + 1 end
       end
     end
@@ -267,7 +267,7 @@ end
 -- be missing; it stays "loading" only while AtlasLoot is still loading one.
 function SourceProvider.BuildAtlasIndex()
   local atlas = SourceProvider.atlas
-  if atlas.state ~= "idle" or not ns.AtlasLoot.IsAvailable() then
+  if atlas.state ~= "idle" or not ns.AtlasLootBridge.IsAvailable() then
     return atlas.state
   end
   atlas.state = "loading"
@@ -280,7 +280,7 @@ function SourceProvider.BuildAtlasIndex()
     end
   end
   for _, moduleName in ipairs(atlas.modules) do
-    ns.AtlasLoot.Load(moduleName, function(storage)
+    ns.AtlasLootBridge.Load(moduleName, function(storage)
       if not storage then
         Log.Debug("AtlasLoot module %s is not available", moduleName)
       else
@@ -332,7 +332,7 @@ end
 --      "New in Forever" hint that says why
 function SourceProvider.Sources(itemID)
   local out = {}
-  for _, hint in ipairs(Log.Try(ns.VendorProvider.ItemHints, itemID) or {}) do out[#out + 1] = hint end
+  for _, hint in ipairs(Log.Try(ns.VendorLearner.ItemHints, itemID) or {}) do out[#out + 1] = hint end
   -- What actually dropped on Forever comes before every database.
   for _, hint in ipairs(Log.Try(ns.LootLearner.ItemHints, itemID) or {}) do
     if hint.kind == Routes.GATHER then hint = SourceProvider.QualifyGatherHint(hint) end
@@ -352,10 +352,10 @@ function SourceProvider.Sources(itemID)
   end
   for _, hint in ipairs(quests) do out[#out + 1] = hint end
   -- The quest catalogue says where the items a curated quest asks for drop.
-  for _, hint in ipairs(Log.Try(ns.QuestFactsProvider.ItemHints, itemID, ns.QuestProvider.Name) or {}) do out[#out + 1] = hint end
+  for _, hint in ipairs(Log.Try(ns.QuestFactsLearner.ItemHints, itemID, ns.QuestProvider.Name) or {}) do out[#out + 1] = hint end
   -- GearQuest Forever knows where leveling gear comes from (vendor and npc,
   -- quest and zone, boss or world drop); it fills in what nothing above did.
-  for _, hint in ipairs(Log.Try(ns.GearQuest.ItemHints, itemID) or {}) do
+  for _, hint in ipairs(Log.Try(ns.GearQuestBridge.ItemHints, itemID) or {}) do
     local duplicate = false
     for _, existing in ipairs(out) do
       if existing.kind == hint.kind and (existing.kind == Routes.VENDOR and existing.name == hint.name or existing.kind == Routes.QUEST and existing.quest == hint.quest) then duplicate = true end
@@ -367,7 +367,7 @@ function SourceProvider.Sources(itemID)
   for _, hint in ipairs(Log.Try(ns.ReputationProvider.ItemHints, itemID) or {}) do out[#out + 1] = hint end
   -- Classic-era sources behind the Forever ones.
   local classicSkills = {}
-  local CDB = ns.ClassicDB
+  local CDB = ns.ClassicDBBridge
   if CDB.IsAvailable() then
     local names = {}
     local recordedVendor = false
@@ -462,8 +462,8 @@ end
 -- Human-readable state of the optional data addons, for /fp vendors.
 function SourceProvider.StatusInfo()
   local status = {}
-  status.atlasloot = ns.AtlasLoot.IsAvailable() and ("installed, index " .. SourceProvider.atlas.state) or "not installed"
-  if ns.DungeonJournal.IsAvailable() then
+  status.atlasloot = ns.AtlasLootBridge.IsAvailable() and ("installed, index " .. SourceProvider.atlas.state) or "not installed"
+  if ns.DungeonJournalBridge.IsAvailable() then
     local state = SourceProvider.BuildJournalIndex()
     status.journal = state == "ready" and string.format("installed, %d items indexed", SourceProvider.journal.items) or ("installed, index " .. state)
   else
@@ -478,5 +478,5 @@ function SourceProvider.StatusLine()
 end
 
 function SourceProvider.Init()
-  ns.ItemProvider.RegisterNameSource(ns.DungeonJournal.ItemNames)
+  ns.ItemProvider.RegisterNameSource(ns.DungeonJournalBridge.ItemNames)
 end

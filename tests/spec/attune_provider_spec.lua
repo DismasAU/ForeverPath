@@ -34,12 +34,12 @@ local function installAttune()
   }, { lang = { Q1_4182 = "Dragonkin Menace", Q1_4183 = "The True Masters", Q1_4282 = "A Shred of Hope", Q1_4322 = "Jail Break!", Q1_96403 = "Important Heirlooms", Q1_96395 = "An Ancient Grudge" } })
 end
 
-describe("AttuneProvider", function()
+describe("AttuneBridge", function()
   local ns, AP
   before_each(function()
     ns = H.fresh()
     H.login(ns)
-    AP = ns.AttuneProvider
+    AP = ns.AttuneBridge
     Mock.AddItem(11446, { name = "A Crumpled Up Note" })
     Mock.AddItem(274289, { name = "Dwarven Heirloom" })
   end)

@@ -1,12 +1,12 @@
 local H = require("harness")
 local Mock = H.Mock
 
-describe("VendorProvider", function()
+describe("VendorLearner", function()
   local ns, VP
   before_each(function()
     ns = H.fresh()
     H.login(ns)
-    VP = ns.VendorProvider
+    VP = ns.VendorLearner
     Mock.AddItem(2320, { name = "Coarse Thread" })
     Mock.AddItem(2589, { name = "Linen Cloth" })
     Mock.AddItem(159, { name = "Refreshing Spring Water" })
@@ -81,10 +81,10 @@ describe("VendorProvider", function()
       _G.C_MerchantFrame = nil
     end })
     H.login(ns2)
-    assert_false(ns2.VendorProvider.IsAvailable())
+    assert_false(ns2.VendorLearner.IsAvailable())
     Mock.merchant = { name = "X", items = {} }
     Mock.FireEvent("MERCHANT_SHOW")
-    assert_eq(ns2.VendorProvider.ScanMerchant(), 0)
+    assert_eq(ns2.VendorLearner.ScanMerchant(), 0)
     assert_eq(#ns2.Log.errors, 0)
   end)
 end)

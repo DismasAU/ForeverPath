@@ -315,7 +315,7 @@ function Tracker.Refresh()
       frame.sub:SetText(string.format("%d%% - %d of %d steps", a.percent, a.done, a.total))
       frame.bar:SetKind(a.complete and "ok" or "gold")
       frame.bar:SetValue(a.percent / 100)
-      frame.nextText:SetText(a.complete and "Attuned" or (a.next and ns.AttuneProvider.StepText(a.next) or ""))
+      frame.nextText:SetText(a.complete and "Attuned" or (a.next and ns.AttuneBridge.StepText(a.next) or ""))
     else
       frame.nextText:SetText(view and view.readiness == ns.Readiness.RECIPES_NOT_SCANNED and "Open a profession window" or (view and view.message or ""))
     end

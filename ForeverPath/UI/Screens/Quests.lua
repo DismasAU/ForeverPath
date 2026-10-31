@@ -304,7 +304,7 @@ local function Create(parent)
     local line = detail.questline
     if line then
       for index, step in ipairs(line.steps) do
-        local current = step.state == ns.AttuneProvider.StepStates.CURRENT
+        local current = step.state == ns.AttuneBridge.StepStates.CURRENT
         lines[#lines + 1] = { text = (step.done and Theme.Hex.text3 or (current and Theme.Hex.text or Theme.Hex.text2))
           .. string.format("%d. %s: %s%s%s|r", index, step.typeLabel, step.name, step.location and (" - " .. step.location) or "", step.done and " (done)" or ""),
           value = step.done and 1 or 0, done = step.done, chain = true }
@@ -406,7 +406,7 @@ local function Create(parent)
     feedOnly:SetChecked(ui.questsFeedOnly == true)
 
     -- A newly selected quest goal takes over the selection.
-    local goal = ns.GoalService.GetSelected()
+    local goal = ns.GoalService.Selected()
     local goalQuest = goal and goal.type == ns.GoalModel.TypeIDs.COMPLETE_QUEST and goal.target.questID or nil
     local questID = self.questID
     if goalQuest and (goal.id ~= self.lastGoalID or not questID) then questID = goalQuest end
@@ -449,7 +449,7 @@ local function Create(parent)
       if self.tab == "completed" then why = "No known quest is completed on this character yet."
       elseif self.tab == "goal" then why = "No known quest rewards something your goals are missing."
       elseif feedOnly:GetChecked() then why = "No known quest feeds a goal. Untick the filter to see every quest."
-      elseif not ns.DungeonJournal.IsAvailable() and not ns.AttuneProvider.IsAvailable() then why = "ForeverPath learns quests from ForeverDungeonJournal and Attune; without them only your quest log is listed."
+      elseif not ns.DungeonJournalBridge.IsAvailable() and not ns.AttuneBridge.IsAvailable() then why = "ForeverPath learns quests from ForeverDungeonJournal and Attune; without them only your quest log is listed."
       else why = "Nothing in your log and no known quest for your faction." end
       self.listEmpty:Set("No quests here", why)
       self.listEmpty:Show()

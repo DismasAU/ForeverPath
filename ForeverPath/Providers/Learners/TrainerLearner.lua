@@ -12,23 +12,23 @@ local Util = ns.Util
 local Log = ns.Log
 local Events = ns.Events
 
-local TrainerProvider = { open = false, restoreFilters = nil }
-ns.TrainerProvider = TrainerProvider
+local TrainerLearner = { open = false, restoreFilters = nil }
+ns.TrainerLearner = TrainerLearner
 
-TrainerProvider.FILTERS = { "available", "unavailable", "used" }
+TrainerLearner.FILTERS = { "available", "unavailable", "used" }
 
-function TrainerProvider.IsAvailable()
+function TrainerLearner.IsAvailable()
   return Compat.HasTrainerWindow()
 end
 
 -- spellID -> { skill, rank, cost, trainer, zone, subzone, seenAt }
-function TrainerProvider.Store()
+function TrainerLearner.Store()
   if not ns.Database.IsLoaded() then return nil end
   return ns.db.trainers
 end
 
 -- trainer name -> { zone, subzone, recipes, seenAt }
-function TrainerProvider.Trainers()
+function TrainerLearner.Trainers()
   if not ns.Database.IsLoaded() then return nil end
   return ns.db.trainerNPCs
 end
@@ -67,7 +67,7 @@ local function serviceType(a, b)
 end
 
 -- Reads one trainer line. Returns a record or nil.
-function TrainerProvider.ReadService(index)
+function TrainerLearner.ReadService(index)
   local name, second, third = callGlobal("GetTrainerServiceInfo", index)
   if type(name) ~= "string" then return nil end
   local kind = serviceType(second, third)
@@ -94,16 +94,16 @@ end
 
 -- Shows every line (available, too advanced, already known) so the whole
 -- offer is recorded; the previous filters are put back when the window closes.
-function TrainerProvider.EnsureFilters()
+function TrainerLearner.EnsureFilters()
   if type(_G.GetTrainerServiceTypeFilter) ~= "function" or type(_G.SetTrainerServiceTypeFilter) ~= "function" then
     return false
   end
   local changed = false
-  for _, filter in ipairs(TrainerProvider.FILTERS) do
+  for _, filter in ipairs(TrainerLearner.FILTERS) do
     local on = callGlobal("GetTrainerServiceTypeFilter", filter)
     if not on or on == 0 then
-      TrainerProvider.restoreFilters = TrainerProvider.restoreFilters or {}
-      TrainerProvider.restoreFilters[filter] = true
+      TrainerLearner.restoreFilters = TrainerLearner.restoreFilters or {}
+      TrainerLearner.restoreFilters[filter] = true
       callGlobal("SetTrainerServiceTypeFilter", filter, 1)
       changed = true
     end
@@ -111,9 +111,9 @@ function TrainerProvider.EnsureFilters()
   return changed
 end
 
-function TrainerProvider.RestoreFilters()
-  local restore = TrainerProvider.restoreFilters
-  TrainerProvider.restoreFilters = nil
+function TrainerLearner.RestoreFilters()
+  local restore = TrainerLearner.restoreFilters
+  TrainerLearner.restoreFilters = nil
   if not restore then return end
   for filter in pairs(restore) do
     callGlobal("SetTrainerServiceTypeFilter", filter, 0)
@@ -133,9 +133,9 @@ local function isProfessionSkill(name)
 end
 
 -- Records the open trainer. Returns the number of recipes recorded.
-function TrainerProvider.ScanTrainer()
-  local store = TrainerProvider.Store()
-  if not store or not TrainerProvider.open or not TrainerProvider.IsAvailable() then return 0 end
+function TrainerLearner.ScanTrainer()
+  local store = TrainerLearner.Store()
+  if not store or not TrainerLearner.open or not TrainerLearner.IsAvailable() then return 0 end
   local npc = currentNPC()
   if not npc then return 0 end
   local count = callGlobal("GetNumTrainerServices")
@@ -147,7 +147,7 @@ function TrainerProvider.ScanTrainer()
   local recorded, changed = 0, false
   local catalogue = ns.Recipes
   for index = 1, count do
-    local record = TrainerProvider.ReadService(index)
+    local record = TrainerLearner.ReadService(index)
     if record and record.rank then
       local known = catalogue.Get(record.spellID) ~= nil
       if tradeskill or known or isProfessionSkill(record.skill) then
@@ -164,7 +164,7 @@ function TrainerProvider.ScanTrainer()
     end
   end
   if recorded > 0 then
-    local trainers = TrainerProvider.Trainers()
+    local trainers = TrainerLearner.Trainers()
     if trainers then
       trainers[npc] = { zone = zone, subzone = subzone, recipes = recorded, seenAt = now }
     end
@@ -194,8 +194,8 @@ local function sharedRecord(entry)
   }
 end
 
-function TrainerProvider.Requirement(spellID)
-  local store = TrainerProvider.Store()
+function TrainerLearner.Requirement(spellID)
+  local store = TrainerLearner.Store()
   local recorded = store and store[spellID] or nil
   if recorded then return recorded end
   -- A trainer another player recorded and shared (App/Share.lua).
@@ -205,7 +205,7 @@ function TrainerProvider.Requirement(spellID)
     if not shared and type(entry) == "table" then shared = sharedRecord(entry) end
   end)
   if shared then return shared end
-  local CDB = ns.ClassicDB
+  local CDB = ns.ClassicDBBridge
   if CDB.IsAvailable() then
     local record = Log.Try(CDB.Trainer, spellID)
     if record then return record end
@@ -214,8 +214,8 @@ function TrainerProvider.Requirement(spellID)
 end
 
 -- "Georgio Bolero (Stormwind City), needs Tailoring 125, 1g"
-function TrainerProvider.Label(spellID)
-  local record = TrainerProvider.Requirement(spellID)
+function TrainerLearner.Label(spellID)
+  local record = TrainerLearner.Requirement(spellID)
   if not record then return nil end
   local where = record.zone or "?"
   if record.subzone then where = where .. " - " .. record.subzone end
@@ -227,42 +227,42 @@ function TrainerProvider.Label(spellID)
   return text
 end
 
-function TrainerProvider.Count()
+function TrainerLearner.Count()
   local recipes, trainers = 0, 0
-  recipes = recipes + Util.Count(TrainerProvider.Store())
-  trainers = trainers + Util.Count(TrainerProvider.Trainers())
+  recipes = recipes + Util.Count(TrainerLearner.Store())
+  trainers = trainers + Util.Count(TrainerLearner.Trainers())
   return recipes, trainers
 end
 
-function TrainerProvider.StatusLine()
-  if not TrainerProvider.IsAvailable() then
+function TrainerLearner.StatusLine()
+  if not TrainerLearner.IsAvailable() then
     return "Trainer windows: API unavailable on this client; trainer requirements cannot be recorded."
   end
-  local recipes, trainers = TrainerProvider.Count()
+  local recipes, trainers = TrainerLearner.Count()
   if recipes == 0 then
     return "Trainer requirements: none recorded yet (open a profession trainer once on any character)."
   end
   return string.format("Trainer requirements: %d recipe%s from %d trainer%s.", recipes, recipes == 1 and "" or "s", trainers, trainers == 1 and "" or "s")
 end
 
-function TrainerProvider.Init()
-  ns.Recipes.SetTrainerLookup(TrainerProvider.Requirement)
+function TrainerLearner.Init()
+  ns.Recipes.SetTrainerLookup(TrainerLearner.Requirement)
   -- Shared trainers change the requirements decoded recipes carry.
   Events.On("FP_SHARED_DATA_CHANGED", ns.Recipes.Invalidate)
   Events.RegisterWoW("TRAINER_SHOW", function()
-    TrainerProvider.open = true
-    TrainerProvider.EnsureFilters()
-    TrainerProvider.ScanTrainer()
+    TrainerLearner.open = true
+    TrainerLearner.EnsureFilters()
+    TrainerLearner.ScanTrainer()
     -- Lines can fill in a moment after the frame opens.
-    Compat.After(0.5, function() Log.Call(TrainerProvider.ScanTrainer) end)
+    Compat.After(0.5, function() Log.Call(TrainerLearner.ScanTrainer) end)
   end)
   Events.RegisterWoW("TRAINER_UPDATE", function()
-    if TrainerProvider.open then
-      Events.Debounce("trainer-scan", 0.3, TrainerProvider.ScanTrainer)
+    if TrainerLearner.open then
+      Events.Debounce("trainer-scan", 0.3, TrainerLearner.ScanTrainer)
     end
   end)
   Events.RegisterWoW("TRAINER_CLOSED", function()
-    TrainerProvider.open = false
-    TrainerProvider.RestoreFilters()
+    TrainerLearner.open = false
+    TrainerLearner.RestoreFilters()
   end)
 end

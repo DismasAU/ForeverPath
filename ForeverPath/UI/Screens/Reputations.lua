@@ -251,7 +251,7 @@ local function Create(parent)
     end
     for i = shown + 1, MAX_QUESTS do s.questRows[i]:Hide() end
     if shown == 0 then
-      s.questsEmpty:SetText(ns.DungeonJournal.IsAvailable() and "No known dungeon quest rewards this reputation." or "Quest reputation rewards come from ForeverDungeonJournal.")
+      s.questsEmpty:SetText(ns.DungeonJournalBridge.IsAvailable() and "No known dungeon quest rewards this reputation." or "Quest reputation rewards come from ForeverDungeonJournal.")
       s.questsEmpty:Show()
     else
       s.questsEmpty:Hide()
@@ -300,7 +300,7 @@ local function Create(parent)
     side:Show()
     status:SetText(Theme.ColorText("text3", RP.StatusLine():gsub("^Reputations: ", "")))
     local ui = ns.chardb.ui
-    local goal = ns.GoalService.GetSelected()
+    local goal = ns.GoalService.Selected()
     local goalFaction = goal and goal.type == ns.GoalModel.TypeIDs.REACH_REPUTATION and goal.target.factionID or nil
     local factionID = self.factionID
     if goalFaction and (goal.id ~= self.lastGoalID or not factionID) then

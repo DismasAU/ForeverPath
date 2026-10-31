@@ -636,7 +636,7 @@ local function Create(parent)
   end
 
   function screen:Refresh()
-    local goal = ns.GoalService.GetSelected()
+    local goal = ns.GoalService.Selected()
     self.goal = goal
     if not goal then
       self:ShowEmpty("No goal selected", "Add a crafting goal from My Goals or the search box, then pick it here.")

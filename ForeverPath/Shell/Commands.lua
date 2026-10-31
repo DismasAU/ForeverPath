@@ -60,7 +60,7 @@ local handlers = {}
 function handlers.help()
   Log.Print("Commands:")
   for _, entry in ipairs(Commands.help) do
-    Log.output(string.format("  |cffffd100%s|r - %s", entry[1], entry[2]))
+    Log.Output(string.format("  |cffffd100%s|r - %s", entry[1], entry[2]))
   end
 end
 
@@ -74,20 +74,20 @@ function handlers.scan(rest)
 end
 
 -- Every data module /fp status reports on; each has StatusLine().
-local STATUS_MODULES = { "Recipes", "VendorProvider", "TrainerProvider", "QuestProvider", "QuestFactsProvider", "ClassicDB", "LootLearner",
-  "Share", "QuestieBridge", "AttuneProvider", "EquipmentProvider", "ReputationProvider", "SourceProvider", "PriceProvider" }
+local STATUS_MODULES = { "Recipes", "VendorLearner", "TrainerLearner", "QuestProvider", "QuestFactsLearner", "ClassicDBBridge", "LootLearner",
+  "Share", "QuestieBridge", "AttuneBridge", "EquipmentProvider", "ReputationProvider", "SourceProvider", "PriceProvider" }
 
 function handlers.status()
   Log.Print("Version %s", tostring(ns.VERSION))
   for _, row in ipairs(ns.Compat.Capabilities()) do
-    Log.output(string.format("  %s: %s", row[1], row[2]))
+    Log.Output(string.format("  %s: %s", row[1], row[2]))
   end
   local professions = ns.ProfessionProvider.GetScannedProfessions()
   if #professions == 0 then
-    Log.output("  Recorded professions: none (open a profession window or use /fp scan)")
+    Log.Output("  Recorded professions: none (open a profession window or use /fp scan)")
   else
     for _, p in ipairs(professions) do
-      Log.output(string.format("  Recorded %s: %d recipes, %d learned, %s", tostring(p.name), p.recipeCount or 0, p.learnedCount or 0, Util.FormatAgo(p.scannedAt)))
+      Log.Output(string.format("  Recorded %s: %d recipes, %d learned, %s", tostring(p.name), p.recipeCount or 0, p.learnedCount or 0, Util.FormatAgo(p.scannedAt)))
     end
   end
   local known = ns.ProfessionProvider.GetCharacterProfessions()
@@ -96,12 +96,12 @@ function handlers.status()
     for _, p in ipairs(known) do
       names[#names + 1] = string.format("%s %s/%s", p.name, tostring(p.skillLevel), tostring(p.maxSkillLevel))
     end
-    Log.output("  Character professions: " .. Util.Join(names))
+    Log.Output("  Character professions: " .. Util.Join(names))
   end
-  Log.output(string.format("  Goals: %d open, %d completed", ns.GoalService.Count({ open = true }), ns.GoalService.Count({ status = ns.GoalModel.Statuses.COMPLETED })))
+  Log.Output(string.format("  Goals: %d open, %d completed", ns.GoalService.Count({ open = true }), ns.GoalService.Count({ status = ns.GoalModel.Statuses.COMPLETED })))
   for _, name in ipairs(STATUS_MODULES) do
     local module = ns[name]
-    Log.output("  " .. tostring(ns.Log.Try(module.StatusLine) or (name .. ": status unavailable")))
+    Log.Output("  " .. tostring(ns.Log.Try(module.StatusLine) or (name .. ": status unavailable")))
   end
 end
 
@@ -111,12 +111,12 @@ function handlers.goals()
     Log.Print("No open goals. Add one with /fp add <item id or link> [qty].")
     return
   end
-  local selected = ns.GoalService.GetSelectedID()
+  local selected = ns.GoalService.SelectedID()
   Log.Print("Goals:")
   for i, goal in ipairs(goals) do
     local marker = goal.id == selected and "*" or " "
     local status = goal.status ~= ns.GoalModel.Statuses.ACTIVE and (" [" .. ns.GoalModel.StatusLabel[goal.status] .. "]") or ""
-    Log.output(string.format("  %s%d. %s%s", marker, i, ns.GoalService.Title(goal), status))
+    Log.Output(string.format("  %s%d. %s%s", marker, i, ns.GoalService.Title(goal), status))
   end
 end
 
@@ -129,7 +129,7 @@ local function addGoal(rest, goalType)
   if head and head ~= "" then
     itemText, quantity = head, tonumber(tail)
   end
-  local goal, message = ns.GoalService.AddFromInput(itemText, quantity, goalType)
+  local goal, message = ns.GoalService.AddItemFromInput(itemText, quantity, goalType)
   Log.Print("%s", message)
   if goal and ns.UI.MainFrame.IsShown() then
     ns.UI.MainFrame.SetAlert(message, "ok")
@@ -194,7 +194,7 @@ function handlers.reps()
   Log.Print("%s", RP.StatusLine())
   for _, record in ipairs(RP.List()) do
     local goal = ns.GoalService.FindReputationGoal(record.factionID)
-    Log.output(string.format("  %s: %s (%d / %d)%s", record.name, record.standingLabel, record.into or 0, record.span or 0,
+    Log.Output(string.format("  %s: %s (%d / %d)%s", record.name, record.standingLabel, record.into or 0, record.span or 0,
       goal and (" [goal: " .. ns.GoalModel.StandingLabels[goal.target.standing] .. "]") or ""))
   end
 end
@@ -210,7 +210,7 @@ function handlers.equipment()
     if entry.goal then parts[#parts + 1] = "goal: " .. ns.GoalService.Name(entry.goal) end
     if entry.upgrade == "bis" then parts[#parts + 1] = "best in slot"
     elseif entry.best then parts[#parts + 1] = string.format("pick: %s (%s%s)", entry.best.name, entry.best.sourceLabel, entry.best.ilvl and (", ilvl " .. entry.best.ilvl) or "") end
-    Log.output(string.format("  %s: %s", entry.slot.label, table.concat(parts, " - ")))
+    Log.Output(string.format("  %s: %s", entry.slot.label, table.concat(parts, " - ")))
   end
 end
 
@@ -228,21 +228,21 @@ function handlers.quests()
     local names = {}
     for _, g in ipairs(feed.goals) do names[#names + 1] = g.name end
     local label = QP.StateLabel(QP.State(questID), feed.entry)
-    Log.output(string.format("  %s [%s] - %s - feeds %s", feed.entry.name, label, feed.entry.instance or "?", Util.Join(names)))
+    Log.Output(string.format("  %s [%s] - %s - feeds %s", feed.entry.name, label, feed.entry.instance or "?", Util.Join(names)))
   end
   if #ids == 0 then
-    Log.output("  No known quest rewards an item or reputation your goals need.")
+    Log.Output("  No known quest rewards an item or reputation your goals need.")
   end
   for _, goal in ipairs(goals) do
     if goal.type == ns.GoalModel.TypeIDs.COMPLETE_QUEST then
       local view = views[goal.id]
-      Log.output(string.format("  Goal: %s - %s", ns.GoalService.Name(goal), view and view.message or ""))
+      Log.Output(string.format("  Goal: %s - %s", ns.GoalService.Name(goal), view and view.message or ""))
     end
   end
 end
 
 local function resolveOrComplain(rest)
-  local goal = ns.GoalService.Resolve(Util.Trim(rest or ""))
+  local goal = ns.GoalService.FindByRef(Util.Trim(rest or ""))
   if not goal then
     Log.Print("No such goal. Use /fp goals to list them.")
   end
@@ -283,7 +283,7 @@ function handlers.tree(rest)
   if rest and Util.Trim(rest) ~= "" then
     goal = resolveOrComplain(rest)
   else
-    goal = ns.GoalService.GetSelected() or ns.GoalService.List({ open = true })[1]
+    goal = ns.GoalService.Selected() or ns.GoalService.List({ open = true })[1]
   end
   if not goal then
     Log.Print("No goal selected. Use /fp goals to list them.")
@@ -297,7 +297,7 @@ function handlers.tree(rest)
   end
   Log.Print("Dependency tree for %s:", ns.GoalService.Title(goal))
   for _, line in ipairs(ns.DependencyResolver.Describe(view.tree, ns.ItemProvider.GetName)) do
-    Log.output("  " .. line)
+    Log.Output("  " .. line)
   end
 end
 
@@ -308,7 +308,7 @@ function handlers.characters()
     local r = entry.record
     local profs = {}
     for _, p in ipairs(r.professions or {}) do profs[#profs + 1] = string.format("%s %d", p.name, p.skillLevel or 0) end
-    Log.output(string.format("  %s%s - level %d %s - %s - %d bag items%s - %s", r.name, entry.isCurrent and " (you)" or "", r.level or 0, r.class or "",
+    Log.Output(string.format("  %s%s - level %d %s - %s - %d bag items%s - %s", r.name, entry.isCurrent and " (you)" or "", r.level or 0, r.class or "",
       #profs > 0 and table.concat(profs, ", ") or "no professions", Util.Count(r.bags and r.bags.items or {}), r.bank and " + bank" or "",
       entry.isCurrent and "live" or (entry.level .. " " .. Util.FormatAgo(r.lastSeen))))
   end
@@ -329,16 +329,16 @@ function handlers.sources(rest)
   local lines = ns.SourceProvider.Describe(itemID)
   Log.Print("Sources for %s:", ns.ItemProvider.GetName(itemID))
   if #lines == 0 then
-    Log.output("  none recorded (no vendor visited, no DungeonJournal or AtlasLoot entry, no class hint)")
+    Log.Output("  none recorded (no vendor visited, no DungeonJournal or AtlasLoot entry, no class hint)")
   end
-  for _, line in ipairs(lines) do Log.output("  " .. line) end
+  for _, line in ipairs(lines) do Log.Output("  " .. line) end
   local price = ns.PriceProvider.GetPrice(itemID)
-  if price then Log.output("  Price: " .. Util.Money(price.copper) .. " each (" .. price.source .. ")") end
+  if price then Log.Output("  Price: " .. Util.Money(price.copper) .. " each (" .. price.source .. ")") end
 end
 
 function handlers.vendors()
   local status = ns.SourceProvider.StatusInfo()
-  Log.Print("%s DungeonJournal: %s. AtlasLoot: %s.", ns.VendorProvider.StatusLine(), status.journal, status.atlasloot)
+  Log.Print("%s DungeonJournal: %s. AtlasLoot: %s.", ns.VendorLearner.StatusLine(), status.journal, status.atlasloot)
 end
 
 function handlers.recipe(rest)
@@ -355,35 +355,35 @@ function handlers.recipe(rest)
   local lines = ns.Recipes.Lines(itemID, ns.ItemProvider.GetName)
   Log.Print("How %s is made:", ns.ItemProvider.GetName(itemID))
   if #lines == 0 then
-    Log.output("  no recipe or combine in the catalogue" .. (ns.Recipes.IsAvailable() and "" or " (catalogue missing: run scripts\\extract_db.ps1)"))
+    Log.Output("  no recipe or combine in the catalogue" .. (ns.Recipes.IsAvailable() and "" or " (catalogue missing: run scripts\\extract_db.ps1)"))
   end
-  for _, line in ipairs(lines) do Log.output("  " .. line) end
+  for _, line in ipairs(lines) do Log.Output("  " .. line) end
 end
 
 function handlers.catalogue()
   Log.Print("%s", ns.Recipes.StatusLine())
   local info = ns.Recipes.Info()
   if info then
-    Log.output(string.format("  Client build at extraction: %s (%s), hotfix cache build %s. Generated from the client's own tables by tools\\DbExtract; regenerate after a patch with scripts\\extract_db.ps1.",
+    Log.Output(string.format("  Client build at extraction: %s (%s), hotfix cache build %s. Generated from the client's own tables by tools\\DbExtract; regenerate after a patch with scripts\\extract_db.ps1.",
       tostring(info.build), tostring(info.buildName), tostring(info.hotfixBuild)))
   end
-  Log.output("  " .. ns.TrainerProvider.StatusLine())
+  Log.Output("  " .. ns.TrainerLearner.StatusLine())
 end
 
 function handlers.trainers()
-  Log.Print("%s", ns.TrainerProvider.StatusLine())
+  Log.Print("%s", ns.TrainerLearner.StatusLine())
   local trainers = {}
-  for name, record in pairs(ns.TrainerProvider.Trainers() or {}) do
+  for name, record in pairs(ns.TrainerLearner.Trainers() or {}) do
     trainers[#trainers + 1] = { name = name, record = record }
   end
   table.sort(trainers, function(a, b) return a.name < b.name end)
   for _, t in ipairs(trainers) do
     local where = t.record.zone or "?"
     if t.record.subzone then where = where .. " - " .. t.record.subzone end
-    Log.output(string.format("  %s (%s): %d recipe%s, %s", t.name, where, t.record.recipes or 0, (t.record.recipes or 0) == 1 and "" or "s", Util.FormatAgo(t.record.seenAt)))
+    Log.Output(string.format("  %s (%s): %d recipe%s, %s", t.name, where, t.record.recipes or 0, (t.record.recipes or 0) == 1 and "" or "s", Util.FormatAgo(t.record.seenAt)))
   end
   if #trainers == 0 then
-    Log.output("  Open any profession trainer: every recipe on offer is recorded with the skill it needs, its cost and the trainer's location.")
+    Log.Output("  Open any profession trainer: every recipe on offer is recorded with the skill it needs, its cost and the trainer's location.")
   end
 end
 
@@ -421,7 +421,7 @@ function handlers.shared(rest)
   end
   Log.Print("%s", ns.Share.StatusLine())
   for i, entry in ipairs(list) do
-    Log.output(string.format("  %d. %s - %s - exported %s, imported %s", i, entry.label, ns.Share.CountsLabel(entry.counts),
+    Log.Output(string.format("  %d. %s - %s - exported %s, imported %s", i, entry.label, ns.Share.CountsLabel(entry.counts),
       Util.FormatAgo(entry.at), Util.FormatAgo(entry.importedAt)))
   end
 end
@@ -437,7 +437,7 @@ function handlers.train(rest)
     Log.Print("%s %d/%d: %d recipe%s to train now%s.", plan.profession, plan.skill, plan.max, #plan.now, #plan.now == 1 and "" or "s",
       plan.cost > 0 and (" (" .. Util.Money(plan.cost) .. ")") or "")
     for _, row in ipairs(plan.now) do
-      Log.output(string.format("  %d  %s - %s%s%s%s", row.rank, row.recipe.name or "?", row.cost > 0 and Util.Money(row.cost) or "free",
+      Log.Output(string.format("  %d  %s - %s%s%s%s", row.rank, row.recipe.name or "?", row.cost > 0 and Util.Money(row.cost) or "free",
         row.trainer and (" - " .. row.trainer) or "", row.zone and (" (" .. row.zone .. ")") or "", row.classic and " [classic data]" or ""))
     end
     if #plan.soon > 0 then
@@ -446,10 +446,10 @@ function handlers.train(rest)
         if i > 6 then names[#names + 1] = string.format("and %d more", #plan.soon - 6) break end
         names[#names + 1] = string.format("%s (%d)", row.recipe.name or "?", row.rank)
       end
-      Log.output("  Next: " .. table.concat(names, ", "))
+      Log.Output("  Next: " .. table.concat(names, ", "))
     end
     if not plan.scanned then
-      Log.output("  Open your " .. plan.profession .. " window once so recipes you already know are left out.")
+      Log.Output("  Open your " .. plan.profession .. " window once so recipes you already know are left out.")
     end
   end
 end
@@ -459,8 +459,8 @@ function handlers.prices(rest)
   rest = Util.Trim(rest or "")
   if rest == "" then
     Log.Print("%s", status.text)
-    if status.lastScan then Log.output("  Last browse scan: " .. Util.FormatAgo(status.lastScan)) end
-    Log.output("  " .. ns.VendorProvider.StatusLine())
+    if status.lastScan then Log.Output("  Last browse scan: " .. Util.FormatAgo(status.lastScan)) end
+    Log.Output("  " .. ns.VendorLearner.StatusLine())
     return
   end
   local parsed = ns.ItemProvider.ParseInput(rest)
@@ -475,12 +475,12 @@ function handlers.prices(rest)
   end
   Log.Print("Prices for %s:", ns.ItemProvider.GetName(itemID))
   for _, line in ipairs(ns.PriceProvider.Describe(itemID)) do
-    Log.output("  " .. line)
+    Log.Output("  " .. line)
   end
 end
 
 function handlers.attunements()
-  local AP = ns.AttuneProvider
+  local AP = ns.AttuneBridge
   if not AP.IsAvailable() then
     Log.Print("Attune is not installed; attunement goals need it.")
     return
@@ -490,7 +490,7 @@ function handlers.attunements()
   for _, attune in ipairs(list) do
     local p = AP.Progress(attune.id)
     local goal = ns.GoalService.FindAttunementGoal(attune.id)
-    Log.output(string.format("  %s%s - %d%% (%d of %d steps)%s%s", attune.name, attune.levels and (" [" .. attune.levels .. "]") or "",
+    Log.Output(string.format("  %s%s - %d%% (%d of %d steps)%s%s", attune.name, attune.levels and (" [" .. attune.levels .. "]") or "",
       p.percent, p.done, p.total, p.next and (" - next: " .. AP.StepText(p.next)) or "", goal and " [goal]" or ""))
   end
 end
@@ -528,7 +528,7 @@ function handlers.shopping()
   ns.GoalService.EvaluateViews()
   local list = ns.GoalService.ShoppingList()
   for _, line in ipairs(ns.ShoppingList.Lines(list, ns.ItemProvider.GetName)) do
-    Log.output(line)
+    Log.Output(line)
   end
 end
 
@@ -581,7 +581,7 @@ function handlers.errors()
   Log.Print("Last %d error(s):", math.min(10, #Log.errors))
   for i = math.max(1, #Log.errors - 9), #Log.errors do
     local entry = Log.errors[i]
-    Log.output(string.format("  [%s] %s", Util.FormatAgo(entry.time), entry.message:match("^([^\n]*)") or entry.message))
+    Log.Output(string.format("  [%s] %s", Util.FormatAgo(entry.time), entry.message:match("^([^\n]*)") or entry.message))
   end
 end
 
