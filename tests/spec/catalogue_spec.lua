@@ -31,7 +31,14 @@ describe("Recipe catalogue (Data/Recipes)", function()
     assert_true(Recipes.IsAvailable())
     local info = Recipes.Info()
     assert_match(info.build, "^1%.60%.")
-    assert_match(info.product, "^wow", "the client product the catalogue was read from (wowf once regenerated from the released client)")
+    -- Still the beta extraction (wow_classic_beta) on purpose: the released
+    -- client (wowf, build 1.60.1.70707) gives the same 2,518 recipes, but its
+    -- hotfix cache lists far fewer items (about 7,000 against the beta's
+    -- 11,094 in ItemIndex), so regenerating now would drop item names and
+    -- search. Switch to wowf, and assert it here, once the released cache
+    -- covers at least as many items.
+    assert_match(info.product, "^wow", "the client product the catalogue was read from")
+    assert_gt(ns.Util.Count(ns.Data.ItemIndex), 11000, "the item index keeps the beta's coverage until the released client matches it")
     assert_gt(Recipes.Count(), 2000)
     assert_gt(Recipes.CombineCount(), 100)
     assert_eq(Recipes.ProfessionName(164), "Blacksmithing")

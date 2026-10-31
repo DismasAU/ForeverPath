@@ -215,7 +215,15 @@ which is not verifiable from the client and may differ from the server's.
 ## 0.10.0
 
 No new in-game API. The recipe catalogue is built offline from the client's
-database files, which is a different kind of dependency:
+database files, which is a different kind of dependency.
+
+The shipped catalogue and item index are still the beta extraction below.
+A run against the released client (`_forever_`, product `wowf`, build
+1.60.1.70707, 2026-10-30, `tools/DbExtract/last-run.json`) gives the same
+2,518 recipes, 182 enchants and 292 combines, but its hotfix cache lists
+about 7,000 items against the beta's 11,094, so regenerating would drop item
+names and search results. The data is regenerated from `wowf` once the
+released client's cache covers at least as many items.
 
 | Source | Use | Status |
 |---|---|---|
