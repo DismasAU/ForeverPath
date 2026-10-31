@@ -76,10 +76,10 @@ local function createMaterialRow(content, index)
     if price then
       lines[#lines + 1] = string.format("Vendor price: %s each%s", Widgets.Money(price.copper, true), price.vendor and (" from " .. price.vendor) or "")
     else
-      lines[#lines + 1] = "Price: no data (visit a vendor that sells it; AH prices arrive later)"
+      lines[#lines + 1] = "Price: no data (record a vendor that sells it, or scan the Auction House with Auctionator)"
     end
-    for _, hint in ipairs(ns.SourceProvider.Sources(m.itemID)) do
-      if hint.kind ~= ns.DependencyResolver.Routes.VENDOR then lines[#lines + 1] = (hint.label or "?") .. (hint.detail and (" - " .. hint.detail) or "") end
+    for _, hint in ipairs(ns.SourceProvider.WhereFrom(m.itemID)) do
+      lines[#lines + 1] = (hint.label or "?") .. (hint.detail and (" - " .. hint.detail) or "")
     end
     return lines
   end)

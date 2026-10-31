@@ -304,6 +304,85 @@ function Overview.Build(entries, opts)
   end)
   return result
 end
+-- How a learn goal's recipe is taught, by Planner.LearnKinds.
+local LEARN_LABEL = { plans = "Plans", trainer = "Trainer", combine = "Combine" }
+
+local function withStep(text, view)
+  return text .. (view.nextStep and (" - " .. view.nextStep) or "")
+end
+
+-- Per view kind, first match wins: meta (the short progress text) and
+-- status (the goal list's line). Item goals fall through to the plan.
+local DESCRIBERS = {
+  { "attunement", function(view)
+    local a = view.attunement
+    return a.complete and "Attuned" or string.format("%d of %d steps", a.done, a.total),
+      a.complete and "Attuned" or string.format("%d of %d steps%s", a.done, a.total, a.next and (" - next: " .. a.next.name) or "")
+  end },
+  { "skill", function(view)
+    local s = view.skill
+    return string.format("%s %d of %d", s.professionName or "", s.current, s.target),
+      s.reached and "Reached" or withStep(string.format("%d of %d", s.current, s.target), view)
+  end },
+  { "quest", function(view)
+    return view.quest.label or "", withStep(view.quest.label or "", view)
+  end },
+  { "reputation", function(view)
+    local p = view.reputation.progress
+    return view.reputation.record.standingLabel or "",
+      p.reached and (p.targetLabel .. " reached") or string.format("%s - %d to %s", view.reputation.record.standingLabel, p.remaining, p.targetLabel)
+  end },
+  { "enchant", function(view)
+    local e = view.enchant
+    local casts = string.format("%d of %d cast%s", e.casts, e.quantity, e.quantity == 1 and "" or "s")
+    return casts, e.remaining <= 0 and "All casts done" or withStep(casts, view)
+  end },
+  { "learn", function(view)
+    return LEARN_LABEL[view.learn.kind],
+      view.learn.learned and "Learned" or withStep(view.learn.recipe.professionName or "", view)
+  end },
+}
+
+-- Whether the view's next step says more than its missing materials: a
+-- goal that is not about materials, or a quest reward with only the reward
+-- left to get.
+local function stepFirst(view)
+  local plan = view.plan
+  if not plan then return false end
+  if (view.learn or view.skill or view.quest or view.reputation or view.enchant) and (plan.isComplete or #plan.materials == 0) then return true end
+  return view.questline ~= nil and view.nextStep ~= nil and not plan.isComplete and #plan.materials <= 1
+end
+
+-- One goal's summary for every surface that lists goals:
+-- { meta (short progress), status (the goal list's line), stepFirst (show
+-- view.nextStep rather than the missing materials) }, or nil without a view.
+function Overview.Describe(view)
+  if not view then return nil end
+  for _, d in ipairs(DESCRIBERS) do
+    if view[d[1]] then
+      local meta, status = d[2](view)
+      return { meta = meta, status = status, stepFirst = stepFirst(view) }
+    end
+  end
+  local plan = view.plan
+  if not plan then
+    return { meta = "", status = Readiness.Label(view.readiness) or "", stepFirst = false }
+  end
+  local meta
+  if plan.obtain then
+    meta = view.hint and view.hint.label or "Source unknown"
+  else
+    meta = string.format("%d of %d materials", view.progress.materialsHave, view.progress.materialsTotal)
+  end
+  local status
+  if view.questline and not plan.isComplete then
+    status = withStep("Quest reward", view)
+  else
+    status = plan.isComplete and "Ready to craft" or string.format("%d of %d materials missing - %s", plan.totals.materialsMissing, #plan.materials, view.recipe and view.recipe.professionName or "")
+  end
+  return { meta = meta, status = status, stepFirst = stepFirst(view) }
+end
+
 
 -- Percent complete (0..100) for a view, or nil when no plan exists.
 function Overview.Percent(view)

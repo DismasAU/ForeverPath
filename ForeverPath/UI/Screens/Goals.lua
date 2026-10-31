@@ -477,28 +477,10 @@ local function Create(parent)
         local quantity = GoalModel.ShownQuantity(goal)
         row.name:SetText(Theme.QualityText(ns.GoalService.Name(goal), item.quality) .. (quantity > 1 and (Theme.Hex.text2 .. " x" .. quantity .. "|r") or ""))
         row.badge:SetBadge(view and view.obtain and "Item" or GoalModel.Types[goal.type].badge, "text")
-        if view and view.attunement then
-          local a = view.attunement
-          row.sub:SetText(a.complete and "Attuned" or string.format("%d of %d steps%s", a.done, a.total, a.next and (" - next: " .. a.next.name) or ""))
-        elseif view and view.skill then
-          local s = view.skill
-          row.sub:SetText(s.reached and "Reached" or string.format("%d of %d - %s", s.current, s.target, view.nextStep or ""))
-        elseif view and view.quest then
-          row.sub:SetText((view.quest.label or "") .. (view.nextStep and (" - " .. view.nextStep) or ""))
-        elseif view and view.reputation then
-          local p = view.reputation.progress
-          row.sub:SetText(p.reached and (p.targetLabel .. " reached") or string.format("%s - %d to %s", view.reputation.record.standingLabel, p.remaining, p.targetLabel))
-        elseif view and view.enchant then
-          local e = view.enchant
-          row.sub:SetText(e.remaining <= 0 and "All casts done" or string.format("%d of %d cast%s - %s", e.casts, e.quantity, e.quantity == 1 and "" or "s", view.nextStep or ""))
-        elseif view and view.learn then
-          row.sub:SetText(view.learn.learned and "Learned" or ((view.learn.recipe.professionName or "") .. (view.nextStep and (" - " .. view.nextStep) or "")))
-        elseif view and view.questline and view.plan and not view.plan.isComplete then
-          row.sub:SetText("Quest reward" .. (view.nextStep and (" - " .. view.nextStep) or ""))
-        elseif view and view.plan then
-          row.sub:SetText(view.plan.isComplete and "Ready to craft" or string.format("%d of %d materials missing - %s", view.plan.totals.materialsMissing, #view.plan.materials, view.recipe and view.recipe.professionName or ""))
+        if view then
+          row.sub:SetText(ns.Overview.Describe(view).status)
         else
-          row.sub:SetText(view and (ns.Readiness.Label(view.readiness) or "") or (goal.status == GoalModel.Statuses.COMPLETED and ("Completed " .. Util.FormatAgo(goal.completedAt)) or ""))
+          row.sub:SetText(goal.status == GoalModel.Statuses.COMPLETED and ("Completed " .. Util.FormatAgo(goal.completedAt)) or "")
         end
         local percent = ns.Overview.Percent(view)
         row.percent:SetText(percent and (percent .. "%") or (goal.status == GoalModel.Statuses.COMPLETED and "100%" or "-"))

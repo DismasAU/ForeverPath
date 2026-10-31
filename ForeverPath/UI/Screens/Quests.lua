@@ -326,7 +326,7 @@ local function Create(parent)
       end
     end
     if state.ready then
-      s.callout.text:SetText("Ready to turn in" .. (entry and entry.turnin and (" - " .. entry.turnin) or ""))
+      s.callout.text:SetText("Ready to turn in" .. (detail.turnin and detail.turnin.label and (" - " .. detail.turnin.label) or ""))
       s.callout:Show()
     elseif state.completed then
       s.callout.text:SetText("Completed")
@@ -351,9 +351,7 @@ local function Create(parent)
     if rewardText and rewardText ~= "" then
       rewardText = rewardText:gsub("\n", " - ")
     elseif #rewards > 0 then
-      local names = {}
-      for _, reward in ipairs(rewards) do names[#names + 1] = reward.name or ns.ItemProvider.GetName(reward.itemID) end
-      rewardText = (entry.rewardChoice and "Choose: " or "") .. table.concat(names, ", ")
+      rewardText = (detail.rewardChoice and "Choose: " or "") .. QP.RewardText(rewards)
     else
       rewardText = Theme.ColorText("text3", "No reward data")
     end

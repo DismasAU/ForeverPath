@@ -20,6 +20,16 @@ DependencyResolver.MAX_DEPTH = 6
 DependencyResolver.Routes = ns.Util.StrictNames({ "craft", "buy", "vendor", "gather", "drop", "quest", "alt", "altcraft", "learn", "combine", "train" }, "route")
 DependencyResolver.Steps = ns.Util.StrictNames({ "train", "quest", "skill" }, "step kind")
 local Routes, Steps = DependencyResolver.Routes, DependencyResolver.Steps
+
+-- "Train - Georgio Bolero (Stormwind City)" for a train step, or the
+-- profession's trainer when none is recorded yet.
+function DependencyResolver.TrainLabel(step)
+  local trainer = step.trainer
+  if trainer and trainer.name then
+    return "Train - " .. trainer.name .. (trainer.zone and (" (" .. trainer.zone .. ")") or "")
+  end
+  return "Train - " .. (step.professionName or "profession") .. " trainer (not yet recorded)"
+end
 DependencyResolver.RouteLabels = { craft = "Craft", buy = "Buy", vendor = "Vendor", gather = "Gather", drop = "Drop", quest = "Quest", alt = "Alt", altcraft = "Alt crafts", learn = "Learn recipe", combine = "Combine", train = "Train" }
 -- Preferred default route when no learned recipe exists: certain and cheap
 -- first. "combine" is an item-use recipe anyone can do; "learn" is a catalogue

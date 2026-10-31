@@ -413,9 +413,8 @@ local function Create(parent)
       if itemID then
         local counts = ns.InventoryProvider.GetCounts(itemID)
         add("In bags", string.format("%d of %d", counts.bags or 0, step.count or 1))
-        for _, hint in ipairs(ns.SourceProvider.Sources(itemID)) do
-          -- The first source that is not a merchant (the AH and vendors show prices elsewhere).
-          if hint.kind ~= ns.DependencyResolver.Routes.VENDOR and hint.label then
+        for _, hint in ipairs(ns.SourceProvider.WhereFrom(itemID)) do
+          if hint.label then
             add("Source", hint.label .. (hint.detail and (" - " .. hint.detail) or ""))
             break
           end

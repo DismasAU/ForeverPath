@@ -448,6 +448,16 @@ function SourceProvider.MaterialTags(material)
   end
   return tags
 end
+-- Where an item comes from besides merchants (vendor prices show elsewhere):
+-- Sources(itemID) without the vendor hints.
+function SourceProvider.WhereFrom(itemID)
+  local out = {}
+  for _, hint in ipairs(SourceProvider.Sources(itemID)) do
+    if hint.kind ~= Routes.VENDOR then out[#out + 1] = hint end
+  end
+  return out
+end
+
 
 -- Human-readable state of the optional data addons, for /fp vendors.
 function SourceProvider.StatusInfo()

@@ -73,11 +73,7 @@ end
 
 local function stepVia(step)
   if step.kind == Steps.QUEST then return "Quest" end
-  local trainer = step.trainer
-  if trainer and trainer.name then
-    return "Train - " .. trainer.name .. (trainer.zone and (" (" .. trainer.zone .. ")") or "")
-  end
-  return "Train - " .. (step.professionName or "profession") .. " trainer"
+  return ns.DependencyResolver.TrainLabel(step)
 end
 
 local function viaText(node)

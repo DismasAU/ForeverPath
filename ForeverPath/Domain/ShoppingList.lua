@@ -80,14 +80,7 @@ local function categoryFor(node)
   return category
 end
 
--- "Train - Georgio Bolero (Stormwind City)" for a train step.
-local function stepLabel(step)
-  local trainer = step.trainer
-  if trainer and trainer.name then
-    return "Train - " .. trainer.name .. (trainer.zone and (" (" .. trainer.zone .. ")") or "")
-  end
-  return "Train - " .. (step.professionName or "profession") .. " trainer (not yet recorded)"
-end
+local stepLabel = ns.DependencyResolver.TrainLabel
 
 -- Affordability of one amount against the gold you carry and the account's.
 -- gold = { current = copper|nil, account = copper|nil }

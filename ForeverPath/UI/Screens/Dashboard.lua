@@ -11,8 +11,6 @@ ns.UI.Screens = ns.UI.Screens or {}
 local GOAL_ROW = 84
 local STEP_ROW = 56
 local MATERIAL_ROW = 31
--- How a learn goal's recipe is taught, by Planner.LearnKinds.
-local LEARN_LABEL = { plans = "Plans", trainer = "Trainer", combine = "Combine" }
 
 local function statCell(parent, label)
   local cell = CreateFrame("Frame", nil, parent)
@@ -352,28 +350,14 @@ local function Create(parent)
       row.bar:SetKind(percent == 100 and "ok" or "gold")
       row.bar:SetValue((percent or 0) / 100)
       if view and view.plan then
-        local questReward = view.questline and view.nextStep and #view.plan.materials <= 1
-        if ((view.learn or view.skill or view.quest or view.reputation) and #view.plan.materials == 0) or questReward then
+        local summary = ns.Overview.Describe(view)
+        if summary.stepFirst then
           row.detail:SetText(view.nextStep or view.message or "")
         else
           row.detail:SetText(ns.Overview.MissingSummary(view, ns.ItemProvider.GetName))
         end
         Widgets.SetTextColor(row.detail, view.plan.isComplete and C.ok or C.partial)
-        if view.skill then
-          row.meta:SetText(string.format("%d of %d", view.skill.current, view.skill.target))
-        elseif view.quest then
-          row.meta:SetText(view.quest.label or "")
-        elseif view.reputation then
-          row.meta:SetText(view.reputation.record.standingLabel or "")
-        elseif view.enchant then
-          row.meta:SetText(string.format("%d of %d cast%s", view.enchant.casts, view.enchant.quantity, view.enchant.quantity == 1 and "" or "s"))
-        elseif view.learn then
-          row.meta:SetText(LEARN_LABEL[view.learn.kind])
-        elseif view.plan.obtain then
-          row.meta:SetText(view.hint and view.hint.label or "Source unknown")
-        else
-          row.meta:SetText(string.format("%d of %d materials", view.progress.materialsHave, view.progress.materialsTotal))
-        end
+        row.meta:SetText(summary.meta)
       elseif view and view.attunement then
         local a = view.attunement
         row.detail:SetText(a.complete and "Attuned" or (a.next and ("Next: " .. ns.AttuneProvider.StepText(a.next)) or ""))

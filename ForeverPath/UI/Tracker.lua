@@ -285,19 +285,11 @@ function Tracker.Refresh()
       frame.more:SetHeight(1)
     end
     height = height + (frame.more:GetHeight() or 0) + 4
-    if view.skill then
-      frame.sub:SetText(string.format("%d%% - %s %d of %d", percent or 0, view.skill.professionName, view.skill.current, view.skill.target))
+    local summary = ns.Overview.Describe(view)
+    if view.skill or view.quest or view.reputation or view.enchant then
+      frame.sub:SetText(string.format("%d%% - %s", percent or 0, summary.meta))
     end
-    if view.quest then
-      frame.sub:SetText(string.format("%d%% - %s", percent or 0, view.quest.label or ""))
-    elseif view.reputation then
-      frame.sub:SetText(string.format("%d%% - %s", percent or 0, view.reputation.record.standingLabel or ""))
-    elseif view.enchant then
-      frame.sub:SetText(string.format("%d%% - %d of %d cast%s", percent or 0, view.enchant.casts, view.enchant.quantity, view.enchant.quantity == 1 and "" or "s"))
-    end
-    if view.nextStep and (view.learn or view.skill or view.quest or view.reputation or view.enchant) and (view.plan.isComplete or #view.plan.materials == 0) then
-      frame.nextText:SetText(view.nextStep)
-    elseif view.nextStep and view.questline and not view.plan.isComplete and #view.plan.materials <= 1 then
+    if summary.stepFirst and view.nextStep then
       frame.nextText:SetText(view.nextStep)
     elseif view.plan.isComplete and view.plan.obtain then
       frame.nextText:SetText(string.format("All %d x %s on hand", view.plan.quantityWanted or 0, ns.GoalService.Name(goal)))

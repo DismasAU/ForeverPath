@@ -299,6 +299,15 @@ function CharacterProvider.WhoKnows(spellID)
   return out
 end
 
+-- Whether a listed character (a CharacterProvider.List entry) knows a
+-- recipe: learnedHere (the live flag) for the current character, the
+-- snapshot for an alt.
+function CharacterProvider.Knows(entry, recipeID, learnedHere)
+  if entry.isCurrent then return learnedHere == true end
+  local known = entry.record.knownRecipes
+  return known ~= nil and known[recipeID] == true
+end
+
 -- Alts that have learned a recipe producing itemID.
 -- Returns { { record, name, recipe, professionName, skillLevel } }.
 function CharacterProvider.AltCrafters(itemID)
