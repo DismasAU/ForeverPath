@@ -452,7 +452,7 @@ local function Create(parent)
       if self.tab == "completed" then why = "No known quest is completed on this character yet."
       elseif self.tab == "goal" then why = "No known quest rewards something your goals are missing."
       elseif feedOnly:GetChecked() then why = "No known quest feeds a goal. Untick the filter to see every quest."
-      elseif not QP.HasJournal() and not QP.HasAttune() then why = "ForeverPath learns quests from ForeverDungeonJournal and Attune; without them only your quest log is listed."
+      elseif not ns.DungeonJournal.IsAvailable() and not ns.AttuneProvider.IsAvailable() then why = "ForeverPath learns quests from ForeverDungeonJournal and Attune; without them only your quest log is listed."
       else why = "Nothing in your log and no known quest for your faction." end
       self.listEmpty:Set("No quests here", why)
       self.listEmpty:Show()

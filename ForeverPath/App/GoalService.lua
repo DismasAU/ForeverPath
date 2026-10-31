@@ -439,7 +439,7 @@ function GoalService.AddReputationGoal(factionID, standing)
   end
   local record = RP.Get(factionID)
   if not record then
-    return nil, string.format("Faction %s is not in your reputation list.", tostring(factionID))
+    return nil, string.format("No faction with id %s is known.", tostring(factionID))
   end
   standing = Util.ParseInt(standing) or RP.NextStanding(record)
   if standing < 1 or standing > 8 then

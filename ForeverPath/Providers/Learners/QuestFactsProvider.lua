@@ -100,9 +100,11 @@ function QuestFactsProvider.Get(questID)
 end
 
 -- Where the catalogue says a quest item comes from, as source hints for
--- the resolver: { { kind = "drop", label, detail, questID, quest } }.
+-- the resolver: { { kind = Routes.DROP, label, detail, questID, quest } }.
+-- questName(questID) names the quest; the aggregator that asks passes it,
+-- so this learner never reaches up into QuestProvider.
 local hintIndex
-function QuestFactsProvider.ItemHints(itemID)
+function QuestFactsProvider.ItemHints(itemID, questName)
   itemID = tonumber(itemID)
   if not itemID then return {} end
   if not hintIndex then
@@ -130,13 +132,12 @@ function QuestFactsProvider.ItemHints(itemID)
   end
   local out = {}
   for _, entry in ipairs(hintIndex[itemID] or {}) do
-    local QP = ns.QuestProvider
-    local questName = QP and QP.Name and QP.Name(entry.questID) or ("Quest " .. tostring(entry.questID))
+    local name = questName and questName(entry.questID) or ("Quest " .. tostring(entry.questID))
     out[#out + 1] = {
-      kind = Routes.DROP, questItem = true, questID = entry.questID, quest = questName,
+      kind = Routes.DROP, questItem = true, questID = entry.questID, quest = name,
       label = "Drop: " .. entry.source,
       short = "Drop: " .. (entry.source:match("^([^,]+)") or entry.source),
-      detail = entry.source .. " - for " .. questName .. " (quest catalogue)",
+      detail = entry.source .. " - for " .. name .. " (quest catalogue)",
     }
   end
   return out

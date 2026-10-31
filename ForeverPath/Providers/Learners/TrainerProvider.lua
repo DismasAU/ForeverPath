@@ -208,7 +208,7 @@ function TrainerProvider.Requirement(spellID)
   end)
   if shared then return shared end
   local CDB = ns.ClassicDB
-  if CDB and CDB.IsAvailable() then
+  if CDB.IsAvailable() then
     local record = Log.Try(CDB.Trainer, spellID)
     if record then return record end
   end

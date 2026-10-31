@@ -146,6 +146,13 @@ function Util.MatchRank(name, needle)
   return 3
 end
 
+-- Whether a class mask (bit classID - 1 set per allowed class, 0 = every
+-- class) admits classID; a nil classID is admitted.
+function Util.ClassAllowed(mask, classID)
+  if not mask or mask == 0 or not classID then return true end
+  return math.floor(mask / 2 ^ (classID - 1)) % 2 == 1
+end
+
 -- Sorts type-ahead hits { rank, name, [idField] } best first (rank, then
 -- tieBreak(a, b) when given and it decides, then name, then id) and cuts
 -- the list to limit. Returns hits.

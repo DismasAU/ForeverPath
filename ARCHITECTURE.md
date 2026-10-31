@@ -40,14 +40,17 @@ ForeverPath/
     SourceProvider.lua       item sources in a fixed order (vendors, learned loot, journal, AtlasLoot, quests, GearQuest, reputation, classic data, class heuristics)
     PriceProvider.lua        pricing boundary: cheapest of registered sources, freshness, status
     QuestProvider.lua        quest log, objectives and completed flags plus the quest knowledge of the journal, Attune, Questie, classic data and the learners
+    ReputationProvider.lua   standings (C_Reputation or legacy), thresholds, reputation quests (QuestProvider, classic data) and AtlasLoot faction rewards
     Client/                  the client's own data
       ItemProvider.lua       item parsing, C_Item lookups, async loading, name cache/search
       InventoryProvider.lua  bag index, bank snapshot, counts (plus alts' totals), owned count
       ProfessionProvider.lua C_TradeSkillUI scanning, recipe cache, learned flags, /fp scan
       CharacterProvider.lua  account-wide character snapshots, alt stock / crafters / coverage
-      EquipmentProvider.lua  worn gear per slot, item stats, GearQuest Forever upgrade picks
-      ReputationProvider.lua standings (C_Reputation or legacy), thresholds, reputation quests and AtlasLoot faction rewards
-    Integrations/            other addons' data, read at runtime
+      EquipmentProvider.lua  worn gear per slot, item stats, upgrade picks per slot (through GearQuest.lua)
+    Integrations/            other addons' data, read at runtime; one adapter per addon, each with IsAvailable()
+      AtlasLoot.lua          AtlasLoot Classic: detection, on-demand module loads (always call back), loot table walks
+      DungeonJournal.lua     ForeverDungeonJournal: its namespace and item names
+      GearQuest.lua          GearQuest Forever: spec, upgrade entries, item facts, source hints
       AttuneProvider.lua     attunement chains from the Attune addon, progress from quest flags / log / level / bags / survey; questlines
       AuctionPriceProvider.lua Auctionator v1 API adapter (lowest buyout, age, 7-day mean, listings)
       QuestieBridge.lua      Questie's quest database read at runtime (QuestieLoader modules), ranked between Forever data and classic data
@@ -353,7 +356,7 @@ Skill-plan craft nodes (`forSkill`) and enchant roots have no `itemID`:
 they carry `name` / `icon`, `Summarize` lists crafts with `name` and
 `enchant`, and screens use `displayOf` / `labelOf` fallbacks.
 
-**Reputation planning.** `Providers/Client/ReputationProvider.lua` normalises
+**Reputation planning.** `Providers/ReputationProvider.lua` (an aggregator at the Providers root) normalises
 `C_Reputation.GetFactionDataByIndex` / `GetFactionDataByID` (or the legacy
 tuples) into `{ factionID, name, standing (1..8), standingLabel, value,
 min, max, into, span, percentWithin, header }` (`List()`, cached until

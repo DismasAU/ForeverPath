@@ -255,7 +255,7 @@ local function Create(parent)
     end
     for i = shown + 1, MAX_QUESTS do s.questRows[i]:Hide() end
     if shown == 0 then
-      s.questsEmpty:SetText(ns.QuestProvider.HasJournal() and "No known dungeon quest rewards this reputation." or "Quest reputation rewards come from ForeverDungeonJournal.")
+      s.questsEmpty:SetText(ns.DungeonJournal.IsAvailable() and "No known dungeon quest rewards this reputation." or "Quest reputation rewards come from ForeverDungeonJournal.")
       s.questsEmpty:Show()
     else
       s.questsEmpty:Hide()

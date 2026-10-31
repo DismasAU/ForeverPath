@@ -202,7 +202,8 @@ function ReputationProvider.Unmet(factionID)
   return record
 end
 
--- One faction by id: the by-id API first, else the list.
+-- One faction by id: the by-id API first, else the list, else the client's
+-- Faction table (an unmet record, flagged unmet).
 function ReputationProvider.Get(factionID)
   factionID = tonumber(factionID)
   if not factionID then return nil end
@@ -289,25 +290,22 @@ end
 function ReputationProvider.QuestRewards()
   if ReputationProvider.questRewards then return ReputationProvider.questRewards end
   local out = {}
-  local QP = ns.QuestProvider
-  if QP and QP.Index then
-    for _, entry in pairs(QP.Index()) do
-      local text = entry.rewardSummary or entry.rewardText or ""
-      for faction, amount in tostring(text):gmatch("([%a' ]+) %+(%d+)") do
-        faction = Util.Trim(faction)
-        if faction ~= "" then
-          local list = out[faction]
-          if not list then list = {} out[faction] = list end
-          list[#list + 1] = { questID = entry.id, amount = tonumber(amount), entry = entry }
-        end
+  for _, entry in pairs(ns.QuestProvider.Index()) do
+    local text = entry.rewardSummary or entry.rewardText or ""
+    for faction, amount in tostring(text):gmatch("([%a' ]+) %+(%d+)") do
+      faction = Util.Trim(faction)
+      if faction ~= "" then
+        local list = out[faction]
+        if not list then list = {} out[faction] = list end
+        list[#list + 1] = { questID = entry.id, amount = tonumber(amount), entry = entry }
       end
     end
-    for _, list in pairs(out) do
-      table.sort(list, function(a, b)
-        if a.amount ~= b.amount then return a.amount > b.amount end
-        return a.questID < b.questID
-      end)
-    end
+  end
+  for _, list in pairs(out) do
+    table.sort(list, function(a, b)
+      if a.amount ~= b.amount then return a.amount > b.amount end
+      return a.questID < b.questID
+    end)
   end
   ReputationProvider.questRewards = out
   return out
@@ -322,21 +320,18 @@ function ReputationProvider.QuestsFor(factionName, factionID)
   local function add(source)
     if seen[source.questID] or not source.entry then return end
     seen[source.questID] = true
-    local state = QP and QP.State(source.questID) or { completed = false, inLog = false }
+    local state = QP.State(source.questID)
     out[#out + 1] = { questID = source.questID, amount = source.amount, entry = source.entry, name = source.entry.name, state = state,
-      label = QP and QP.StateLabel(state, source.entry) or "?", classic = source.entry.classic or nil }
+      label = QP.StateLabel(state, source.entry), classic = source.entry.classic or nil }
   end
   for _, source in ipairs(list) do add(source) end
   local CDB = ns.ClassicDB
-  if factionID and CDB and CDB.IsAvailable() then
+  if factionID and CDB.IsAvailable() then
     for _, source in ipairs(CDB.ReputationQuests(factionID)) do add(source) end
   end
   return out
 end
 
-function ReputationProvider.HasAtlasLoot()
-  return ns.AtlasLoot.IsInstalled()
-end
 
 local function tierStanding(name, position, count)
   for standing = 8, 1, -1 do
@@ -380,7 +375,7 @@ end
 -- Loads the factions module once per session (on demand).
 function ReputationProvider.EnsureAtlas()
   local atlas = ReputationProvider.atlas
-  if atlas.state ~= "idle" or not ns.AtlasLoot.IsInstalled() then return atlas.state end
+  if atlas.state ~= "idle" or not ns.AtlasLoot.IsAvailable() then return atlas.state end
   atlas.state = "loading"
   ns.AtlasLoot.Load(ReputationProvider.MODULE, function(storage)
     if not storage then
@@ -405,7 +400,7 @@ end
 -- "failed" (the tables could not be read; see /fp errors).
 function ReputationProvider.RewardsState()
   local state = ReputationProvider.atlas.state
-  if state == "idle" and not ns.AtlasLoot.IsInstalled() then return "missing" end
+  if state == "idle" and not ns.AtlasLoot.IsAvailable() then return "missing" end
   return state
 end
 
@@ -450,7 +445,7 @@ function ReputationProvider.StatusLine()
   for _, entries in pairs(ReputationProvider.QuestRewards()) do quests = quests + #entries end
   return string.format("Reputations: %d faction%s listed, %d in the client's faction table; %d quest reward%s known; faction rewards %s.", #list, #list == 1 and "" or "s",
     ReputationProvider.CatalogueCount(), quests, quests == 1 and "" or "s",
-    ReputationProvider.HasAtlasLoot() and "from AtlasLoot" or "unavailable (AtlasLoot Factions not installed)")
+    ns.AtlasLoot.IsAvailable() and "from AtlasLoot" or "unavailable (AtlasLoot Factions not installed)")
 end
 
 -- Chat lines for one faction.

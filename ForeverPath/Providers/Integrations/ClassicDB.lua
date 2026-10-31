@@ -116,20 +116,26 @@ function ClassicDB.PlayerSide()
   return nil
 end
 
-local function hasClassBit(mask, classID)
-  if not mask or mask == 0 or not classID then return true end
-  return math.floor(mask / 2 ^ (classID - 1)) % 2 == 1
-end
-
--- Can this character take the quest (faction and class)?
-function ClassicDB.Eligible(questID, side, classID)
+-- Can this character take the quest (side flag and class)? nil side or
+-- classID means the player's.
+local function eligibleQuest(questID, side, classID)
   local row = data() and data().quests[questID]
   if not row then return false end
   side = side or ClassicDB.PlayerSide()
   classID = classID or select(2, Compat.PlayerClass())
   local questSide = row[QUEST.SIDE] or 0
   if questSide ~= 0 and side and questSide ~= side then return false end
-  return hasClassBit(row[QUEST.CLASS_MASK], classID)
+  return Util.ClassAllowed(row[QUEST.CLASS_MASK], classID)
+end
+
+-- The bridges' shared contract: can a character of this faction ("Alliance"
+-- or "Horde") and classID take the entry? nil faction or classID means the
+-- player's.
+function ClassicDB.Eligible(entry, faction, classID)
+  if not entry then return false end
+  faction = faction or Compat.PlayerFaction()
+  if entry.faction and entry.faction ~= "Both" and faction and entry.faction ~= faction then return false end
+  return Util.ClassAllowed(entry.classMask, classID or select(2, Compat.PlayerClass()))
 end
 
 ---------------------------------------------------------------------------
@@ -562,7 +568,7 @@ function ClassicDB.QuestsRewarding(itemID, side, classID)
   if not ClassicDB.rewardIndex then buildIndexes() end
   local out = {}
   for _, questID in ipairs(ClassicDB.rewardIndex[tonumber(itemID) or 0] or {}) do
-    if ClassicDB.Eligible(questID, side, classID) then out[#out + 1] = ClassicDB.Quest(questID) end
+    if eligibleQuest(questID, side, classID) then out[#out + 1] = ClassicDB.Quest(questID) end
   end
   return out
 end
@@ -574,7 +580,7 @@ function ClassicDB.ReputationQuests(factionID, side, classID)
   if not ClassicDB.reputationIndex then buildIndexes() end
   local out = {}
   for _, source in ipairs(ClassicDB.reputationIndex[tonumber(factionID) or 0] or {}) do
-    if ClassicDB.Eligible(source.questID, side, classID) then
+    if eligibleQuest(source.questID, side, classID) then
       out[#out + 1] = { questID = source.questID, amount = source.amount, entry = ClassicDB.Quest(source.questID) }
     end
   end
@@ -592,7 +598,7 @@ function ClassicDB.Search(text, limit, side, classID)
   local hits = {}
   for _, t in ipairs(ClassicDB.titleIndex) do
     local rank = Util.MatchRank(t.lower, needle)
-    if rank and ClassicDB.Eligible(t.questID, side, classID) then
+    if rank and eligibleQuest(t.questID, side, classID) then
       hits[#hits + 1] = { questID = t.questID, name = ClassicDB.Quest(t.questID).name, rank = rank }
     end
   end
@@ -618,7 +624,7 @@ function ClassicDB.ChainTo(questID, isCompleted, side, classID)
       end
       if not pick then
         for _, member in ipairs(group) do
-          if ClassicDB.Eligible(member, side, classID) then pick = member break end
+          if eligibleQuest(member, side, classID) then pick = member break end
         end
       end
       pick = pick or group[1]

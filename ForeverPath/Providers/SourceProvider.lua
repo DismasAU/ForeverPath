@@ -22,27 +22,9 @@ ns.SourceProvider = SourceProvider
 
 SourceProvider.MAX_ATLAS_ENTRIES = 3
 SourceProvider.MAX_JOURNAL_ENTRIES = 3
-SourceProvider.JOURNAL_GLOBAL = "ForeverDungeonJournal_NS"
-
 ---------------------------------------------------------------------------
--- ForeverDungeonJournal bridge
+-- ForeverDungeonJournal sources (read through ns.DungeonJournal)
 ---------------------------------------------------------------------------
--- The journal keeps its data in a global namespace:
---   DB[dungeonName] = { bosses = { { name, npcID, trash, loot = { { itemID, name, slot, quality, mobName } } } },
---                       quests = { { id, name, faction, rewardChoice, rewardItems = { { itemID, name, quality } } } } }
---   SHARED_BY_BOSS[dungeonName][bossName] = { { itemID, name, slot, quality } }
--- The journal's namespace, or nil when it is not installed. The one place
--- that names its global; QuestProvider reads the journal through it too.
-function SourceProvider.Journal()
-  local fdj = _G[SourceProvider.JOURNAL_GLOBAL]
-  if type(fdj) == "table" and type(fdj.DB) == "table" then return fdj end
-  return nil
-end
-
-function SourceProvider.HasDungeonJournal()
-  return SourceProvider.Journal() ~= nil
-end
-
 local function addJournalEntry(index, itemID, entry, cap)
   if type(itemID) ~= "number" or itemID <= 0 then return false end
   local list = index[itemID]
@@ -66,7 +48,7 @@ end
 
 -- Walks the journal's tables into journal.index[itemID] = { entries }.
 function SourceProvider.IndexDungeonJournal()
-  local fdj = SourceProvider.Journal()
+  local fdj = ns.DungeonJournal.Get()
   local index, added = {}, 0
   local cap = SourceProvider.MAX_JOURNAL_ENTRIES
   for dungeonName, dungeon in pairs(fdj.DB) do
@@ -117,40 +99,11 @@ function SourceProvider.IndexDungeonJournal()
   return added
 end
 
--- Every item name the journal carries (boss and trash loot, shared loot,
--- quest rewards), for name search; built once per session.
-function SourceProvider.JournalNames()
-  if SourceProvider.journalNames then return SourceProvider.journalNames end
-  local names = {}
-  local fdj = SourceProvider.Journal()
-  local function take(entry)
-    if type(entry) == "table" and tonumber(entry[1]) and type(entry[2]) == "string" and entry[2] ~= "" then
-      names[tonumber(entry[1])] = entry[2]
-    end
-  end
-  for dungeonName, dungeon in pairs(fdj and fdj.DB or {}) do
-    if type(dungeonName) == "string" and type(dungeon) == "table" then
-      for _, boss in ipairs(type(dungeon.bosses) == "table" and dungeon.bosses or {}) do
-        for _, entry in ipairs(type(boss) == "table" and type(boss.loot) == "table" and boss.loot or {}) do take(entry) end
-      end
-      local shared = type(fdj.SHARED_BY_BOSS) == "table" and fdj.SHARED_BY_BOSS[dungeonName] or nil
-      for _, list in pairs(type(shared) == "table" and shared or {}) do
-        for _, entry in ipairs(type(list) == "table" and list or {}) do take(entry) end
-      end
-      for _, quest in ipairs(type(dungeon.quests) == "table" and dungeon.quests or {}) do
-        for _, reward in ipairs(type(quest) == "table" and type(quest.rewardItems) == "table" and quest.rewardItems or {}) do take(reward) end
-      end
-    end
-  end
-  SourceProvider.journalNames = names
-  return names
-end
-
 -- Indexes the journal once per session, the first time a source is asked for.
 function SourceProvider.BuildJournalIndex()
   local journal = SourceProvider.journal
   if journal.state ~= "idle" then return journal.state end
-  if not SourceProvider.HasDungeonJournal() then return journal.state end
+  if not ns.DungeonJournal.IsAvailable() then return journal.state end
   local ok, added = Log.Capture(SourceProvider.IndexDungeonJournal)
   if ok then
     journal.state = "ready"
@@ -284,9 +237,6 @@ end
 ---------------------------------------------------------------------------
 -- AtlasLoot bridge
 ---------------------------------------------------------------------------
-function SourceProvider.HasAtlasLoot()
-  return ns.AtlasLoot.IsInstalled()
-end
 
 -- One drop entry for itemID, at most MAX_ATLAS_ENTRIES per item, no
 -- duplicate boss in the same instance. Returns whether it was added.
@@ -324,7 +274,7 @@ end
 -- be missing; it stays "loading" only while AtlasLoot is still loading one.
 function SourceProvider.BuildAtlasIndex()
   local atlas = SourceProvider.atlas
-  if atlas.state ~= "idle" or not ns.AtlasLoot.IsInstalled() then
+  if atlas.state ~= "idle" or not ns.AtlasLoot.IsAvailable() then
     return atlas.state
   end
   atlas.state = "loading"
@@ -409,10 +359,10 @@ function SourceProvider.Sources(itemID)
   end
   for _, hint in ipairs(quests) do out[#out + 1] = hint end
   -- The quest catalogue says where the items a curated quest asks for drop.
-  for _, hint in ipairs(Log.Try(ns.QuestFactsProvider.ItemHints, itemID) or {}) do out[#out + 1] = hint end
+  for _, hint in ipairs(Log.Try(ns.QuestFactsProvider.ItemHints, itemID, ns.QuestProvider.Name) or {}) do out[#out + 1] = hint end
   -- GearQuest Forever knows where leveling gear comes from (vendor and npc,
   -- quest and zone, boss or world drop); it fills in what nothing above did.
-  for _, hint in ipairs(Log.Try(ns.EquipmentProvider.ItemHints, itemID) or {}) do
+  for _, hint in ipairs(Log.Try(ns.GearQuest.ItemHints, itemID) or {}) do
     local duplicate = false
     for _, existing in ipairs(out) do
       if existing.kind == hint.kind and (existing.kind == Routes.VENDOR and existing.name == hint.name or existing.kind == Routes.QUEST and existing.quest == hint.quest) then duplicate = true end
@@ -425,7 +375,7 @@ function SourceProvider.Sources(itemID)
   -- Classic-era sources behind the Forever ones.
   local classicSkills = {}
   local CDB = ns.ClassicDB
-  if CDB and CDB.IsAvailable() then
+  if CDB.IsAvailable() then
     local names = {}
     local recordedVendor = false
     for _, existing in ipairs(out) do
@@ -448,7 +398,7 @@ function SourceProvider.Sources(itemID)
     if hint and not (hint.skill and classicSkills[hint.skill]) then out[#out + 1] = hint end
   end
   -- Nothing at all, and the item is Forever's own: say why.
-  if #out == 0 and CDB and CDB.IsAvailable() and CDB.IsNewInForever(itemID) then
+  if #out == 0 and CDB.IsAvailable() and CDB.IsNewInForever(itemID) then
     out[#out + 1] = { kind = Routes.DROP, unavailable = true, newInForever = true, label = "New in Forever", short = "New in Forever",
       detail = "not in the classic data; loot it once (or open a merchant that sells it) and ForeverPath remembers where it came from" }
   end
@@ -509,8 +459,8 @@ end
 -- Human-readable state of the optional data addons, for /fp vendors.
 function SourceProvider.StatusInfo()
   local status = {}
-  status.atlasloot = SourceProvider.HasAtlasLoot() and ("installed, index " .. SourceProvider.atlas.state) or "not installed"
-  if SourceProvider.HasDungeonJournal() then
+  status.atlasloot = ns.AtlasLoot.IsAvailable() and ("installed, index " .. SourceProvider.atlas.state) or "not installed"
+  if ns.DungeonJournal.IsAvailable() then
     local state = SourceProvider.BuildJournalIndex()
     status.journal = state == "ready" and string.format("installed, %d items indexed", SourceProvider.journal.items) or ("installed, index " .. state)
   else
@@ -525,5 +475,5 @@ function SourceProvider.StatusLine()
 end
 
 function SourceProvider.Init()
-  ns.ItemProvider.RegisterNameSource(SourceProvider.JournalNames)
+  ns.ItemProvider.RegisterNameSource(ns.DungeonJournal.ItemNames)
 end

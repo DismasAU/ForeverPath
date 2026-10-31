@@ -80,6 +80,13 @@ describe("Questie bridge", function()
     assert_true(QP.Eligible(entry))
     local rewarding = QP.QuestsRewarding(RAGE)
     assert_eq(rewarding[1].id, TEMPEST)
+    -- Both bridges answer the same contract: faction, then class, nil meaning the player's.
+    local tempest = ns.QuestieBridge.Quest(TEMPEST)
+    assert_false(ns.QuestieBridge.Eligible(tempest, "Alliance", 7))
+    assert_false(ns.QuestieBridge.Eligible(tempest, "Horde", 1))
+    assert_true(ns.QuestieBridge.Eligible(tempest))
+    assert_eq(#ns.QuestieBridge.QuestsRewarding(RAGE, "Alliance"), 0, "QuestsRewarding filters like ClassicDB's")
+    assert_eq(ns.QuestieBridge.QuestsRewarding(RAGE)[1].id, TEMPEST)
     -- The chain: Call of Air -> Elemental Aid -> The Tempest's Weapons (preQuestGroup).
     local line = QP.Questline(TEMPEST)
     assert_not_nil(line)

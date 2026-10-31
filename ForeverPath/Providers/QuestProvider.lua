@@ -50,18 +50,10 @@ function QuestProvider.IsAvailable()
   return Compat.IsQuestFlaggedCompleted ~= nil and Compat.IsOnQuest ~= nil
 end
 
--- Both addons are read through their own adapters (SourceProvider for the
--- journal, AttuneProvider for Attune), so each is detected in one place.
+-- Both addons are read through their own adapters (ns.DungeonJournal and
+-- ns.AttuneProvider), so each is detected in one place.
 local function journal()
-  return ns.SourceProvider.Journal()
-end
-
-function QuestProvider.HasJournal()
-  return journal() ~= nil
-end
-
-function QuestProvider.HasAttune()
-  return ns.AttuneProvider.IsAvailable()
+  return ns.DungeonJournal.Get()
 end
 
 local function rewardsFromJournal(quest)
@@ -173,16 +165,11 @@ function QuestProvider.Get(questID)
   questID = tonumber(questID) or 0
   local entry = QuestProvider.Index()[questID]
   if entry then return entry end
-  local QB = ns.QuestieBridge
-  entry = QB and QB.IsAvailable() and QB.Quest(questID) or nil
-  if entry then return entry end
-  local CDB = ns.ClassicDB
-  return CDB and CDB.Quest(questID) or nil
+  return ns.QuestieBridge.Quest(questID) or ns.ClassicDB.Quest(questID)
 end
 
 function QuestProvider.Classic(questID)
-  local CDB = ns.ClassicDB
-  return CDB and CDB.Quest(tonumber(questID) or 0) or nil
+  return ns.ClassicDB.Quest(tonumber(questID) or 0)
 end
 
 -- Can this character take the quest? Curated entries check their faction;
@@ -190,13 +177,9 @@ end
 function QuestProvider.Eligible(entry)
   if not entry then return false end
   local faction = QuestProvider.Faction()
-  if entry.faction and entry.faction ~= "Both" and faction and entry.faction ~= faction then return false end
-  if entry.classic then return ns.ClassicDB.Eligible(entry.id) end
-  if entry.questie then
-    local _, classID = Compat.PlayerClass()
-    return ns.QuestieBridge.Eligible(entry, classID)
-  end
-  return true
+  if entry.classic then return ns.ClassicDB.Eligible(entry, faction) end
+  if entry.questie then return ns.QuestieBridge.Eligible(entry, faction) end
+  return not (entry.faction and entry.faction ~= "Both" and faction and entry.faction ~= faction)
 end
 
 -- The player's faction and level, through the provider so the Planner can
@@ -416,20 +399,14 @@ function QuestProvider.QuestsRewarding(itemID)
   end
   table.sort(out, function(a, b) return a.id < b.id end)
   -- Questie's, then classic quests (this character's faction and class) after the curated ones.
-  local QB = ns.QuestieBridge
-  if QB and QB.IsAvailable() then
-    for _, entry in ipairs(QB.QuestsRewarding(itemID)) do
-      if not seen[entry.id] and QuestProvider.Eligible(entry) then
-        out[#out + 1] = entry
-        seen[entry.id] = true
-      end
+  for _, entry in ipairs(ns.QuestieBridge.QuestsRewarding(itemID, QuestProvider.Faction())) do
+    if not seen[entry.id] then
+      out[#out + 1] = entry
+      seen[entry.id] = true
     end
   end
-  local CDB = ns.ClassicDB
-  if CDB and CDB.IsAvailable() then
-    for _, entry in ipairs(CDB.QuestsRewarding(itemID)) do
-      if not seen[entry.id] then out[#out + 1] = entry end
-    end
+  for _, entry in ipairs(ns.ClassicDB.QuestsRewarding(itemID)) do
+    if not seen[entry.id] then out[#out + 1] = entry end
   end
   return out
 end
@@ -456,12 +433,10 @@ function QuestProvider.Search(text, limit)
     consider(log.questID, log.title, log.zone or "Quest log")
   end
   local CDB = ns.ClassicDB
-  if CDB and CDB.IsAvailable() then
-    for _, hit in ipairs(CDB.Search(text)) do
-      if not seen[hit.questID] then
-        local entry = CDB.Quest(hit.questID)
-        consider(hit.questID, hit.name, (entry.location or "Classic") .. (entry.level and (" - level " .. entry.level) or ""))
-      end
+  for _, hit in ipairs(CDB.Search(text)) do
+    if not seen[hit.questID] then
+      local entry = CDB.Quest(hit.questID)
+      consider(hit.questID, hit.name, (entry.location or "Classic") .. (entry.level and (" - level " .. entry.level) or ""))
     end
   end
   return Util.SortRankedHits(hits, "questID", limit)
@@ -520,16 +495,15 @@ function QuestProvider.StatusLine()
     return "Quests: the quest API (C_QuestLog) is unavailable on this client."
   end
   local sources = {}
-  if QuestProvider.HasJournal() then sources[#sources + 1] = "ForeverDungeonJournal" end
-  if QuestProvider.HasAttune() then sources[#sources + 1] = "Attune" end
+  if ns.DungeonJournal.IsAvailable() then sources[#sources + 1] = "ForeverDungeonJournal" end
+  if ns.AttuneProvider.IsAvailable() then sources[#sources + 1] = "Attune" end
   if ns.QuestieBridge.IsAvailable() then sources[#sources + 1] = "Questie" end
   local numQuests, max = QuestProvider.LogCapacity()
   local QF = ns.QuestFactsProvider
-  local CDB = ns.ClassicDB
-  local classic = CDB and CDB.IsAvailable() and select(1, CDB.Counts()) or 0
+  local classic = ns.ClassicDB.Counts()
   return string.format("Quests: %d known from %s%s; quest log %d / %d; givers and items recorded for %d quests.", QuestProvider.Count(),
     #sources > 0 and table.concat(sources, " and ") or "no data addon", classic > 0 and string.format(", plus %d classic quests", classic) or "",
-    numQuests, max, QF and (QF.Count() + QF.ShippedCount()) or 0)
+    numQuests, max, QF.Count() + QF.ShippedCount())
 end
 
 ---------------------------------------------------------------------------
@@ -655,8 +629,7 @@ function QuestProvider.Questline(questID)
 end
 
 function QuestProvider.Facts(questID)
-  local QF = ns.QuestFactsProvider
-  return QF and QF.Get(questID) or nil
+  return ns.QuestFactsProvider.Get(questID)
 end
 
 -- Map coordinates arrive as 0-1 fractions (journal, learned) or percent (Attune).
@@ -683,9 +656,7 @@ function QuestProvider.Giver(questID)
     local name = s.target or (s.label and (s.label:match("^([^%-]+)") or s.label):gsub("%s+$", "")) or entry.pickup
     return { name = name, mapID = s.mapID, x = fraction(s.x), y = fraction(s.y), zone = entry.location, label = s.label or name }
   end
-  local QB = ns.QuestieBridge
-  local CDB = ns.ClassicDB
-  local classic = (QB and QB.IsAvailable() and QB.Giver(questID)) or (CDB and CDB.IsAvailable() and CDB.Giver(questID)) or nil
+  local classic = ns.QuestieBridge.Giver(questID) or ns.ClassicDB.Giver(questID)
   if entry and entry.pickup and not entry.classic and not entry.questie then
     local name = entry.pickup:match("^([^,]+)") or entry.pickup
     -- The journal names the giver; the classic spawn gives the position when it is the same NPC.
@@ -702,9 +673,7 @@ function QuestProvider.Turnin(questID)
   local facts = QuestProvider.Facts(questID)
   if facts and facts.turnin and facts.turnin.name then return placeOf(facts.turnin) end
   local entry = QuestProvider.Get(questID)
-  local QB = ns.QuestieBridge
-  local CDB = ns.ClassicDB
-  local classic = (QB and QB.IsAvailable() and QB.Turnin(questID)) or (CDB and CDB.IsAvailable() and CDB.Turnin(questID)) or nil
+  local classic = ns.QuestieBridge.Turnin(questID) or ns.ClassicDB.Turnin(questID)
   if entry and entry.turnin and not entry.classic and not entry.questie then
     local name = entry.turnin:match("^([^,]+)") or entry.turnin
     if classic and classic.mapID and string.lower(classic.name or "") == string.lower(name) then
@@ -727,7 +696,7 @@ end
 function QuestProvider.RequiredItems(questID)
   local QF = ns.QuestFactsProvider
   local state = QuestProvider.State(questID)
-  if state.inLog and QF then
+  if state.inLog then
     local live = QF.LiveItems(questID)
     if #live > 0 then return live end
   end
@@ -737,13 +706,11 @@ function QuestProvider.RequiredItems(questID)
     out[#out + 1] = { name = item.name, count = item.count or 1, have = owned(item.itemID), itemID = item.itemID, source = item.source }
   end
   if #out == 0 and not (facts and facts.items and #facts.items == 0 and facts.learned) then
-    local CDB = ns.ClassicDB
-    local classicItems = CDB and CDB.IsAvailable() and CDB.RequiredItems(questID) or {}
+    local classicItems = ns.ClassicDB.RequiredItems(questID)
     local counts = {}
     for _, item in ipairs(classicItems) do counts[item.itemID] = item.count end
     -- Questie names the items (it carries no counts; classic-db's count is used when it has one).
-    local QB = ns.QuestieBridge
-    local questie = QB and QB.IsAvailable() and QB.Quest(questID) or nil
+    local questie = ns.QuestieBridge.Quest(questID)
     if questie and #questie.items > 0 then
       for _, item in ipairs(questie.items) do
         out[#out + 1] = { count = counts[item.itemID] or item.count or 1, have = owned(item.itemID), itemID = item.itemID, questie = true }

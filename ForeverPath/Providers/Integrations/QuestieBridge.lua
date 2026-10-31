@@ -20,6 +20,7 @@ local _, ns = ...
 
 local Log = ns.Log
 local Util = ns.Util
+local Compat = ns.Compat
 
 local QuestieBridge = { entries = {} }
 ns.QuestieBridge = QuestieBridge
@@ -99,8 +100,7 @@ local function place(thing)
       end
       if uiMapID then
         result.mapID, result.x, result.y = uiMapID, first[1] / 100, first[2] / 100
-        local CDB = ns.ClassicDB
-        result.zone = (CDB and CDB.ZoneName(uiMapID)) or result.zone
+        result.zone = ns.ClassicDB.ZoneName(uiMapID) or result.zone
         if not result.zone and type(C_Map) == "table" and type(C_Map.GetMapInfo) == "function" then
           local info = Util.SafeCall(C_Map.GetMapInfo, uiMapID)
           result.zone = type(info) == "table" and info.name or nil
@@ -182,24 +182,26 @@ function QuestieBridge.Turnin(questID)
   return entry and QuestieBridge.PlaceOf(entry.enderNpcs, entry.enderObjects) or nil
 end
 
--- Quests Questie says reward itemID (entries).
-function QuestieBridge.QuestsRewarding(itemID)
+-- The bridges' shared contract (as ClassicDB.Eligible): can a character of
+-- this faction and classID take the entry? nil means the player's.
+function QuestieBridge.Eligible(entry, faction, classID)
+  if not entry then return false end
+  faction = faction or Compat.PlayerFaction()
+  if entry.faction and entry.faction ~= "Both" and faction and entry.faction ~= faction then return false end
+  return Util.ClassAllowed(entry.classMask, classID or select(2, Compat.PlayerClass()))
+end
+
+-- Quests Questie says reward itemID that a character of this faction and
+-- class can take (entries), like ClassicDB.QuestsRewarding.
+function QuestieBridge.QuestsRewarding(itemID, faction, classID)
   local q = db()
   local item = q and callQuestie(q, "GetItem", tonumber(itemID))
   local out = {}
   for _, questID in ipairs(item and list(item.questRewards) or {}) do
     local entry = QuestieBridge.Quest(questID)
-    if entry then out[#out + 1] = entry end
+    if entry and QuestieBridge.Eligible(entry, faction, classID) then out[#out + 1] = entry end
   end
   return out
-end
-
--- Questie's own class check (1 << (classID - 1) in requiredClasses).
-function QuestieBridge.Eligible(entry, classID)
-  if not entry then return false end
-  local mask = entry.classMask or 0
-  if mask == 0 or not classID then return true end
-  return math.floor(mask / 2 ^ (classID - 1)) % 2 == 1
 end
 
 function QuestieBridge.StatusLine()

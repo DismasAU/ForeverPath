@@ -16,14 +16,14 @@ local Util = ns.Util
 local AtlasLoot = {}
 ns.AtlasLoot = AtlasLoot
 
-function AtlasLoot.IsInstalled()
+function AtlasLoot.IsAvailable()
   local atlas = _G.AtlasLoot
   return type(atlas) == "table" and type(atlas.ItemDB) == "table" and type(atlas.ItemDB.Storage) == "table"
 end
 
 -- The loaded data of a module, or nil.
 function AtlasLoot.Storage(moduleName)
-  if not AtlasLoot.IsInstalled() then return nil end
+  if not AtlasLoot.IsAvailable() then return nil end
   local storage = _G.AtlasLoot.ItemDB.Storage[moduleName]
   return type(storage) == "table" and storage or nil
 end
@@ -35,7 +35,7 @@ end
 -- (onDone ran with nil).
 function AtlasLoot.Load(moduleName, onDone)
   local storage = AtlasLoot.Storage(moduleName)
-  if storage or not AtlasLoot.IsInstalled() then
+  if storage or not AtlasLoot.IsAvailable() then
     onDone(storage)
     return storage and "ready" or "missing"
   end

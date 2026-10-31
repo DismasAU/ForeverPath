@@ -46,6 +46,8 @@ Providers\Client\CharacterProvider.lua
 Providers\Learners\VendorProvider.lua
 Providers\Learners\TrainerProvider.lua
 Providers\Integrations\AtlasLoot.lua
+Providers\Integrations\DungeonJournal.lua
+Providers\Integrations\GearQuest.lua
 Providers\SourceProvider.lua
 Providers\Integrations\AttuneProvider.lua
 Providers\Integrations\ClassicDB.lua
@@ -54,7 +56,7 @@ Providers\Integrations\QuestieBridge.lua
 Providers\Learners\QuestFactsProvider.lua
 Providers\QuestProvider.lua
 Providers\Client\EquipmentProvider.lua
-Providers\Client\ReputationProvider.lua
+Providers\ReputationProvider.lua
 Providers\PriceProvider.lua
 Providers\Integrations\AuctionPriceProvider.lua
 App\PlannerDeps.lua

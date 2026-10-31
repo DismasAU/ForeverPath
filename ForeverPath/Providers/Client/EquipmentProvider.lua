@@ -1,15 +1,6 @@
 -- Equipment: what is worn in every slot, the item stats and levels the client
 -- reports, and the upgrade hunts GearQuest Forever ships for the player's
--- class, spec, faction and level band.
---
--- GearQuest Forever (_G.GearQuest) expands its generated per-class tables into
--- GQ.Data.entries: { itemId, slot ("Head", "Back", "MainHand", "SecondaryHand",
--- "Ranged", "Finger", "Trinket", ...), minLevel, maxLevel, curatedRank (1 =
--- best), pipelineScore, classes = { WARRIOR = true }, specs = { arms = true }
--- | nil, factions = { Alliance = true } | nil, sourceType, instructions, zone,
--- npc, questName, profession, reqRep }. The per-class item facts (name,
--- quality, ilvl, reqLevel) sit in GQ.Data.<class>ItemFacts tables. Both are
--- read as data; the class file is loaded through GQ.Data:EnsureClassLoaded.
+-- class, spec, faction and level band (read through ns.GearQuest).
 local _, ns = ...
 
 local Compat = ns.Compat
@@ -18,7 +9,7 @@ local Log = ns.Log
 local Events = ns.Events
 local Routes = ns.DependencyResolver.Routes
 
-local EquipmentProvider = { factsCache = {} }
+local EquipmentProvider = {}
 ns.EquipmentProvider = EquipmentProvider
 
 EquipmentProvider.LEVEL_GRACE = 5
@@ -73,11 +64,6 @@ local MOD_TO_KEY = {}
 for _, stat in ipairs(EquipmentProvider.STATS) do if stat.mod then MOD_TO_KEY[stat.mod] = stat.key end end
 -- GearQuest's scoredStats keys already match the short keys above.
 
-EquipmentProvider.SourceLabels = {
-  vendor = "Vendor", quest_reward = "Quest", boss_drop = "Dungeon drop", raid_trash = "Raid trash", world_drop = "World drop",
-  rare_npc = "Rare mob", profession = "Crafted", container = "Container", object_drop = "Object", fishing = "Fishing",
-  mail = "Mail", special = "Special", unsourced = "Unknown source",
-}
 -- Source filter groups for the screen.
 EquipmentProvider.SourceGroups = {
   { key = "any", label = "Any" },
@@ -94,29 +80,6 @@ function EquipmentProvider.IsAvailable()
   return type(_G.GetInventoryItemID) == "function"
 end
 
-local function gearQuest()
-  local gq = _G.GearQuest
-  if type(gq) == "table" and type(gq.Data) == "table" then return gq end
-  return nil
-end
-
-function EquipmentProvider.HasGearQuest()
-  return gearQuest() ~= nil
-end
-
--- GearQuest's idea of the player's spec (talents, or the player's pick), and its label.
-function EquipmentProvider.Spec()
-  local gq = gearQuest()
-  if not gq or type(gq.Spec) ~= "table" then return nil end
-  local classFile = Compat.PlayerClass()
-  local spec = Util.SafeCall(gq.Spec.GetDisplaySpec, gq.Spec, classFile)
-  if type(spec) ~= "string" then return nil end
-  local label = spec
-  local text = Util.SafeCall(gq.Spec.GetSpecLabel, gq.Spec, spec, classFile)
-  if type(text) == "string" then label = text end
-  return spec, label
-end
-
 ---------------------------------------------------------------------------
 -- Items
 ---------------------------------------------------------------------------
@@ -131,7 +94,7 @@ function EquipmentProvider.ItemLevel(linkOrID)
     if tonumber(ilvl) and ilvl > 0 then return ilvl end
   end
   local itemID = type(linkOrID) == "number" and linkOrID or tonumber(tostring(linkOrID):match("item:(%d+)"))
-  local facts = itemID and EquipmentProvider.Facts(itemID)
+  local facts = itemID and ns.GearQuest.Facts(itemID)
   return facts and tonumber(facts.ilvl) or nil
 end
 
@@ -148,9 +111,7 @@ function EquipmentProvider.Stats(linkOrID)
   end
   if next(out) == nil then
     local itemID = type(linkOrID) == "number" and linkOrID or tonumber(tostring(linkOrID):match("item:(%d+)"))
-    local gq = gearQuest()
-    local scored = gq and type(gq.Data.scoredStats) == "table" and itemID and gq.Data.scoredStats[itemID] or nil
-    for key, value in pairs(type(scored) == "table" and scored or {}) do
+    for key, value in pairs(ns.GearQuest.ScoredStats(itemID) or {}) do
       if tonumber(value) then out[key] = tonumber(value) end
     end
   end
@@ -208,50 +169,6 @@ end
 ---------------------------------------------------------------------------
 -- GearQuest hunts
 ---------------------------------------------------------------------------
--- GearQuest's item facts for an item (name, quality, ilvl, reqLevel, sourceType...).
-function EquipmentProvider.Facts(itemID)
-  local cached = EquipmentProvider.factsCache[itemID]
-  if cached ~= nil then return cached or nil end
-  local gq = gearQuest()
-  local found = false
-  if gq then
-    for key, tbl in pairs(gq.Data) do
-      if type(key) == "string" and type(tbl) == "table" and key:find("Facts") then
-        local row = tbl[itemID]
-        if type(row) == "table" and row.sourceType then
-          found = row
-          break
-        end
-      end
-    end
-  end
-  EquipmentProvider.factsCache[itemID] = found
-  return found or nil
-end
-
--- Every item name in GearQuest's loaded facts tables, for name search.
-function EquipmentProvider.ItemNames()
-  local names = {}
-  local gq = gearQuest()
-  if not gq or type(gq.Data) ~= "table" then return names end
-  for key, tbl in pairs(gq.Data) do
-    if type(key) == "string" and type(tbl) == "table" and key:find("Facts") then
-      for itemID, row in pairs(tbl) do
-        if tonumber(itemID) and type(row) == "table" and type(row.name) == "string" and row.name ~= "" then
-          names[tonumber(itemID)] = row.name
-        end
-      end
-    end
-  end
-  return names
-end
-
-local function ensureClass(gq, classFile)
-  if not classFile or type(gq.Data.EnsureClassLoaded) ~= "function" then return type(gq.Data.entries) == "table" end
-  if Util.SafeCall(gq.Data.EnsureClassLoaded, gq.Data, classFile) then EquipmentProvider.factsCache = {} end
-  return type(gq.Data.entries) == "table"
-end
-
 local function entryMatches(entry, classFile, spec, faction, level)
   if type(entry) ~= "table" or not entry.itemId then return false end
   if entry.classes and classFile and not entry.classes[classFile] then return false end
@@ -267,18 +184,18 @@ end
 -- opts.source = a SourceGroups key ("any" default), opts.limit.
 function EquipmentProvider.Candidates(slotKey, opts)
   opts = opts or {}
+  local GQ = ns.GearQuest
   local slot = EquipmentProvider.SlotByKey[slotKey]
-  local gq = gearQuest()
-  if not slot or not gq then return {} end
   local classFile = Compat.PlayerClass()
-  if not ensureClass(gq, classFile) then return {} end
-  local spec = EquipmentProvider.Spec()
+  local entries = slot and GQ.Entries(classFile)
+  if not entries then return {} end
+  local spec = GQ.Spec()
   local faction = Compat.PlayerFaction()
   local level = Compat.PlayerLevel()
   local group
   for _, g in ipairs(EquipmentProvider.SourceGroups) do if g.key == (opts.source or "any") then group = g end end
   local best = {}
-  for _, entry in ipairs(gq.Data.entries) do
+  for _, entry in ipairs(entries) do
     if entry.slot == slot.gq and entryMatches(entry, classFile, spec, faction, level) and (not group or not group.types or group.types[entry.sourceType]) then
       local current = best[entry.itemId]
       local rank = tonumber(entry.curatedRank) or 99
@@ -289,7 +206,7 @@ function EquipmentProvider.Candidates(slotKey, opts)
   end
   local out = {}
   for _, candidate in pairs(best) do
-    local facts = EquipmentProvider.Facts(candidate.itemID)
+    local facts = GQ.Facts(candidate.itemID)
     local info = ns.ItemProvider.GetItem(candidate.itemID) or {}
     local entry = candidate.entry
     candidate.name = info.name or (facts and facts.name) or ("Item " .. candidate.itemID)
@@ -298,7 +215,7 @@ function EquipmentProvider.Candidates(slotKey, opts)
     candidate.ilvl = EquipmentProvider.ItemLevel(info.link or candidate.itemID) or (facts and tonumber(facts.ilvl)) or entry.minLevel
     candidate.reqLevel = facts and tonumber(facts.reqLevel) or nil
     candidate.sourceType = entry.sourceType or (facts and facts.sourceType) or "unsourced"
-    candidate.sourceLabel = EquipmentProvider.SourceLabels[candidate.sourceType] or candidate.sourceType
+    candidate.sourceLabel = GQ.SourceLabels[candidate.sourceType] or candidate.sourceType
     candidate.instructions = entry.instructions or (facts and facts.instructions)
     candidate.zone, candidate.npc, candidate.questName, candidate.profession, candidate.reqRep = entry.zone, entry.npc, entry.questName, entry.profession, entry.reqRep
     out[#out + 1] = candidate
@@ -315,26 +232,6 @@ function EquipmentProvider.Candidates(slotKey, opts)
   return out
 end
 
--- Source hints for the resolver from GearQuest's facts: where a piece of
--- gear comes from (vendor and npc, quest and zone, boss or world drop).
-function EquipmentProvider.ItemHints(itemID)
-  local facts = EquipmentProvider.Facts(itemID)
-  if not facts then return {} end
-  local kind
-  local t = facts.sourceType
-  if t == "vendor" then kind = Routes.VENDOR
-  elseif t == "quest_reward" then kind = Routes.QUEST
-  elseif t == "boss_drop" or t == "raid_trash" or t == "rare_npc" or t == "world_drop" then kind = Routes.DROP
-  elseif t == "container" or t == "object_drop" or t == "fishing" then kind = Routes.GATHER
-  else return {} end
-  local label = EquipmentProvider.SourceLabels[t] or t
-  if kind == Routes.VENDOR and facts.npc then label = "Vendor: " .. facts.npc end
-  if kind == Routes.QUEST and facts.questName then label = "Quest reward: " .. facts.questName end
-  local detail = facts.instructions
-  if facts.zone and not (detail and detail:find(facts.zone, 1, true)) then detail = (detail and (detail .. " ") or "") .. "(" .. facts.zone .. ")" end
-  return { { kind = kind, label = label, detail = detail, name = facts.npc, zone = facts.zone, quest = facts.questName, source = "GearQuest", gearQuest = true } }
-end
-
 ---------------------------------------------------------------------------
 -- The whole picture
 ---------------------------------------------------------------------------
@@ -345,8 +242,8 @@ end
 function EquipmentProvider.Analyze(opts)
   opts = opts or {}
   local byKey, list = EquipmentProvider.Equipped()
-  local hasGQ = EquipmentProvider.HasGearQuest()
-  local spec, specLabel = EquipmentProvider.Spec()
+  local hasGQ = ns.GearQuest.IsAvailable()
+  local spec, specLabel = ns.GearQuest.Spec()
   local result = { slots = {}, averageIlvl = EquipmentProvider.AverageItemLevel(list), hasGearQuest = hasGQ, spec = spec, specLabel = specLabel }
   for _, slot in ipairs(EquipmentProvider.SLOTS) do
     local worn = byKey[slot.key]
@@ -375,20 +272,20 @@ function EquipmentProvider.StatusLine()
   local _, list = EquipmentProvider.Equipped()
   local worn = 0
   for _, entry in ipairs(list) do if entry.itemID then worn = worn + 1 end end
-  local spec, label = EquipmentProvider.Spec()
+  local _, label = ns.GearQuest.Spec()
   return string.format("Equipment: %d of %d slots filled, average item level %s; upgrade hunts %s.", worn, #list, tostring(EquipmentProvider.AverageItemLevel(list)),
-    EquipmentProvider.HasGearQuest() and ("from GearQuest Forever" .. (label and (" (" .. label .. ")") or "")) or "unavailable (GearQuest Forever not installed)")
+    ns.GearQuest.IsAvailable() and ("from GearQuest Forever" .. (label and (" (" .. label .. ")") or "")) or "unavailable (GearQuest Forever not installed)")
 end
 
 local function changed(reason)
-  EquipmentProvider.factsCache = {}
+  ns.GearQuest.ResetCache()
   Events.Debounce("equipment-updated", 0.5, function()
     Events.Fire("FP_EQUIPMENT_UPDATED", reason)
   end)
 end
 
 function EquipmentProvider.Init()
-  ns.ItemProvider.RegisterNameSource(EquipmentProvider.ItemNames)
+  ns.ItemProvider.RegisterNameSource(ns.GearQuest.ItemNames)
   if not EquipmentProvider.IsAvailable() then
     Log.Debug("GetInventoryItemID missing; equipment provider disabled")
     return
