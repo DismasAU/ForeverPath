@@ -143,7 +143,7 @@ describe("Learn-recipe goals", function()
   end)
 
   it("searches the catalogue by recipe name and profession", function()
-    local Recipes = ns.Data.Recipes
+    local Recipes = ns.Recipes
     local hits = Recipes.Search("bolt of woolen", 5)
     assert_eq(hits[1].spellID, WOOLEN_BOLT)
     assert_eq(hits[1].professionName, "Tailoring")

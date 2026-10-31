@@ -23,13 +23,13 @@ end
 
 -- spellID -> { skill, rank, cost, trainer, zone, subzone, seenAt }
 function TrainerProvider.Store()
-  if not ns.db then return nil end
+  if not ns.Database.IsLoaded() then return nil end
   return ns.db.trainers
 end
 
 -- trainer name -> { zone, subzone, recipes, seenAt }
 function TrainerProvider.Trainers()
-  if not ns.db then return nil end
+  if not ns.Database.IsLoaded() then return nil end
   return ns.db.trainerNPCs
 end
 
@@ -82,7 +82,7 @@ function TrainerProvider.ReadService(index)
   -- searched by recipe name within the required profession.
   local spellID = spellIDFromLink(callGlobal("GetTrainerServiceItemLink", index))
   if not spellID then
-    spellID = ns.Data.Recipes.SpellIDByName(name, record.skill)
+    spellID = ns.Recipes.SpellIDByName(name, record.skill)
     record.byName = spellID ~= nil or nil
   end
   if not spellID then return nil end
@@ -129,9 +129,7 @@ local function isProfessionTrainer()
 end
 
 local function isProfessionSkill(name)
-  local catalogue = ns.Data.Recipes
-  if catalogue and catalogue.ProfessionID and catalogue.ProfessionID(name) then return true end
-  return false
+  return ns.Recipes.ProfessionID(name) ~= nil
 end
 
 -- Records the open trainer. Returns the number of recipes recorded.
@@ -147,11 +145,11 @@ function TrainerProvider.ScanTrainer()
   local zone, subzone = currentZone()
   local now = Util.Now()
   local recorded, changed = 0, false
-  local catalogue = ns.Data.Recipes
+  local catalogue = ns.Recipes
   for index = 1, count do
     local record = TrainerProvider.ReadService(index)
     if record and record.rank then
-      local known = catalogue and catalogue.Get and catalogue.Get(record.spellID) ~= nil
+      local known = catalogue.Get(record.spellID) ~= nil
       if tradeskill or known or isProfessionSkill(record.skill) then
         local previous = store[record.spellID]
         if not previous or previous.rank ~= record.rank or previous.trainer ~= npc or previous.cost ~= record.cost then
@@ -172,7 +170,7 @@ function TrainerProvider.ScanTrainer()
     end
     Log.Debug("Recorded trainer %s (%s): %d recipes", npc, zone or "?", recorded)
     if changed then
-      if catalogue and catalogue.Invalidate then catalogue.Invalidate() end
+      catalogue.Invalidate()
       Events.Fire("FP_TRAINERS_UPDATED", npc)
     end
   end
@@ -248,9 +246,9 @@ function TrainerProvider.StatusLine()
 end
 
 function TrainerProvider.Init()
-  ns.Data.Recipes.SetTrainerLookup(TrainerProvider.Requirement)
+  ns.Recipes.SetTrainerLookup(TrainerProvider.Requirement)
   -- Shared trainers change the requirements decoded recipes carry.
-  Events.On("FP_SHARED_DATA_CHANGED", ns.Data.Recipes.Invalidate)
+  Events.On("FP_SHARED_DATA_CHANGED", ns.Recipes.Invalidate)
   Events.RegisterWoW("TRAINER_SHOW", function()
     TrainerProvider.open = true
     TrainerProvider.EnsureFilters()

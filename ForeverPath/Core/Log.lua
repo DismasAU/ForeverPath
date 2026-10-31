@@ -43,10 +43,11 @@ function Log.Debug(fmt, ...)
   end
 end
 
+-- Turns debug logging on or off; the saved setting follows once loaded.
 function Log.SetDebug(enabled)
   Log.debugEnabled = enabled and true or false
-  if ns.db and ns.db.settings then
-    ns.db.settings.debug = Log.debugEnabled
+  if ns.db and ns.db.settings.debug ~= Log.debugEnabled then
+    ns.Database.SetSetting("debug", Log.debugEnabled)
   end
 end
 

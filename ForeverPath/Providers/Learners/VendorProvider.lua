@@ -18,7 +18,7 @@ function VendorProvider.IsAvailable()
 end
 
 function VendorProvider.Store()
-  if not ns.db then return nil end
+  if not ns.Database.IsLoaded() then return nil end
   return ns.db.vendors
 end
 

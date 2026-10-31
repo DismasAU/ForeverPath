@@ -61,7 +61,7 @@ describe("TrainerProvider", function()
   end)
 
   it("feeds the catalogue: required skill, crafter checks, messages and chat", function()
-    local Recipes = ns.Data.Recipes
+    local Recipes = ns.Recipes
     local before = Recipes.Get(WOOLEN)
     assert_eq(before.skill.min, 1)
     assert_nil(before.trainer)
@@ -96,7 +96,7 @@ describe("TrainerProvider", function()
   end)
 
   it("adds a 'train it' step to the tree, the shopping list and CraftWise for an unlearned trainer recipe", function()
-    local Recipes = ns.Data.Recipes
+    local Recipes = ns.Recipes
     local woolen = Recipes.Get(WOOLEN).outputItemID
     Mock.AddItem(woolen, { name = "Bolt of Woolen Cloth" })
     Mock.AddItem(2592, { name = "Wool Cloth" })

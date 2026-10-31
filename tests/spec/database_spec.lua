@@ -78,7 +78,9 @@ describe("Database", function()
     assert_eq(ns.chardb.window.width, 900)
     assert_eq(ns.chardb.window.point, "TOPLEFT")
     assert_eq(ns.chardb.window.relativePoint, "CENTER", "missing fields come from defaults")
-    local migrated = ns.chardb.goals[goal.id]
+    assert_eq(ns.chardb.goals[goal.id].priority, 1, "the migration numbers goals in stored order")
+    -- The tracked and status defaults come from GoalStore's sanitizing on load.
+    local migrated = ns.GoalService.Init():Get(goal.id)
     assert_eq(migrated.tracked, true)
     assert_eq(migrated.status, "ACTIVE")
     assert_eq(migrated.priority, 1)

@@ -292,7 +292,7 @@ local function Create(parent)
 
   function screen:Refresh()
     local RP = ns.ReputationProvider
-    if not RP or not RP.IsAvailable() then
+    if not RP.IsAvailable() then
       list:Hide()
       side:Hide()
       self.empty:Set("Reputations unavailable", "This client does not expose the faction API ForeverPath needs.")

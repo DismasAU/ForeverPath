@@ -32,7 +32,7 @@ function LootLearner.IsAvailable()
 end
 
 function LootLearner.Store()
-  if not ns.db then return nil end
+  if not ns.Database.IsLoaded() then return nil end
   return ns.db.lootSeen
 end
 

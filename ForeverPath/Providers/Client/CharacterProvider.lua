@@ -75,7 +75,7 @@ function CharacterProvider.CurrentKey()
 end
 
 function CharacterProvider.Store()
-  if not ns.db then return nil end
+  if not ns.Database.IsLoaded() then return nil end
   return ns.db.characters
 end
 
@@ -303,7 +303,7 @@ end
 -- Returns { { record, name, recipe, professionName, skillLevel } }.
 function CharacterProvider.AltCrafters(itemID)
   local out = {}
-  if not ns.db or type(ns.db.itemRecipes) ~= "table" then return out end
+  if not ns.Database.IsLoaded() then return out end
   local ids = ns.db.itemRecipes[itemID]
   if type(ids) ~= "table" then return out end
   for _, entry in ipairs(CharacterProvider.List()) do
@@ -329,7 +329,7 @@ end
 -- when settings.includeAlts is on.
 function CharacterProvider.Sources(itemID)
   local options = {}
-  local includeBank = ns.Database.Setting("includeBank", true) ~= false
+  local includeBank = ns.Database.Setting("includeBank") ~= false
   for _, alt in ipairs(CharacterProvider.Alts(itemID, includeBank)) do
     options[#options + 1] = {
       kind = Routes.ALT, name = alt.name, count = alt.total,
@@ -350,7 +350,7 @@ end
 -- For the Characters banner: which alt covers the most of the given needs.
 -- needs: { [itemID] = count }. Returns { name, key, record, covered, items = { { itemID, count } } } or nil.
 function CharacterProvider.BestCoverage(needs)
-  local includeBank = ns.Database.Setting("includeBank", true) ~= false
+  local includeBank = ns.Database.Setting("includeBank") ~= false
   local best
   for _, entry in ipairs(CharacterProvider.List()) do
     if not entry.isCurrent then

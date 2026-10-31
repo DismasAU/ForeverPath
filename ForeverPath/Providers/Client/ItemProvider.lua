@@ -54,7 +54,7 @@ function ItemProvider.ParseInput(text)
 end
 
 local function nameCache()
-  return ns.db and ns.db.itemNames or nil
+  return ns.Database.IsLoaded() and ns.db.itemNames or nil
 end
 
 function ItemProvider.RememberName(itemID, name)
@@ -70,8 +70,7 @@ function ItemProvider.GetCachedName(itemID)
   local cache = nameCache()
   local name = cache and cache[itemID] or nil
   if name then return name end
-  local catalogue = ns.Data.Recipes
-  return catalogue and catalogue.ItemName and catalogue.ItemName(itemID) or nil
+  return ns.Recipes.ItemName(itemID)
 end
 
 -- true / false, or nil when the client cannot say.
@@ -147,10 +146,7 @@ function ItemProvider.GetItem(itemID)
     end
   end
   info.name = ItemProvider.GetCachedName(itemID)
-  local catalogue = ns.Data.Recipes
-  if catalogue and catalogue.ItemQuality then
-    info.quality = catalogue.ItemQuality(itemID)
-  end
+  info.quality = ns.Recipes.ItemQuality(itemID)
   if ItemProvider.failed[itemID] then
     info.unavailable = true
   else
@@ -215,7 +211,7 @@ function ItemProvider.SearchByName(query, limit)
       consider(itemID, name)
     end
   end
-  if ns.db and ns.db.recipes then
+  if ns.Database.IsLoaded() then
     for _, recipe in pairs(ns.db.recipes) do
       if recipe.outputItemID then
         consider(recipe.outputItemID, recipe.name)
@@ -224,11 +220,8 @@ function ItemProvider.SearchByName(query, limit)
   end
   -- The catalogue names every item a recipe makes or needs; the item index
   -- every item the client lists as searchable.
-  local catalogue = ns.Data.Recipes
-  if catalogue and catalogue.Items then
-    for itemID, row in pairs(catalogue.Items()) do
-      consider(itemID, row[1])
-    end
+  for itemID, row in pairs(ns.Recipes.Items()) do
+    consider(itemID, row[1])
   end
   local index = ns.Data.ItemIndex
   if type(index) == "table" then

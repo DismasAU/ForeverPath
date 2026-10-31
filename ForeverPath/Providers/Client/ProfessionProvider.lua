@@ -70,7 +70,7 @@ end
 -- All cached recipes that produce itemID, with this character's learned flag.
 function ProfessionProvider.FindRecipesForItem(itemID)
   local out = {}
-  if not ns.db then
+  if not ns.Database.IsLoaded() then
     return out
   end
   local ids = ns.db.itemRecipes[itemID]
@@ -90,14 +90,14 @@ end
 -- Returns recipe, isLive. With refresh=true the schematic is re-read from the
 -- API; an empty answer (window closed, data not loaded) keeps the cached copy.
 function ProfessionProvider.GetRecipe(recipeID, refresh)
-  local cached = ns.db and ns.db.recipes[recipeID] or nil
+  local cached = ns.Database.IsLoaded() and ns.db.recipes[recipeID] or nil
   if refresh and ProfessionProvider.IsAvailable() then
     local schematic = api("GetRecipeSchematic", recipeID, false)
     if type(schematic) == "table" and type(schematic.reagentSlotSchematics) == "table" and #schematic.reagentSlotSchematics > 0 then
       local fresh = RecipeModel.FromSchematic(schematic, nil, {
         basicReagentType = Compat.reagentTypeBasic,
         now = cached and cached.scannedAt or nil,
-        isEnchant = ns.Data.Recipes.IsEnchant,
+        isEnchant = ns.Recipes.IsEnchant,
       })
       if fresh and #fresh.reagents > 0 then
         fresh = RecipeModel.Merge(cached, fresh)
@@ -147,7 +147,7 @@ end
 -- Starts scanning the profession currently shown in the tradeskill window.
 -- Returns true when a scan started, otherwise false plus a reason.
 function ProfessionProvider.ScanOpenProfession()
-  if not ProfessionProvider.IsAvailable() or not ns.db or not ns.chardb then
+  if not ProfessionProvider.IsAvailable() or not ns.Database.IsLoaded() then
     return false, "unavailable"
   end
   if api("IsNPCCrafting") then
@@ -217,7 +217,7 @@ function ProfessionProvider.ProcessScanChunk(token)
       professionName = state.name,
       basicReagentType = Compat.reagentTypeBasic,
       now = now,
-      isEnchant = ns.Data.Recipes.IsEnchant,
+      isEnchant = ns.Recipes.IsEnchant,
     })
     -- A recipe without reagents means the schematic was not fully loaded;
     -- keep whatever we had rather than storing an empty reagent list.

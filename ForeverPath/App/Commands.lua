@@ -106,7 +106,7 @@ function handlers.status()
   end
   Log.output(string.format("  Goals: %d open, %d completed", ns.GoalService.Count({ open = true }), ns.GoalService.Count({ status = ns.GoalModel.Statuses.COMPLETED })))
   for _, name in ipairs(STATUS_MODULES) do
-    local module = name == "Recipes" and ns.Data.Recipes or ns[name]
+    local module = ns[name]
     Log.output("  " .. tostring(ns.Log.Try(module.StatusLine) or (name .. ": status unavailable")))
   end
 end
@@ -378,18 +378,18 @@ function handlers.recipe(rest)
     Log.Print("Usage: /fp recipe <item id, link or name>")
     return
   end
-  local lines = ns.Data.Recipes.Lines(itemID, ns.ItemProvider.GetName)
+  local lines = ns.Recipes.Lines(itemID, ns.ItemProvider.GetName)
   Log.Print("How %s is made:", ns.ItemProvider.GetName(itemID))
   if #lines == 0 then
-    Log.output("  no recipe or combine in the catalogue" .. (ns.Data.Recipes.IsAvailable() and "" or " (catalogue missing: run scripts\\extract_db.ps1)"))
+    Log.output("  no recipe or combine in the catalogue" .. (ns.Recipes.IsAvailable() and "" or " (catalogue missing: run scripts\\extract_db.ps1)"))
   end
   for _, line in ipairs(lines) do Log.output("  " .. line) end
 end
 
 function handlers.catalogue()
   if not requireLoaded() then return end
-  Log.Print("%s", ns.Data.Recipes.StatusLine())
-  local info = ns.Data.Recipes.Info()
+  Log.Print("%s", ns.Recipes.StatusLine())
+  local info = ns.Recipes.Info()
   if info then
     Log.output(string.format("  Client build at extraction: %s (%s), hotfix cache build %s. Generated from the client's own tables by tools\\DbExtract; regenerate after a patch with scripts\\extract_db.ps1.",
       tostring(info.build), tostring(info.buildName), tostring(info.hotfixBuild)))
@@ -541,21 +541,22 @@ end
 
 function handlers.celebrate(rest)
   if not requireLoaded() then return end
-  local settings = ns.db.settings
+  local DB = ns.Database
   rest = Util.Trim(rest or ""):lower()
   if rest == "test" then
     ns.UI.Toast.Test()
     Log.Print("Test toast shown.")
   elseif rest == "on" or rest == "off" then
-    settings.toasts = rest == "on"
-    settings.completeSound = rest == "on"
+    DB.SetSetting("toasts", rest == "on")
+    DB.SetSetting("completeSound", rest == "on")
     Log.Print("Celebrations %s.", rest)
   elseif rest == "auto on" or rest == "auto off" then
-    settings.autoComplete = rest == "auto on"
+    DB.SetSetting("autoComplete", rest == "auto on")
     Log.Print("Auto-complete %s.", rest:sub(6))
   else
+    local function onOff(name) return DB.Setting(name) ~= false and "on" or "off" end
     Log.Print("Auto-complete %s, toasts %s, sound %s. Use /fp celebrate on|off|test, or /fp celebrate auto on|off.",
-      settings.autoComplete ~= false and "on" or "off", settings.toasts ~= false and "on" or "off", settings.completeSound ~= false and "on" or "off")
+      onOff("autoComplete"), onOff("toasts"), onOff("completeSound"))
   end
 end
 

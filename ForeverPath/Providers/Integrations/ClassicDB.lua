@@ -102,7 +102,7 @@ function ClassicDB.Reset()
   ClassicDB.rewardIndex = nil
   ClassicDB.reputationIndex = nil
   ClassicDB.titleIndex = nil
-  ns.Data.Recipes.Invalidate()
+  ns.Recipes.Invalidate()
 end
 
 ---------------------------------------------------------------------------

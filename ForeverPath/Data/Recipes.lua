@@ -21,7 +21,7 @@ local Recipes = {
   decoded = {},         -- spellID -> recipe
   decodedCombines = {}, -- spellID -> combine recipe
 }
-ns.Data.Recipes = Recipes
+ns.Recipes = Recipes
 
 Recipes.COMBINE_PROFESSION = "Combine"
 Recipes.Bind = { NONE = 0, PICKUP = 1, EQUIP = 2, USE = 3, QUEST = 4 }

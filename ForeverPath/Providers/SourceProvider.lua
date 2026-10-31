@@ -152,11 +152,7 @@ function SourceProvider.ItemClass(itemID)
     local classID, subclassID = select(6, Util.SafeCall(Compat.GetItemInfoInstant, itemID))
     if type(classID) == "number" then return classID, subclassID end
   end
-  local catalogue = ns.Data.Recipes
-  if catalogue and catalogue.ItemClass then
-    return catalogue.ItemClass(itemID)
-  end
-  return nil
+  return ns.Recipes.ItemClass(itemID)
 end
 
 function SourceProvider.ClassHint(itemID)
@@ -173,10 +169,7 @@ local function recipesFor(itemID)
       out[#out + 1] = candidate.recipe
     end
   end
-  local catalogue = ns.Data.Recipes
-  if catalogue and catalogue.Lookup then
-    for _, recipe in ipairs(catalogue.Lookup(itemID) or {}) do out[#out + 1] = recipe end
-  end
+  for _, recipe in ipairs(ns.Recipes.Lookup(itemID) or {}) do out[#out + 1] = recipe end
   return out
 end
 

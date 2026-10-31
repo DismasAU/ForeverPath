@@ -383,7 +383,7 @@ local function Create(parent)
 
   function screen:Refresh()
     local QP = ns.QuestProvider
-    if not QP or not QP.IsAvailable() then
+    if not QP.IsAvailable() then
       list:Hide()
       side:Hide()
       tabs:Hide()

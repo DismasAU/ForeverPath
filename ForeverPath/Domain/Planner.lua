@@ -42,8 +42,19 @@ local Planner = {}
 ns.Planner = Planner
 
 -- Planner.DefaultDeps() -> the deps table above wired to the addon's own
--- providers. It is defined in App/PlannerDeps.lua, the composition root, so
+-- providers, for callers that pass none. The composition root
+-- (App/PlannerDeps.lua) installs the factory with Planner.SetDefaultDeps, so
 -- nothing in Domain names a provider.
+local defaultDeps
+
+function Planner.SetDefaultDeps(factory)
+  defaultDeps = factory
+end
+
+function Planner.DefaultDeps()
+  if not defaultDeps then error("Planner.SetDefaultDeps has not been called", 2) end
+  return defaultDeps()
+end
 
 -- Whether this character has learned a recipe spell (false without the
 -- profession provider, or when it raises - which is logged).

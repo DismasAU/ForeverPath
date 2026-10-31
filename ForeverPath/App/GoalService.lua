@@ -36,10 +36,8 @@ function GoalService.Init()
   return ns.goals
 end
 
+-- The goal store, or nil before Bootstrap has run GoalService.Init.
 function GoalService.Store()
-  if not ns.goals and ns.chardb then
-    GoalService.Init()
-  end
   return ns.goals
 end
 
@@ -118,13 +116,9 @@ end
 function GoalService.TypeForItem(itemID)
   local candidates = ns.Log.Try(ns.ProfessionProvider.FindRecipesForItem, itemID)
   if type(candidates) == "table" and #candidates > 0 then return GoalModel.TypeIDs.CRAFT_ITEM end
-  local catalogue = ns.Data.Recipes
-  if catalogue and catalogue.Lookup then
-    local hints = catalogue.Lookup(itemID)
-    if type(hints) == "table" and #hints > 0 then return GoalModel.TypeIDs.CRAFT_ITEM end
-  end
-  local haveCatalogue = catalogue and catalogue.IsAvailable and catalogue.IsAvailable()
-  if not haveCatalogue and not ns.ProfessionProvider.HasScanData() then
+  local hints = ns.Recipes.Lookup(itemID)
+  if type(hints) == "table" and #hints > 0 then return GoalModel.TypeIDs.CRAFT_ITEM end
+  if not ns.Recipes.IsAvailable() and not ns.ProfessionProvider.HasScanData() then
     return GoalModel.TypeIDs.CRAFT_ITEM
   end
   return GoalModel.TypeIDs.OBTAIN_ITEM
@@ -229,8 +223,8 @@ function GoalService.AddRecipeFromInput(text)
   local spellID = GoalService.SpellIDFromText(text) or Util.ParseInt(text)
   local note = ""
   if not spellID then
-    local catalogue = ns.Data.Recipes
-    local hits = catalogue and catalogue.Search and catalogue.Search(text, 5) or {}
+    local catalogue = ns.Recipes
+    local hits = catalogue.Search(text, 5) or {}
     if #hits == 0 then
       return nil, string.format("No recipe called \"%s\" is in the catalogue.", text)
     end
@@ -286,8 +280,8 @@ function GoalService.AddEnchantFromInput(text, quantity)
   local spellID = GoalService.SpellIDFromText(text) or Util.ParseInt(text)
   local note = ""
   if not spellID then
-    local catalogue = ns.Data.Recipes
-    local hits = catalogue and catalogue.Search and catalogue.Search(text, 5, nil, "enchant") or {}
+    local catalogue = ns.Recipes
+    local hits = catalogue.Search(text, 5, nil, "enchant") or {}
     if #hits == 0 then
       return nil, string.format("No enchant called \"%s\" is in the catalogue.", text)
     end
@@ -323,11 +317,7 @@ end
 function GoalService.AddSkillGoal(professionName, rank)
   local store = GoalService.Store()
   if not store then return nil, LOADING end
-  local catalogue = ns.Data.Recipes
-  local professionID, canonical
-  if catalogue and catalogue.FindProfession then
-    professionID, canonical = catalogue.FindProfession(professionName)
-  end
+  local professionID, canonical = ns.Recipes.FindProfession(professionName)
   local standing = ns.Planner.CurrentSkill(canonical or professionName, professionID)
   if not canonical then
     -- Not a catalogue profession: accept it when the character has it (e.g. a secondary skill).
@@ -381,7 +371,7 @@ function GoalService.AddQuestGoal(questID)
   local store = GoalService.Store()
   if not store then return nil, LOADING end
   local QP = ns.QuestProvider
-  if not QP or not QP.IsAvailable() then
+  if not QP.IsAvailable() then
     return nil, "Quest goals need the quest API (C_QuestLog), which this client lacks."
   end
   local existing = GoalService.FindQuestGoal(questID)
@@ -401,7 +391,7 @@ function GoalService.AddQuestFromInput(text)
     return nil, "Type a quest name (or its id)."
   end
   local QP = ns.QuestProvider
-  if not QP or not QP.IsAvailable() then
+  if not QP.IsAvailable() then
     return nil, "Quest goals need the quest API (C_QuestLog), which this client lacks."
   end
   local questID = Util.ParseInt(text)
@@ -434,7 +424,7 @@ function GoalService.AddReputationGoal(factionID, standing)
   local store = GoalService.Store()
   if not store then return nil, LOADING end
   local RP = ns.ReputationProvider
-  if not RP or not RP.IsAvailable() then
+  if not RP.IsAvailable() then
     return nil, "Reputation goals need the faction API, which this client lacks."
   end
   local record = RP.Get(factionID)
@@ -467,7 +457,7 @@ function GoalService.AddReputationFromInput(text)
     return nil, "Type a faction, optionally with the standing to reach (Argent Dawn Exalted)."
   end
   local RP = ns.ReputationProvider
-  if not RP or not RP.IsAvailable() then
+  if not RP.IsAvailable() then
     return nil, "Reputation goals need the faction API, which this client lacks."
   end
   local name, standing = parseReputationInput(text, RP)
@@ -562,7 +552,7 @@ function GoalService.Suggest(kind, text, limit)
   local function push(hit)
     if #out < limit then out[#out + 1] = hit end
   end
-  local catalogue = ns.Data.Recipes
+  local catalogue = ns.Recipes
   local function items(n)
     for _, hit in ipairs(ItemProvider.SearchByName(text, n)) do
       local itemID = hit.itemID
@@ -570,7 +560,7 @@ function GoalService.Suggest(kind, text, limit)
     end
   end
   local function recipes(n, which)
-    for _, hit in ipairs(catalogue and catalogue.Search and catalogue.Search(text, n, nil, which) or {}) do
+    for _, hit in ipairs(catalogue.Search(text, n, nil, which) or {}) do
       local spellID = hit.spellID
       if which == "enchant" then
         push({ kind = "enchant", text = hit.name, meta = hit.professionName or "Enchant", spellID = spellID, add = function(quantity) return GoalService.AddEnchantGoal(spellID, quantity) end })
@@ -583,7 +573,7 @@ function GoalService.Suggest(kind, text, limit)
     local name, target = parseSkillInput(text)
     local needle = string.lower(name)
     local count = 0
-    for _, p in ipairs(catalogue and catalogue.Professions and catalogue.Professions() or {}) do
+    for _, p in ipairs(catalogue.Professions() or {}) do
       if count < n and needle ~= "" and string.find(string.lower(p.name or ""), needle, 1, true) then
         count = count + 1
         local standing = ns.Planner.CurrentSkill(p.name, p.id)
@@ -594,7 +584,7 @@ function GoalService.Suggest(kind, text, limit)
   end
   local function quests(n)
     local QP = ns.QuestProvider
-    if not QP or not QP.IsAvailable or not QP.IsAvailable() then return end
+    if not QP.IsAvailable() then return end
     for _, hit in ipairs(QP.Search(text, n)) do
       local questID = hit.questID
       push({ kind = "quest", text = hit.name, meta = hit.where or "Quest", questID = questID, add = function() return GoalService.AddQuestGoal(questID) end })
@@ -602,7 +592,7 @@ function GoalService.Suggest(kind, text, limit)
   end
   local function factions(n)
     local RP = ns.ReputationProvider
-    if not RP or not RP.IsAvailable() then return end
+    if not RP.IsAvailable() then return end
     local name, standing = parseReputationInput(text, RP)
     for _, hit in ipairs(RP.Search(name, n)) do
       local factionID = hit.factionID
@@ -614,7 +604,7 @@ function GoalService.Suggest(kind, text, limit)
   end
   local function attunements(n)
     local AP = ns.AttuneProvider
-    if not AP or not AP.IsAvailable() then return end
+    if not AP.IsAvailable() then return end
     local needle = string.lower(text)
     local count = 0
     for _, attune in ipairs(AP.List()) do
@@ -743,14 +733,12 @@ end
 ---------------------------------------------------------------------------
 -- Whether alts' snapshotted bags and banks count as owned in every goal.
 function GoalService.IncludesAlts()
-  return ns.db ~= nil and ns.db.settings.includeAlts == true
+  return ns.Database.Setting("includeAlts") == true
 end
 
 -- Sets includeAlts and announces it. Returns the message to show, or nil, reason.
 function GoalService.SetIncludeAlts(on)
-  if not ns.db then return nil, "not loaded" end
-  ns.db.settings.includeAlts = on and true or false
-  Events.Fire("FP_SETTINGS_CHANGED", "includeAlts")
+  if not ns.Database.SetSetting("includeAlts", on and true or false) then return nil, LOADING end
   return on and "Alts' bags and banks now count as owned." or "Only this character's bags and bank count as owned."
 end
 

@@ -27,7 +27,7 @@ QuestFactsProvider.RETRY_LIMIT = 20
 local call = ns.Util.SafeCall
 
 function QuestFactsProvider.Store()
-  if not ns.db then return nil end
+  if not ns.Database.IsLoaded() then return nil end
   return ns.db.questFacts
 end
 

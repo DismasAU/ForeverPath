@@ -157,7 +157,7 @@ function InventoryProvider.GetCounts(itemID)
   -- can say "Miravelle has 6"; only counted as owned when settings.includeAlts.
   local characters = ns.CharacterProvider
   if characters and characters.AltTotal then
-    local includeBank = ns.Database.Setting("includeBank", true) ~= false
+    local includeBank = ns.Database.Setting("includeBank") ~= false
     local total, alts = characters.AltTotal(itemID, includeBank)
     if total > 0 then
       result.alts = total
@@ -173,7 +173,7 @@ end
 -- what goal progress and attunement steps count as owned. Alts never count.
 function InventoryProvider.OwnedCount(itemID)
   local counts = InventoryProvider.GetCounts(itemID)
-  local includeBank = ns.Database.Setting("includeBank", true) ~= false
+  local includeBank = ns.Database.Setting("includeBank") ~= false
   return counts.bags + (includeBank and counts.bank or 0)
 end
 

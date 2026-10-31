@@ -136,7 +136,7 @@ describe("Item index (client)", function()
   it("names, ranks and binds every searchable item, not just recipe items", function()
     local ns = H.fresh()
     H.login(ns)
-    local R = ns.Data.Recipes
+    local R = ns.Recipes
     assert_eq(R.ItemName(19019), "Thunderfury, Blessed Blade of the Windseeker")
     assert_eq(R.ItemQuality(19019), 5)
     assert_eq(R.ItemBind(19019), 1)

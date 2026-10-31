@@ -24,7 +24,7 @@ describe("Recipe catalogue (Data/Recipes)", function()
   local ns, Recipes
   before_each(function()
     ns = H.fresh()
-    Recipes = ns.Data.Recipes
+    Recipes = ns.Recipes
   end)
 
   it("ships the client's recipes with build information", function()

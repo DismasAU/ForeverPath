@@ -1,20 +1,24 @@
 -- The Planner's composition root: its injected deps wired to the addon's
--- own providers and catalogue. The Planner itself (Domain/Planner*.lua)
--- only ever sees this table, so tests hand it doubles instead.
+-- own providers and catalogue, installed through Planner.SetDefaultDeps.
+-- The Planner itself (Domain/Planner*.lua) only ever sees this table, so
+-- tests hand it doubles instead.
 local _, ns = ...
 
-function ns.Planner.DefaultDeps()
+ns.Planner.SetDefaultDeps(function()
   return {
     item = ns.ItemProvider,
     profession = ns.ProfessionProvider,
     inventory = ns.InventoryProvider,
-    catalogue = ns.Data.Recipes,
+    catalogue = ns.Recipes,
     characters = ns.CharacterProvider,
     sources = ns.SourceProvider,
     price = ns.PriceProvider,
     attune = ns.AttuneProvider,
     quest = ns.QuestProvider,
     reputation = ns.ReputationProvider,
-    settings = ns.db and ns.db.settings or {},
+    settings = {
+      includeBank = ns.Database.Setting("includeBank"),
+      includeAlts = ns.Database.Setting("includeAlts"),
+    },
   }
-end
+end)

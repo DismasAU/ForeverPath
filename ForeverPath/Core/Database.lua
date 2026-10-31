@@ -88,14 +88,13 @@ Database.migrations = {
     { version = 2, up = function(db) db.window = nil end },
   },
   char = {
-    -- v2: goals gained `tracked` and `priority`; statuses gained QUEUED/COMPLETED.
+    -- v2: goals gained `priority` (in stored order). The tracked and status
+    -- defaults are GoalStore:Sanitize's job on every load.
     { version = 2, up = function(db)
       local index = 0
       for _, goal in pairs(db.goals or {}) do
         if type(goal) == "table" then
           index = index + 1
-          if goal.tracked == nil then goal.tracked = true end
-          if goal.status == nil then goal.status = "ACTIVE" end
           if goal.priority == nil then goal.priority = index end
         end
       end
@@ -150,6 +149,8 @@ function Database.Prepare(stored, defaults, migrations, targetVersion)
 end
 
 -- Reads the SavedVariables globals (nil on first run) and installs ns.db / ns.chardb.
+-- The window carry-over below is the character half of global migration v2
+-- (which then drops db.window); a later schema bump must keep both halves.
 -- Must be called from ADDON_LOADED or later: the client fills the globals right
 -- before that event, after the addon files have already executed.
 function Database.Load()
@@ -168,7 +169,7 @@ function Database.Load()
   _G.ForeverPathCharDB = charTable
   ns.db = globalTable
   ns.chardb = charTable
-  ns.Log.debugEnabled = globalTable.settings.debug and true or false
+  ns.Log.SetDebug(globalTable.settings.debug)
   return globalTable, charTable
 end
 
@@ -181,14 +182,27 @@ function Database.EachImported(kind, fn)
   end
 end
 
--- A saved setting (ns.db.settings[name]), or `default` when it is unset or
--- before the database loads. The one place that answers both cases.
+-- A saved setting (ns.db.settings[name]); when it is unset or the database
+-- has not loaded yet, `default`, else the DEFAULTS value. The one place that
+-- answers both cases, so callers never restate a default.
 function Database.Setting(name, default)
   local settings = ns.db and ns.db.settings
   if settings and settings[name] ~= nil then return settings[name] end
-  return default
+  if default ~= nil then return default end
+  return Database.DEFAULTS.global.settings[name]
 end
 
+-- Saves a setting and announces it (FP_SETTINGS_CHANGED name). Returns
+-- false before the database loads.
+function Database.SetSetting(name, value)
+  if not Database.IsLoaded() then return false end
+  ns.db.settings[name] = value
+  ns.Events.Fire("FP_SETTINGS_CHANGED", name)
+  return true
+end
+
+-- Whether the saved variables are loaded (ADDON_LOADED has run): the one
+-- readiness check below the App layer.
 function Database.IsLoaded()
   return ns.db ~= nil and ns.chardb ~= nil
 end

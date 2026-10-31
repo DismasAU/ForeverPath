@@ -33,7 +33,7 @@ describe("Enchant goals", function()
   end)
 
   it("ships enchants in the catalogue and finds them by name, kind and link", function()
-    local Recipes = ns.Data.Recipes
+    local Recipes = ns.Recipes
     assert_true(Recipes.IsEnchant(CRUSADER))
     assert_false(Recipes.IsEnchant(HAMMER))
     assert_false(Recipes.IsEnchant(1))

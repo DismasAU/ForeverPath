@@ -365,7 +365,7 @@ local function Create(parent)
 
   function screen:Refresh()
     local EP = ns.EquipmentProvider
-    if not EP or not EP.IsAvailable() then
+    if not EP.IsAvailable() then
       strip:Hide()
       equipped:Hide()
       side:Hide()

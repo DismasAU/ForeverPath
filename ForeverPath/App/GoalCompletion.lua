@@ -57,9 +57,7 @@ end
 
 -- This character's current skill in a profession, or nil without it.
 function GoalCompletion.SkillLevel(target)
-  local planner = ns.Planner
-  if not planner or not planner.CurrentSkill then return nil end
-  local standing = planner.CurrentSkill(target.professionName, target.professionID)
+  local standing = ns.Planner.CurrentSkill(target.professionName, target.professionID)
   return standing and standing.skillLevel or nil
 end
 
