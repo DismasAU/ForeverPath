@@ -222,16 +222,17 @@ end
 
 CraftWise.ChoiceLabels = { buy = "Buy", vendor = "Vendor", craft = "Craft", owned = "Owned", alt = "Alt", altcraft = "Alt crafts", gather = "Gather", drop = "Drop", quest = "Quest", train = "Train" }
 
--- Applies the hybrid plan as per-item route overrides on a goal: "buy" where
--- buying beats crafting, the default (nil) where crafting wins.
--- setRoute(itemID, route) is called for every craftable component.
-function CraftWise.ApplyPlan(result, setRoute)
-  local changed = 0
-  for itemID, route in pairs(result and result.plan or {}) do
-    local value = route == Routes.BUY and "buy" or nil
-    if setRoute(itemID, value) then changed = changed + 1 end
+-- A preset's route overrides for a goal, { [itemID] = "buy" | false }
+-- (false: the default route): "default" none, "hybrid" the plan ("buy" where
+-- buying beats crafting), "buyall" buy every craftable component.
+function CraftWise.PresetRoutes(result, mode)
+  local routes = {}
+  if mode == "hybrid" then
+    for itemID, route in pairs(result and result.plan or {}) do routes[itemID] = route == Routes.BUY and "buy" or false end
+  elseif mode == "buyall" then
+    for itemID in pairs(CraftWise.BuyAllPlan(result)) do routes[itemID] = "buy" end
   end
-  return changed
+  return routes
 end
 
 -- Routes that buy every craftable component ("buy all materials" mode).

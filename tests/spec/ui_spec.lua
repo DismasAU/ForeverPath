@@ -843,6 +843,11 @@ describe("UI shell and screens (mock widgets)", function()
     goals.settings:ApplyRouteMode("buyall")
     Mock.RunTimers()
     assert_eq(ns.GoalService.GetSelected().routes[2996], "buy")
+    -- Both screens apply presets the same way: an override outside the plan is cleared.
+    local goalID = ns.GoalService.GetSelectedID()
+    ns.GoalService.SetRoute(goalID, 2589, "buy")
+    ns.GoalService.ApplyRoutePreset(goalID, "hybrid", goals.settings.craftwise)
+    assert_nil(ns.GoalService.GetSelected().routes and ns.GoalService.GetSelected().routes[2589], "the stale override is gone")
   end)
 
   it("shows CraftWise empty states without prices", function()

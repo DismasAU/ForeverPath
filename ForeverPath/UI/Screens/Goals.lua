@@ -220,20 +220,7 @@ local function createSettings(screen)
 
   function panel:ApplyRouteMode(mode)
     if not self.goalID then return end
-    local goalID, result = self.goalID, self.craftwise
-    local plan = {}
-    if mode == "hybrid" and result then
-      plan = result.plan
-    elseif mode == "buyall" and result then
-      plan = ns.CraftWise.BuyAllPlan(result)
-    end
-    -- Clear every current override, then apply the preset.
-    for itemID in pairs(self.goal and self.goal.routes or {}) do
-      if plan[itemID] == nil then ns.GoalService.SetRoute(goalID, itemID, nil) end
-    end
-    for itemID, value in pairs(plan) do
-      ns.GoalService.SetRoute(goalID, itemID, value == "buy" and "buy" or nil)
-    end
+    ns.GoalService.ApplyRoutePreset(self.goalID, mode, self.craftwise)
     local labels = { default = "Default routes restored.", hybrid = "CraftWise hybrid plan applied.", buyall = "Buying every material." }
     ns.UI.MainFrame.SetAlert(labels[mode] or "Routes updated.", "ok")
     ns.UI.MainFrame.RequestRefresh()

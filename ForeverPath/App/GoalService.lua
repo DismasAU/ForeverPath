@@ -329,9 +329,8 @@ function GoalService.AddSkillGoal(professionName, rank)
   local existing = GoalService.FindSkillGoal(canonical)
   if existing then
     return reuseGoal(store, existing, function(goal, reopening)
-      local ok, err = store:SetRank(goal.id, rank)
-      if ok and reopening then goal.target.startRank = standing and standing.skillLevel or goal.target.startRank end
-      return ok, err
+      local restart = reopening and standing and { startRank = standing.skillLevel } or nil
+      return store:SetRank(goal.id, rank, restart)
     end)
   end
   local goal, message, isNew = createGoal(store, GoalModel.TypeIDs.REACH_SKILL, {
@@ -353,11 +352,6 @@ function GoalService.AddSkillFromInput(text)
   return GoalService.AddSkillGoal(parseSkillInput(text))
 end
 
-function GoalService.SetRank(id, rank)
-  local store = GoalService.Store()
-  if not store then return false, "not loaded" end
-  return store:SetRank(id, rank)
-end
 
 ---------------------------------------------------------------------------
 -- Quest goals
@@ -438,9 +432,7 @@ function GoalService.AddReputationGoal(factionID, standing)
   local existing = GoalService.FindReputationGoal(record.factionID)
   if existing then
     return reuseGoal(store, existing, function(goal, reopening)
-      local ok, err = store:SetStanding(goal.id, standing)
-      if ok and reopening then goal.target.startValue = record.value end
-      return ok, err
+      return store:SetStanding(goal.id, standing, reopening and { startValue = record.value } or nil)
     end)
   end
   local goal, message, isNew = createGoal(store, GoalModel.TypeIDs.REACH_REPUTATION, {
@@ -635,41 +627,35 @@ function GoalService.Suggest(kind, text, limit)
   return out
 end
 
+-- Plain forwards to the goal store (Domain/GoalStore.lua). Before load the
+-- writers answer false, LOADING (Remove: nil, LOADING) and the readers
+-- their empty value.
+local WRITERS = { "Select", "SetQuantity", "SetRank", "SetProgress", "SetCasts", "SetStatus", "SetTracked", "SetRoute", "SetPriority" }
+for _, name in ipairs(WRITERS) do
+  GoalService[name] = function(...)
+    local store = GoalService.Store()
+    if not store then return false, LOADING end
+    return store[name](store, ...)
+  end
+end
+
 -- Returns the removed goal, or nil, reason.
 function GoalService.Remove(id)
   local store = GoalService.Store()
-  if not store then return nil, "not loaded" end
+  if not store then return nil, LOADING end
   return store:Remove(id)
 end
 
-function GoalService.Select(id)
-  local store = GoalService.Store()
-  if not store then return false, "not loaded" end
-  return store:Select(id)
-end
-
-function GoalService.SetQuantity(id, quantity)
-  local store = GoalService.Store()
-  if not store then return false, "not loaded" end
-  return store:SetQuantity(id, quantity)
-end
-
-function GoalService.SetCasts(id, casts)
-  local store = GoalService.Store()
-  if not store then return false, "not loaded" end
-  return store:SetCasts(id, casts)
-end
-
-function GoalService.SetStatus(id, status)
-  local store = GoalService.Store()
-  if not store then return false, "not loaded" end
-  return store:SetStatus(id, status)
-end
-
-function GoalService.SetTracked(id, tracked)
-  local store = GoalService.Store()
-  if not store then return false, "not loaded" end
-  return store:SetTracked(id, tracked)
+local READERS = { List = {}, Count = 0, GetSelected = false, GetSelectedID = false, Get = false }
+for name, empty in pairs(READERS) do
+  GoalService[name] = function(...)
+    local store = GoalService.Store()
+    if not store then
+      if type(empty) == "table" then return {} end
+      return empty or nil
+    end
+    return store[name](store, ...)
+  end
 end
 
 -- Sets whatever the goal counts (quantity, casts or target skill).
@@ -681,46 +667,22 @@ function GoalService.SetAmount(id, value)
   return GoalService.SetQuantity(id, value)
 end
 
-function GoalService.SetRoute(id, itemID, route)
-  local store = GoalService.Store()
-  if not store then return false, "not loaded" end
-  return store:SetRoute(id, itemID, route)
-end
-
-function GoalService.SetPriority(id, position)
-  local store = GoalService.Store()
-  if not store then return false, "not loaded" end
-  return store:SetPriority(id, position)
-end
-
-function GoalService.List(filter)
-  local store = GoalService.Store()
-  if not store then return {} end
-  return store:List(filter)
-end
-
-function GoalService.Count(filter)
-  local store = GoalService.Store()
-  if not store then return 0 end
-  return store:Count(filter)
-end
-
-function GoalService.GetSelected()
-  local store = GoalService.Store()
-  if not store then return nil end
-  return store:GetSelected()
-end
-
-function GoalService.GetSelectedID()
-  local store = GoalService.Store()
-  if not store then return nil end
-  return store:GetSelectedID()
-end
-
-function GoalService.Get(id)
-  local store = GoalService.Store()
-  if not store then return nil end
-  return store:Get(id)
+-- Applies a CraftWise preset ("default", "hybrid" or "buyall") to a goal's
+-- route overrides from its comparison result: overrides the preset does not
+-- name are cleared, the rest set. Returns how many routes it set, or nil,
+-- reason. Every screen applies presets through here, so they agree.
+function GoalService.ApplyRoutePreset(goalID, mode, result)
+  local goal = GoalService.Get(goalID)
+  if not goal then return nil, "no such goal" end
+  local routes = ns.CraftWise.PresetRoutes(result, mode)
+  for itemID in pairs(goal.routes or {}) do
+    if routes[itemID] == nil then GoalService.SetRoute(goalID, itemID, nil) end
+  end
+  local changed = 0
+  for itemID, route in pairs(routes) do
+    if GoalService.SetRoute(goalID, itemID, route or nil) then changed = changed + 1 end
+  end
+  return changed
 end
 
 -- The goal for an item, whether it is a craft or an obtain goal.
@@ -761,7 +723,7 @@ end
 
 function GoalService.SetInShopping(goalID, included)
   local state = GoalService.ShoppingState()
-  if not state then return false, "not loaded" end
+  if not state then return false, LOADING end
   state.included[goalID] = included
   return true
 end
@@ -809,148 +771,48 @@ end
 ---------------------------------------------------------------------------
 -- Goal attribution: which quests and equipment slots serve which goals
 ---------------------------------------------------------------------------
--- Which quests feed open goals: { [questID] = { entry, goals = { { goal, name,
--- itemID, count } | { goal, name, reputation, faction } } } }, from the
--- missing leaves of each goal's tree (quest rewards) and, for reputation
--- goals, every open quest that gives reputation with the faction.
+-- Which quests feed open goals (Domain/GoalAttribution.QuestFeeds).
 -- goals default to the open goals, views to the last evaluation.
 function GoalService.QuestFeeds(goals, views)
   goals = goals or GoalService.List({ open = true })
   views = views or GoalService.views
-  local feeds = {}
-  local function feedFor(entry)
-    local feed = feeds[entry.id]
-    if not feed then
-      feed = { entry = entry, goals = {} }
-      feeds[entry.id] = feed
-    end
-    return feed
-  end
+  local entries = {}
   for _, goal in ipairs(goals) do
-    local view = views[goal.id]
-    local name = GoalService.Name(goal)
-    if goal.type == GoalModel.TypeIDs.REACH_REPUTATION then
-      local quests = view and view.reputation and view.reputation.quests
-        or ns.Log.Try(ns.ReputationProvider.QuestsFor, goal.target.name, goal.target.factionID)
-      for _, quest in ipairs(quests or {}) do
-        if quest.entry and not (quest.state and quest.state.completed) then
-          local feed = feedFor(quest.entry)
-          feed.goals[#feed.goals + 1] = { goal = goal, name = name, reputation = quest.amount, faction = goal.target.name }
-        end
-      end
-    else
-      local leaves = view and view.tree and view.tree.summary.missingLeaves or {}
-      for _, leaf in ipairs(leaves) do
-        if leaf.itemID then
-          for _, entry in ipairs(ns.QuestProvider.QuestsRewarding(leaf.itemID)) do
-            local feed = feedFor(entry)
-            feed.goals[#feed.goals + 1] = { goal = goal, name = name, itemID = leaf.itemID, count = leaf.count }
-          end
-        end
-      end
-    end
+    entries[#entries + 1] = { goal = goal, view = views[goal.id], name = GoalService.Name(goal) }
   end
-  return feeds
+  return ns.GoalAttribution.QuestFeeds(entries, {
+    questsRewarding = ns.QuestProvider.QuestsRewarding,
+    reputationQuests = function(goal)
+      return ns.Log.Try(ns.ReputationProvider.QuestsFor, goal.target.name, goal.target.factionID)
+    end,
+  })
 end
 
--- The Quests screen's board for a tab ("zone", "goal" or "completed"):
--- { groups = { { key, label, rows = { { questID, name, level, label, kind,
--- state, entry, feeds = { goal names }, feed, goal } } } }, feeds, feedCount,
--- total, questGoals }. Zone groups are instances or log zones; goal groups
--- are named after the goals a quest serves, journal and quest-log quests
--- alike. feedOnly keeps only quests that serve a goal on the zone tab.
+-- The Quests screen's board for a tab (Domain/GoalAttribution.QuestBoard).
 function GoalService.QuestBoard(tab, feedOnly)
   local QP = ns.QuestProvider
-  local feeds = GoalService.QuestFeeds()
   local questGoals = {}
   for _, goal in ipairs(GoalService.List()) do
     if goal.type == GoalModel.TypeIDs.COMPLETE_QUEST then questGoals[goal.target.questID] = goal end
   end
-  -- The goals a quest serves, its own quest goal first.
-  local function servedGoals(questID)
-    local names = {}
-    if questGoals[questID] then names[1] = GoalService.Name(questGoals[questID]) end
-    for _, f in ipairs(feeds[questID] and feeds[questID].goals or {}) do names[#names + 1] = f.name end
-    return names
-  end
   local playerLevel = ns.Compat.PlayerLevel()
-  local groups, byLabel, seen = {}, {}, {}
-  local function add(groupLabel, questID, name, level, state, entry)
-    if seen[questID] then return end
-    seen[questID] = true
-    local g = byLabel[groupLabel]
-    if not g then
-      g = { key = groupLabel, label = groupLabel, rows = {} }
-      byLabel[groupLabel] = g
-      groups[#groups + 1] = g
-    end
-    local label, kind, key = QP.StateLabel(state, entry, playerLevel)
-    local goal = questGoals[questID]
-    local feedNames = servedGoals(questID)
-    if goal then feedNames[1] = "goal: " .. feedNames[1] end
-    g.rows[#g.rows + 1] = {
-      questID = questID, name = name, level = level, label = label, kind = kind, stateKey = key, state = state, entry = entry,
-      feeds = feedNames, feed = feeds[questID], goal = goal,
-    }
-  end
-  local function serves(questID) return feeds[questID] ~= nil or questGoals[questID] ~= nil end
-  for _, entry in ipairs(QP.List()) do
-    local state = QP.State(entry.id)
-    local include
-    if tab == "completed" then include = state.completed
-    elseif tab == "goal" then include = serves(entry.id) and not state.completed
-    else include = not state.completed and (not feedOnly or serves(entry.id)) end
-    if include then
-      add(tab == "goal" and table.concat(servedGoals(entry.id), ", ") or (entry.instance or "?"), entry.id, entry.name, entry.level, state, entry)
-    end
-  end
-  if tab ~= "completed" then
-    for _, log in ipairs(QP.LogEntries()) do
-      if not seen[log.questID] and ((tab == "goal" and serves(log.questID)) or (tab ~= "goal" and (not feedOnly or serves(log.questID)))) then
-        add(tab == "goal" and table.concat(servedGoals(log.questID), ", ") or (log.zone or "Quest log"), log.questID,
-          log.title or QP.Name(log.questID), log.level, QP.State(log.questID), QP.Get(log.questID))
-      end
-    end
-  end
-  table.sort(groups, function(a, b) return tostring(a.label) < tostring(b.label) end)
-  local total = 0
-  for _, g in ipairs(groups) do
-    table.sort(g.rows, function(a, b)
-      if (a.level or 0) ~= (b.level or 0) then return (a.level or 0) < (b.level or 0) end
-      if a.name ~= b.name then return tostring(a.name) < tostring(b.name) end
-      return a.questID < b.questID
-    end)
-    total = total + #g.rows
-  end
-  return { groups = groups, feeds = feeds, feedCount = Util.Count(feeds), total = total, questGoals = questGoals }
+  return ns.GoalAttribution.QuestBoard(tab, feedOnly, {
+    quests = QP.List(), logEntries = QP.LogEntries(), feeds = GoalService.QuestFeeds(), questGoals = questGoals,
+    nameOf = GoalService.Name, state = QP.State, questName = QP.Name, get = QP.Get,
+    stateLabel = function(state, entry) return QP.StateLabel(state, entry, playerLevel) end,
+  })
 end
 
 -- EquipmentProvider.Analyze with the open item goals placed on the slots
--- their items fit: each slot entry gains goal, goalView, goalItemID, and the
--- result trackedGoals (item goals that are gear) and upgradesPlanned.
--- source filters GearQuest candidates.
+-- their items fit (Domain/GoalAttribution.PlaceOnSlots): each slot entry
+-- gains goal, goalView, goalItemID, and the result trackedGoals (item goals
+-- that are gear) and upgradesPlanned. source filters GearQuest candidates.
 function GoalService.Equipment(source, goals, views)
   goals = goals or GoalService.List({ open = true })
   views = views or GoalService.views
   local EP = ns.EquipmentProvider
   local analysis = EP.Analyze({ source = source })
-  local goalSlots, tracked = {}, 0
-  for _, goal in ipairs(goals) do
-    if GoalModel.Types[goal.type].targetKind == "item" then
-      local keys = EP.SlotKeysFor(goal.target.itemID)
-      if #keys > 0 then
-        tracked = tracked + 1
-        local placed = false
-        for _, key in ipairs(keys) do
-          if not placed and not goalSlots[key] then
-            goalSlots[key] = goal
-            placed = true
-          end
-        end
-        if not placed then goalSlots[keys[1]] = goalSlots[keys[1]] or goal end
-      end
-    end
-  end
+  local goalSlots, tracked = ns.GoalAttribution.PlaceOnSlots(goals, EP.SlotKeysFor)
   analysis.trackedGoals, analysis.upgradesPlanned = tracked, 0
   for _, entry in ipairs(analysis.slots) do
     local goal = goalSlots[entry.slot.key]

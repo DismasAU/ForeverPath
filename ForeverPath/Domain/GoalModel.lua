@@ -7,8 +7,10 @@
 --     tracked = true, priority = 1,
 --     createdAt = 1792147990, updatedAt = 1792147990, completedAt = nil, notes = nil,
 --   }
+-- Any target may carry completedBy = "auto" once GoalCompletion completed it.
 -- `target` is type specific:
---   CRAFT_ITEM / OBTAIN_ITEM   { itemID, quantity }
+--   CRAFT_ITEM / OBTAIN_ITEM   { itemID, quantity, baseline, peak } (baseline and peak:
+--                              GoalCompletion's count when a craft goal started, best gain since)
 --   COMPLETE_ATTUNEMENT        { attuneID, name, icon }
 --   LEARN_RECIPE               { spellID, name, professionName, professionID, icon }
 --   REACH_SKILL                { professionID, professionName, rank, startRank, icon }

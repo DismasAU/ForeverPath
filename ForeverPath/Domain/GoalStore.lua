@@ -176,8 +176,11 @@ function GoalStore:GetSelected()
   return self:Get(self.storage.selectedGoalId)
 end
 
--- Applies change(goal, now) -> ok, err to a stored goal and announces it when
--- it succeeds; opts.renumber re-sequences priorities first (status changes).
+-- The one write path: applies change(goal, now) -> ok, err to a stored goal
+-- and announces it when it succeeds. opts.target merges extra target fields
+-- (startRank, startValue, completedBy) before the announcement;
+-- opts.renumber re-sequences priorities first (status changes); opts.silent
+-- skips the announcement (completion bookkeeping the player never sees).
 function GoalStore:Update(id, change, opts)
   local goal = self.storage.goals[id]
   if not goal then
@@ -187,88 +190,86 @@ function GoalStore:Update(id, change, opts)
   if not ok then
     return false, err
   end
+  for field, value in pairs(opts and opts.target or {}) do goal.target[field] = value end
   if opts and opts.renumber then self:Renumber() end
-  notify(self, "updated", goal)
+  if not (opts and opts.silent) then notify(self, "updated", goal) end
   return true
 end
 
 -- Setters over the GoalModel rules: each returns true, or false, reason.
+-- target (optional) is extra target fields written with the change.
 function GoalStore:SetQuantity(id, quantity)
   return self:Update(id, function(goal, now) return GoalModel.SetQuantity(goal, quantity, now) end)
 end
 
-function GoalStore:SetRank(id, rank)
-  return self:Update(id, function(goal, now) return GoalModel.SetRank(goal, rank, now) end)
+function GoalStore:SetRank(id, rank, target)
+  return self:Update(id, function(goal, now) return GoalModel.SetRank(goal, rank, now) end, { target = target })
 end
 
-function GoalStore:SetStanding(id, standing)
-  return self:Update(id, function(goal, now) return GoalModel.SetStanding(goal, standing, now) end)
+function GoalStore:SetStanding(id, standing, target)
+  return self:Update(id, function(goal, now) return GoalModel.SetStanding(goal, standing, now) end, { target = target })
 end
 
 function GoalStore:SetCasts(id, casts)
   return self:Update(id, function(goal, now) return GoalModel.SetCasts(goal, casts, now) end)
 end
 
-function GoalStore:SetStatus(id, status)
-  return self:Update(id, function(goal, now) return GoalModel.SetStatus(goal, status, now) end, { renumber = true })
+function GoalStore:SetStatus(id, status, target)
+  return self:Update(id, function(goal, now) return GoalModel.SetStatus(goal, status, now) end, { renumber = true, target = target })
 end
 
 function GoalStore:SetTracked(id, tracked)
-  local goal = self.storage.goals[id]
-  if not goal then
-    return false, "no such goal"
-  end
-  goal.tracked = tracked and true or false
-  goal.updatedAt = self.now()
-  notify(self, "updated", goal)
-  return true
+  return self:Update(id, function(goal, now)
+    goal.tracked = tracked and true or false
+    goal.updatedAt = now
+    return true
+  end)
+end
+
+-- An item goal's completion bookkeeping (baseline, peak); not announced.
+function GoalStore:SetProgress(id, progress)
+  return self:Update(id, function() return true end, { target = progress, silent = true })
 end
 
 -- Switches a goal between types that share the same target shape
 -- (CRAFT_ITEM <-> OBTAIN_ITEM).
 function GoalStore:SetType(id, goalType)
-  local goal = self.storage.goals[id]
-  if not goal then
-    return false, "no such goal"
-  end
-  local def = GoalModel.Types[goalType]
-  if not def then
-    return false, "unknown goal type"
-  end
-  local current = GoalModel.Types[goal.type]
-  if not current or current.targetKind ~= def.targetKind then
-    return false, "goal types have different targets"
-  end
-  local ok, err = GoalModel.ValidateTarget(goalType, goal.target)
-  if not ok then
-    return false, err
-  end
-  if goal.type ~= goalType then
-    goal.type = goalType
-    goal.updatedAt = self.now()
-    notify(self, "updated", goal)
-  end
-  return true
+  return self:Update(id, function(goal, now)
+    local def = GoalModel.Types[goalType]
+    if not def then
+      return false, "unknown goal type"
+    end
+    local current = GoalModel.Types[goal.type]
+    if not current or current.targetKind ~= def.targetKind then
+      return false, "goal types have different targets"
+    end
+    local ok, err = GoalModel.ValidateTarget(goalType, goal.target)
+    if not ok then
+      return false, err
+    end
+    if goal.type ~= goalType then
+      goal.type = goalType
+      goal.updatedAt = now
+    end
+    return true
+  end)
 end
 
 -- Forces how a reagent is obtained for this goal: "craft", "buy" or nil (default).
 function GoalStore:SetRoute(id, itemID, route)
-  local goal = self.storage.goals[id]
-  if not goal then
-    return false, "no such goal"
-  end
-  if type(itemID) ~= "number" then
-    return false, "itemID must be a number"
-  end
-  if route ~= nil and not GoalModel.IsRouteOverride(route) then
-    return false, "route must be craft, buy or nil"
-  end
-  goal.routes = goal.routes or {}
-  goal.routes[itemID] = route
-  if next(goal.routes) == nil then goal.routes = nil end
-  goal.updatedAt = self.now()
-  notify(self, "updated", goal)
-  return true
+  return self:Update(id, function(goal, now)
+    if type(itemID) ~= "number" then
+      return false, "itemID must be a number"
+    end
+    if route ~= nil and not GoalModel.IsRouteOverride(route) then
+      return false, "route must be craft, buy or nil"
+    end
+    goal.routes = goal.routes or {}
+    goal.routes[itemID] = route
+    if next(goal.routes) == nil then goal.routes = nil end
+    goal.updatedAt = now
+    return true
+  end)
 end
 
 -- Assigns sequential priorities to open goals in their current order.

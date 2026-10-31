@@ -13,6 +13,7 @@ return {
   "planner_spec",
   "overview_spec",
   "shopping_list_spec",
+  "goal_attribution_spec",
   "item_provider_spec",
   "profession_provider_spec",
   "inventory_provider_spec",

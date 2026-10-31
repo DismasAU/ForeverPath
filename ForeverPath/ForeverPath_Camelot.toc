@@ -38,6 +38,7 @@ Domain\PlannerProfessions.lua
 Domain\PlannerQuests.lua
 Domain\Overview.lua
 Domain\ShoppingList.lua
+Domain\GoalAttribution.lua
 Domain\CraftWise.lua
 Providers\Client\ItemProvider.lua
 Providers\Client\ProfessionProvider.lua

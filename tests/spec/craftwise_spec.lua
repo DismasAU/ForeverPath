@@ -122,10 +122,8 @@ describe("CraftWise", function()
   it("plans routes, recognises presets and prices obtain trees", function()
     local prices = { [CLOTH] = 10, [THREAD] = 20, [BOLT] = 15, [BAG] = 500 }
     local result = CW.Compare(tree({}), { priceOf = pricer(prices) })
-    local applied = {}
-    local changed = CW.ApplyPlan(result, function(itemID, route) applied[itemID] = route or "default" return true end)
-    assert_eq(changed, 1)
-    assert_eq(applied[BOLT], "buy")
+    assert_deep_eq(CW.PresetRoutes(result, "hybrid"), { [BOLT] = "buy" })
+    assert_deep_eq(CW.PresetRoutes(result, "default"), {})
     assert_eq(CW.Mode(result, nil), "default")
     assert_eq(CW.Mode(result, { [BOLT] = "buy" }), "hybrid")
     assert_eq(CW.Mode(result, { [BOLT] = "craft" }), "custom")

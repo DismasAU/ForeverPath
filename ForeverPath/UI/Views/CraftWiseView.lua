@@ -201,10 +201,7 @@ function CraftWiseView.Create(screen)
 
   function view:UsePlan()
     if not self.goal or not self.result then return end
-    local goalID = self.goal.id
-    local changed = ns.CraftWise.ApplyPlan(self.result, function(itemID, route)
-      return ns.GoalService.SetRoute(goalID, itemID, route)
-    end)
+    local changed = ns.GoalService.ApplyRoutePreset(self.goal.id, "hybrid", self.result) or 0
     ns.UI.MainFrame.SetAlert(string.format("CraftWise hybrid plan applied: %d component route%s set.", changed, changed == 1 and "" or "s"), "ok")
     ns.UI.MainFrame.RequestRefresh()
   end

@@ -32,8 +32,7 @@ end
 function GoalCompletion.Baseline(goal, force)
   if not itemGoal(goal) then return end
   if force or goal.target.baseline == nil then
-    goal.target.baseline = ns.InventoryProvider.OwnedCount(goal.target.itemID)
-    goal.target.peak = 0
+    ns.GoalService.SetProgress(goal.id, { baseline = ns.InventoryProvider.OwnedCount(goal.target.itemID), peak = 0 })
   end
 end
 
@@ -70,7 +69,9 @@ local function itemDone(goal)
   end
   local progress = GoalCompletion.Progress(goal)
   -- Keep the best gain seen, so items crafted and then used still count.
-  if progress and progress.peak then goal.target.peak = progress.peak end
+  if progress and progress.peak and progress.peak ~= goal.target.peak then
+    ns.GoalService.SetProgress(goal.id, { peak = progress.peak })
+  end
   return progress ~= nil and progress.done
 end
 
@@ -111,8 +112,7 @@ function GoalCompletion.Check(reason)
   if not setting("autoComplete", true) then return completed end
   for _, goal in ipairs(ns.GoalService.List({ open = true })) do
     local check = DONE_CHECKS[goal.type]
-    if check and goal.target and check(goal) and ns.GoalService.SetStatus(goal.id, GoalModel.Statuses.COMPLETED) then
-      goal.target.completedBy = "auto"
+    if check and goal.target and check(goal) and ns.GoalService.SetStatus(goal.id, GoalModel.Statuses.COMPLETED, { completedBy = "auto" }) then
       completed[#completed + 1] = goal
       GoalCompletion.Celebrate(goal)
     end
@@ -228,9 +228,11 @@ function GoalCompletion.Init()
     end)
   end
   Events.RegisterWoW("PLAYER_ENTERING_WORLD", function()
-    -- Remember statuses so a later reopen is noticed, and baseline old goals.
+    -- Remember statuses so a later reopen is noticed, and baseline craft
+    -- goals saved without one, so the first check can already complete them.
     for _, goal in ipairs(ns.GoalService.List()) do
       GoalCompletion.lastStatus[goal.id] = goal.status
+      if goal.type == GoalModel.TypeIDs.CRAFT_ITEM then GoalCompletion.Baseline(goal) end
     end
     ns.Compat.After(3, function() GoalCompletion.Check("login") end)
   end)
