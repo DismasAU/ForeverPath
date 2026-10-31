@@ -375,15 +375,7 @@ function Recipes.Search(text, limit, professionName, kind)
       hits[#hits + 1] = { spellID = spellID, name = name, professionID = row[2], professionName = Recipes.ProfessionName(row[2]), rank = rank, enchant = enchant or nil }
     end
   end
-  table.sort(hits, function(a, b)
-    if a.rank ~= b.rank then return a.rank < b.rank end
-    if a.name ~= b.name then return a.name < b.name end
-    return a.spellID < b.spellID
-  end)
-  if limit and #hits > limit then
-    for i = #hits, limit + 1, -1 do hits[i] = nil end
-  end
-  return hits
+  return ns.Util.SortRankedHits(hits, "spellID", limit)
 end
 
 -- Recipe spell id by recipe name (case-insensitive), preferring the given

@@ -446,15 +446,7 @@ function QuestProvider.Search(text, limit)
       end
     end
   end
-  table.sort(hits, function(a, b)
-    if a.rank ~= b.rank then return a.rank < b.rank end
-    if a.name ~= b.name then return a.name < b.name end
-    return a.questID < b.questID
-  end)
-  if limit and #hits > limit then
-    for i = #hits, limit + 1, -1 do hits[i] = nil end
-  end
-  return hits
+  return Util.SortRankedHits(hits, "questID", limit)
 end
 
 -- "Ready", "In log", "Available", "Locked", "Done" for a quest (entry optional).

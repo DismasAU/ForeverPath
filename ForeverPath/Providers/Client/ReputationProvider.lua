@@ -250,15 +250,10 @@ function ReputationProvider.Search(text, limit)
       end
     end
   end
-  table.sort(hits, function(a, b)
-    if a.rank ~= b.rank then return a.rank < b.rank end
+  -- Factions you have met first.
+  return Util.SortRankedHits(hits, "factionID", limit, function(a, b)
     if (a.unmet or false) ~= (b.unmet or false) then return not a.unmet end
-    return a.name < b.name
   end)
-  if limit and #hits > limit then
-    for i = #hits, limit + 1, -1 do hits[i] = nil end
-  end
-  return hits
 end
 
 -- Progress towards a standing: { record, target, targetLabel, targetMin, remaining, reached, percent }.

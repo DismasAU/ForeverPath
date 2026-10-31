@@ -60,6 +60,32 @@ describe("Planner", function()
     assert_match(view.message, "C_TradeSkillUI")
   end)
 
+  it("plans obtain goals without the profession API", function()
+    local d = deps({ sources = { Sources = function(id)
+      if id == 2996 then return { { kind = "vendor", label = "Vendor: Tailoring supplies" } } end
+      return {}
+    end } })
+    d.profession.IsAvailable = function() return false end
+    local obtainGoal = { id = "o", type = "OBTAIN_ITEM", target = { itemID = 2996, quantity = 3 } }
+    local view = Planner.Evaluate(obtainGoal, d)
+    assert_true(view.readiness ~= Readiness.PROVIDER_UNAVAILABLE, "only crafting goals need C_TradeSkillUI")
+    assert_not_nil(view.tree)
+    assert_eq(view.tree.root.missing, 2, "1 in the bags of 3")
+  end)
+
+  it("shares one ledger between a goal's tree and the items attached below it", function()
+    local d = deps()
+    local seen = {}
+    local resolve = ns.DependencyResolver.Resolve
+    ns.DependencyResolver.Resolve = function(root, opts)
+      seen[#seen + 1] = opts.ledger
+      return resolve(root, opts)
+    end
+    Planner.Evaluate(goal, d)
+    ns.DependencyResolver.Resolve = resolve
+    for i = 2, #seen do assert_true(seen[i] == seen[1], "tree " .. i .. " uses the first ledger") end
+  end)
+
   it("asks for a scan when no profession data exists", function()
     local d = deps()
     d.profession.FindRecipesForItem = function() return {} end

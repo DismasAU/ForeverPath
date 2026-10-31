@@ -980,13 +980,15 @@ end
 -- What the active goals still need beyond this character's own bags and
 -- bank, per item: needs[itemID] = units, and order (most needed first).
 -- Alts' snapshots are added back, so the answer is the same whether they
--- count as owned or not. Train and quest steps carry no item and are left out.
+-- count as owned or not. Train and quest steps carry no item and are left
+-- out, as are crafts done for skill points (their reagents are needed, the
+-- outputs are not), the same rule as the shopping list.
 function GoalService.Needs()
   local needs, order = {}, {}
   for _, view in pairs(GoalService.views) do
     if view.goal and view.goal.status == GoalModel.Statuses.ACTIVE and view.tree then
       for _, node in pairs(view.tree.byKey) do
-        local short = node.depth > 0 and node.itemID and (node.missing + (node.ownedAlts or 0)) or 0
+        local short = node.depth > 0 and node.itemID and not node.forSkill and (node.missing + (node.ownedAlts or 0)) or 0
         if short > 0 then
           if not needs[node.itemID] then order[#order + 1] = node.itemID end
           needs[node.itemID] = (needs[node.itemID] or 0) + short

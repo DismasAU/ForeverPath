@@ -146,6 +146,23 @@ function Util.MatchRank(name, needle)
   return 3
 end
 
+-- Sorts type-ahead hits { rank, name, [idField] } best first (rank, then
+-- tieBreak(a, b) when given and it decides, then name, then id) and cuts
+-- the list to limit. Returns hits.
+function Util.SortRankedHits(hits, idField, limit, tieBreak)
+  table.sort(hits, function(a, b)
+    if a.rank ~= b.rank then return a.rank < b.rank end
+    local decided = tieBreak and tieBreak(a, b)
+    if decided ~= nil then return decided end
+    if a.name ~= b.name and a.name and b.name then return a.name < b.name end
+    return a[idField] < b[idField]
+  end)
+  if limit then
+    for i = #hits, limit + 1, -1 do hits[i] = nil end
+  end
+  return hits
+end
+
 -- Human readable "how long ago" text.
 function Util.FormatAgo(timestamp, now)
   if type(timestamp) ~= "number" then

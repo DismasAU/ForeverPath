@@ -9,7 +9,7 @@
 --                    GetRecipe(recipeID, refresh) -> recipe
 --   deps.inventory   GetCounts(itemID) -> { bags, bank, alts, bankSource, bankScannedAt }
 --   deps.catalogue   the recipe catalogue (Data/Recipes.lua): IsAvailable(), Lookup(itemID), Get(spellID),
---                    GetCombine(spellID), ForProfession(skillLine), ProfessionID(name), Sources(itemID),
+--                    GetCombine(spellID), ForProfession(skillLine), ProfessionID(name),
 --                    IsSoulbound(itemID), ItemBind(itemID)
 --   deps.characters  Sources(itemID) -> alt hints, WhoKnows(spellID), WithProfession(name, id)
 --   deps.sources     Sources(itemID) -> vendor / drop / quest / gather hints, IsRawMaterial(itemID)
@@ -70,6 +70,9 @@ local function inventoryContext(deps)
     includeBank = true
   end
   local includeAlts = deps.settings and deps.settings.includeAlts == true
+  -- One ledger for every tree this evaluation builds (the goal's tree and
+  -- the quest items attached below it), so no unit is counted twice.
+  local ledger = deps.ledger or Allocation.New()
   local ctx = { includeBank = includeBank, includeAlts = includeAlts }
   ctx.lookup = function(reagentID)
     local counts = deps.inventory and deps.inventory.GetCounts and deps.inventory.GetCounts(reagentID) or 0
@@ -85,7 +88,7 @@ local function inventoryContext(deps)
       counts = ctx.lookup,
       includeBank = includeBank,
       routes = routes,
-      ledger = deps.ledger or Allocation.New(),
+      ledger = ledger,
       includeAlts = includeAlts,
       sources = Planner.SourceFinder(deps),
       crafters = deps.characters and deps.characters.WithProfession or nil,
@@ -178,7 +181,11 @@ local function evaluate(goal, deps)
     return view
   end
 
-  if not deps.profession or not deps.profession.IsAvailable() then
+  -- Obtain goals plan from sources and need no profession API; without it
+  -- they simply see no recipes.
+  local obtain = goal.type == GoalModel.TypeIDs.OBTAIN_ITEM
+  local professionAPI = deps.profession and deps.profession.IsAvailable() or false
+  if not professionAPI and not obtain then
     view.readiness = Readiness.PROVIDER_UNAVAILABLE
     view.message = "This client does not expose the profession API ForeverPath needs (C_TradeSkillUI). Crafting goals cannot be evaluated here."
     return view
@@ -187,7 +194,6 @@ local function evaluate(goal, deps)
   local candidates = Planner.Candidates(itemID, deps)
   view.candidates = candidates
   local learned, unlearned = chooseCandidate(candidates)
-  local obtain = goal.type == GoalModel.TypeIDs.OBTAIN_ITEM
   local catalogue = deps.catalogue and deps.catalogue.IsAvailable and deps.catalogue.IsAvailable() or false
 
   if #candidates == 0 and not obtain and not catalogue and not deps.profession.HasScanData() then
@@ -573,13 +579,11 @@ function Planner.Progress(plan)
   }
 end
 
--- Source hints for the resolver: static data plus alt characters.
+-- Source hints for the resolver: the source providers plus alt characters.
 function Planner.SourceFinder(deps)
-  local static = deps.catalogue and deps.catalogue.Sources
   local characters = deps.characters and deps.characters.Sources
   local sources = deps.sources and deps.sources.Sources
   local finders = {}
-  if static then finders[#finders + 1] = static end
   if sources then finders[#finders + 1] = sources end
   if characters then finders[#finders + 1] = characters end
   if #finders == 0 then return nil end

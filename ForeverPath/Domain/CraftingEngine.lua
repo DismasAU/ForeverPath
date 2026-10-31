@@ -70,26 +70,19 @@ function CraftingEngine.ComputeRequirements(recipe, quantityWanted)
   }
 end
 
--- Normalizes whatever the inventory lookup returns into { bags, bank, alts, total, bankSource }.
+-- Allocation.Normalize's shape plus total (what the settings count as
+-- owned) and reserved.
 local function normalizeCounts(counts, includeBank, includeAlts)
-  if type(counts) == "number" then
-    return { bags = counts, bank = nil, total = counts, bankSource = "none" }
+  local out = ns.Allocation.Normalize(counts)
+  out.total = out.bags
+  if includeBank ~= false and out.bank then
+    out.total = out.total + out.bank
   end
-  if type(counts) ~= "table" then
-    return { bags = 0, bank = nil, total = 0, bankSource = "none" }
+  if includeAlts == true and out.alts then
+    out.total = out.total + out.alts
   end
-  local bags = tonumber(counts.bags) or 0
-  local bank = tonumber(counts.bank)
-  local alts = tonumber(counts.alts)
-  local total = bags
-  if includeBank ~= false and bank then
-    total = total + bank
-  end
-  if includeAlts == true and alts then
-    total = total + alts
-  end
-  return { bags = bags, bank = bank, alts = alts, total = total, bankSource = counts.bankSource or (bank and "unknown" or "none"),
-    altSources = counts.altSources, reserved = tonumber(counts.reserved) or 0 }
+  out.reserved = type(counts) == "table" and tonumber(counts.reserved) or 0
+  return out
 end
 
 -- Combines requirements with inventory counts.

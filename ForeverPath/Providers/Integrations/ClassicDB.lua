@@ -595,14 +595,7 @@ function ClassicDB.Search(text, limit, side, classID)
       hits[#hits + 1] = { questID = t.questID, name = ClassicDB.Quest(t.questID).name, rank = rank }
     end
   end
-  table.sort(hits, function(a, b)
-    if a.rank ~= b.rank then return a.rank < b.rank end
-    return a.questID < b.questID
-  end)
-  if limit and #hits > limit then
-    for i = #hits, limit + 1, -1 do hits[i] = nil end
-  end
-  return hits
+  return Util.SortRankedHits(hits, "questID", limit)
 end
 
 -- The quests to do before questID, then questID, in order. For an "any of"

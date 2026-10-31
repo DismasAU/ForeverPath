@@ -398,6 +398,11 @@ describe("Reach-skill goals", function()
     local byItem = {}
     for _, r in ipairs(list.rows) do byItem[r.itemID or r.key] = r end
     assert_nil(byItem[PANTS_ITEM])
+    -- Cross-goal needs agree: the outputs crafted for points are not needed.
+    ns.GoalService.EvaluateViews()
+    local needs = ns.GoalService.Needs()
+    assert_nil(needs[PANTS_ITEM], "skill-up outputs are not materials")
+    assert_gt(needs[WOOLEN_CLOTH] or 0, 0)
     assert_eq(byItem[WOOLEN_CLOTH].category, "craft")
     assert_not_nil(byItem[WOOL])
     assert_true(byItem[patternItem].learn)

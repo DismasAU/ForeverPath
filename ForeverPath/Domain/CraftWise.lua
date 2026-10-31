@@ -139,22 +139,19 @@ function CraftWise.Compare(tree, opts)
   result.buy.listings = market and market.listings or nil
   result.buy.avg7 = market and market.avg7 and market.avg7 * wanted or nil
 
-  -- Craft everything: buy every raw material of the full tree.
+  -- Craft everything (buy every raw material of the full tree) and hybrid
+  -- (the cheaper of buying or crafting at every level). A root with nothing
+  -- to craft below it can only be bought.
   if root.claims and #root.children == 0 then
     result.craft.cost = nil
     result.craft.unknown = 1
     result.craft.possible = false
+    result.hybrid.cost = rootRow.hybrid
+    result.hybrid.unknown = rootRow.unknown or 0
   else
     result.craft.cost = rootRow.craftPath
     result.craft.unknown = rootRow.pathUnknown or 0
     result.craft.possible = #root.children > 0 or (root.missing or 0) <= 0
-  end
-
-  -- Hybrid: the cheaper of buying or crafting at every level.
-  if root.claims and #root.children == 0 then
-    result.hybrid.cost = rootRow.hybrid
-    result.hybrid.unknown = rootRow.unknown or 0
-  else
     result.hybrid.cost = rootRow.craft
     result.hybrid.unknown = rootRow.craftUnknown or 0
   end
@@ -163,7 +160,7 @@ function CraftWise.Compare(tree, opts)
   result.hybrid.buyList, result.hybrid.craftList, result.hybrid.ownedList, result.hybrid.altList = {}, {}, {}, {}
   result.plan = {}
   local worst
-  local function walk(row, parentChoice)
+  local function walk(row)
     local node = row.node
     if row.depth > 0 then
       if row.choice == "owned" then
@@ -187,10 +184,10 @@ function CraftWise.Compare(tree, opts)
     end
     -- Only descend into components that are crafted in the hybrid plan.
     if row.choice == "craft" or row.depth == 0 then
-      for _, child in ipairs(row.children) do walk(child, row.choice) end
+      for _, child in ipairs(row.children) do walk(child) end
     end
   end
-  walk(rootRow, nil)
+  walk(rootRow)
   result.hybrid.freshness = worst
 
   -- Recommendation: cheapest known strategy; hybrid wins ties.
@@ -249,10 +246,10 @@ function CraftWise.Mode(result, routes)
   routes = routes or {}
   local function matches(plan)
     for itemID, route in pairs(plan) do
-      if (routes[itemID] or nil) ~= (route == Routes.BUY and "buy" or nil) then return false end
+      if routes[itemID] ~= (route == Routes.BUY and "buy" or nil) then return false end
     end
     for itemID in pairs(routes) do
-      if plan[itemID] == nil and routes[itemID] ~= nil then return false end
+      if plan[itemID] == nil then return false end
     end
     return true
   end
