@@ -361,10 +361,7 @@ local function Create(parent)
   screen.rowPool = Widgets.Pool(scroll.content, createGoalRow)
   screen.groupPool = Widgets.Pool(scroll.content, createGroupRow)
 
-  local footer = Widgets.Frame(body, nil, { bg = C.sidebar })
-  footer:SetHeight(26)
-  footer:SetPoint("BOTTOMLEFT", body, "BOTTOMLEFT", 0, 0)
-  footer:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", 0, 0)
+  local footer = Widgets.TableFooter(body, 26)
   local footerText = Widgets.Text(footer, "small", "Click a goal to configure it")
   footerText:SetPoint("LEFT", footer, "LEFT", 12, 0)
   local footerRight = Widgets.Text(footer, "small", "TRK = shown in tracker", { justify = "RIGHT" })
@@ -453,10 +450,7 @@ local function Create(parent)
     local total = 0
     for _, group in ipairs(groups) do
       groupIndex = groupIndex + 1
-      local groupRow = self.groupPool:Get(groupIndex)
-      Widgets.StackAt(groupRow, scroll.content, y)
-      groupRow.label:SetText(Theme.Upper(group.label))
-      groupRow.count:SetText(tostring(#group.goals))
+      Widgets.PlaceGroupRow(self.groupPool:Get(groupIndex), scroll.content, y, group.label, #group.goals)
       y = y + GROUP_ROW
       for _, goal in ipairs(group.goals) do
         total = total + 1

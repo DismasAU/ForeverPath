@@ -191,6 +191,15 @@ function Widgets.TableHeader(body, columns, first)
 end
 
 -- A footer bar of `height` across the bottom of body, with a top line.
+-- A gradient texture filling frame inside its 1 px border.
+function Widgets.FillGradient(frame, gradient)
+  local texture = frame:CreateTexture(nil, "BACKGROUND")
+  texture:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
+  texture:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
+  Widgets.Gradient(texture, gradient)
+  return texture
+end
+
 function Widgets.TableFooter(body, height)
   local footer = Widgets.Frame(body, nil, { bg = C.sidebar })
   footer:SetHeight(height)
@@ -788,10 +797,7 @@ end
 function Widgets.Dropdown(parent, text, width, onClick)
   local button = Widgets.Frame(parent, nil, { frameType = "Button", border = C.bronzeDim })
   button:SetSize(width or 140, 24)
-  local gradient = button:CreateTexture(nil, "BACKGROUND")
-  gradient:SetPoint("TOPLEFT", button, "TOPLEFT", 1, -1)
-  gradient:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -1, 1)
-  Widgets.Gradient(gradient, G.dropdown)
+  Widgets.FillGradient(button, G.dropdown)
   local label = Widgets.Text(button, "button", text, { color = C.text })
   label:SetPoint("LEFT", button, "LEFT", 8, 0)
   label:SetPoint("RIGHT", button, "RIGHT", -20, 0)
@@ -1180,6 +1186,13 @@ function Widgets.StackAt(frame, parent, y, height)
   frame:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -y)
   frame:SetPoint("TOPRIGHT", parent, "TOPRIGHT", 0, -y)
   if height then frame:SetHeight(height) end
+end
+
+-- A stacked list's group header (a pooled row with label and count) at y.
+function Widgets.PlaceGroupRow(row, parent, y, label, count)
+  Widgets.StackAt(row, parent, y)
+  row.label:SetText(Theme.Upper(label))
+  row.count:SetText(tostring(count))
 end
 
 -- Centered "nothing here" state.

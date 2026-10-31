@@ -75,9 +75,7 @@ end
 ---------------------------------------------------------------------------
 local function createRow(content, index)
   local row = CreateFrame("Button", nil, content)
-  row:SetHeight(ROW)
-  row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(index - 1) * ROW)
-  row:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -(index - 1) * ROW)
+  Widgets.StackAt(row, content, (index - 1) * ROW, ROW)
   local line = Widgets.HLine(row, C.rowLine, 1)
   line:SetPoint("BOTTOMLEFT", row, "BOTTOMLEFT", 0, 0)
   line:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", 0, 0)

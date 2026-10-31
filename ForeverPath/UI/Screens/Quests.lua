@@ -419,10 +419,7 @@ local function Create(parent)
     local firstQuest
     for _, g in ipairs(collected.groups) do
       groupIndex = groupIndex + 1
-      local groupRow = self.groupPool:Get(groupIndex)
-      Widgets.StackAt(groupRow, scroll.content, y)
-      groupRow.label:SetText(Theme.Upper(g.label))
-      groupRow.count:SetText(tostring(#g.rows))
+      Widgets.PlaceGroupRow(self.groupPool:Get(groupIndex), scroll.content, y, g.label, #g.rows)
       y = y + GROUP_ROW
       for _, r in ipairs(g.rows) do
         rowIndex = rowIndex + 1

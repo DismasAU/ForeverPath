@@ -56,9 +56,7 @@ end
 
 local function createRow(content, index)
   local row = CreateFrame("Button", nil, content)
-  row:SetHeight(ROW)
-  row:SetPoint("TOPLEFT", content, "TOPLEFT", 0, -(index - 1) * ROW)
-  row:SetPoint("TOPRIGHT", content, "TOPRIGHT", 0, -(index - 1) * ROW)
+  Widgets.StackAt(row, content, (index - 1) * ROW, ROW)
   local icon = Widgets.ItemIcon(row, 16)
   icon:SetPoint("LEFT", row, "LEFT", 0, 0)
   local counter = Widgets.Text(row, "small", "", { justify = "RIGHT" })

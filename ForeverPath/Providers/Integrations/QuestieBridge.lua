@@ -185,10 +185,7 @@ end
 -- The bridges' shared contract (as ClassicDBBridge.Eligible): can a character of
 -- this faction and classID take the entry? nil means the player's.
 function QuestieBridge.Eligible(entry, faction, classID)
-  if not entry then return false end
-  faction = faction or Compat.PlayerFaction()
-  if entry.faction and entry.faction ~= "Both" and faction and entry.faction ~= faction then return false end
-  return Util.ClassAllowed(entry.classMask, classID or select(2, Compat.PlayerClass()))
+  return ns.Planner.CanTakeQuest(entry, faction or Compat.PlayerFaction(), classID or select(2, Compat.PlayerClass()))
 end
 
 -- Quests Questie says reward itemID that a character of this faction and

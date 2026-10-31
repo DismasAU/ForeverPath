@@ -413,9 +413,8 @@ end
 
 -- Quests by name (index and log), exact and prefix matches first.
 function QuestProvider.Search(text, limit)
-  if type(text) ~= "string" then return {} end
-  local needle = string.lower(Util.Trim(text))
-  if needle == "" then return {} end
+  local needle = Util.SearchNeedle(text)
+  if not needle then return {} end
   local hits, seen = {}, {}
   local function consider(id, name, where)
     if seen[id] or type(name) ~= "string" then return end

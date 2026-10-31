@@ -153,6 +153,14 @@ function Util.ClassAllowed(mask, classID)
   return math.floor(mask / 2 ^ (classID - 1)) % 2 == 1
 end
 
+-- The lower-cased, trimmed needle a type-ahead search matches with, or nil
+-- for no text.
+function Util.SearchNeedle(text)
+  if type(text) ~= "string" then return nil end
+  local needle = string.lower(Util.Trim(text))
+  return needle ~= "" and needle or nil
+end
+
 -- Sorts type-ahead hits { rank, name, [idField] } best first (rank, then
 -- tieBreak(a, b) when given and it decides, then name, then id) and cuts
 -- the list to limit. Returns hits.

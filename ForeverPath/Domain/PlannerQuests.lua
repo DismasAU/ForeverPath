@@ -11,6 +11,14 @@ local Planner = ns.Planner
 -- text comes from QuestProvider.StateText, so planning never branches on it.
 Planner.QuestStates = ns.Util.StrictNames({ "done", "ready", "in_log", "available", "locked" }, "quest state")
 local QuestStates = Planner.QuestStates
+
+-- Whether a character of this faction ("Alliance" / "Horde") and classID
+-- can take a quest entry ({ faction, classMask }); nil admits any.
+function Planner.CanTakeQuest(entry, faction, classID)
+  if not entry then return false end
+  if entry.faction and entry.faction ~= "Both" and faction and entry.faction ~= faction then return false end
+  return ns.Util.ClassAllowed(entry.classMask, classID)
+end
 local Shared = Planner.Shared
 local inventoryContext = Shared.inventoryContext
 

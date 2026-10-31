@@ -232,9 +232,8 @@ end
 
 -- Factions by name: exact, then prefix, then substring.
 function ReputationProvider.Search(text, limit)
-  if type(text) ~= "string" then return {} end
-  local needle = string.lower(Util.Trim(text))
-  if needle == "" then return {} end
+  local needle = Util.SearchNeedle(text)
+  if not needle then return {} end
   local hits, seen = {}, {}
   for _, record in ipairs(ReputationProvider.List()) do
     local rank = Util.MatchRank(record.name, needle)

@@ -166,13 +166,7 @@ local function Create(parent)
   list:SetPoint("TOPLEFT", top, "BOTTOMLEFT", 0, -8)
   list:SetPoint("BOTTOMRIGHT", side, "BOTTOMLEFT", -10, 0)
   local body = list.body
-  local footer = Widgets.Frame(body, nil, { bg = C.sidebar })
-  footer:SetHeight(26)
-  footer:SetPoint("BOTTOMLEFT", body, "BOTTOMLEFT", 0, 0)
-  footer:SetPoint("BOTTOMRIGHT", body, "BOTTOMRIGHT", 0, 0)
-  local footerLine = Widgets.HLine(footer, C.black, 1)
-  footerLine:SetPoint("TOPLEFT", footer, "TOPLEFT", 0, 0)
-  footerLine:SetPoint("TOPRIGHT", footer, "TOPRIGHT", 0, 0)
+  local footer = Widgets.TableFooter(body, 26)
   local footerText = Widgets.Text(footer, "small", "")
   footerText:SetPoint("LEFT", footer, "LEFT", 12, 0)
   screen.footerText = footerText
@@ -328,10 +322,7 @@ local function Create(parent)
     local y, groupIndex, rowIndex, total, first = 0, 0, 0, 0, nil
     for _, group in ipairs(groups) do
       groupIndex = groupIndex + 1
-      local groupRow = self.groupPool:Get(groupIndex)
-      Widgets.StackAt(groupRow, scroll.content, y)
-      groupRow.label:SetText(Theme.Upper(group.label))
-      groupRow.count:SetText(tostring(#group.rows))
+      Widgets.PlaceGroupRow(self.groupPool:Get(groupIndex), scroll.content, y, group.label, #group.rows)
       y = y + GROUP_ROW
       for _, record in ipairs(group.rows) do
         rowIndex = rowIndex + 1

@@ -132,10 +132,7 @@ end
 -- or "Horde") and classID take the entry? nil faction or classID means the
 -- player's.
 function ClassicDBBridge.Eligible(entry, faction, classID)
-  if not entry then return false end
-  faction = faction or Compat.PlayerFaction()
-  if entry.faction and entry.faction ~= "Both" and faction and entry.faction ~= faction then return false end
-  return Util.ClassAllowed(entry.classMask, classID or select(2, Compat.PlayerClass()))
+  return ns.Planner.CanTakeQuest(entry, faction or Compat.PlayerFaction(), classID or select(2, Compat.PlayerClass()))
 end
 
 ---------------------------------------------------------------------------
@@ -591,9 +588,8 @@ end
 -- Search functions: { { questID, name, rank } }, best rank (Util.MatchRank)
 -- first, at most `limit`.
 function ClassicDBBridge.Search(text, limit, side, classID)
-  if not data() or type(text) ~= "string" then return {} end
-  local needle = string.lower(Util.Trim(text))
-  if needle == "" then return {} end
+  local needle = Util.SearchNeedle(text)
+  if not data() or not needle then return {} end
   if not ClassicDBBridge.titleIndex then buildIndexes() end
   local hits = {}
   for _, t in ipairs(ClassicDBBridge.titleIndex) do
