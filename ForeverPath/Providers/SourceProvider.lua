@@ -337,19 +337,19 @@ function SourceProvider.BuildAtlasIndex()
     end
   end
   for _, moduleName in ipairs(atlas.modules) do
-    local state = ns.AtlasLoot.Load(moduleName, function(storage)
-      local ok, added = Log.Capture(SourceProvider.IndexAtlasModule, storage)
-      if ok then
-        Log.Debug("Indexed AtlasLoot module %s: %d loot entries", moduleName, added)
+    ns.AtlasLoot.Load(moduleName, function(storage)
+      if not storage then
+        Log.Debug("AtlasLoot module %s is not available", moduleName)
       else
-        Log.Error("AtlasLoot index failed for %s: %s", moduleName, tostring(added))
+        local ok, added = Log.Capture(SourceProvider.IndexAtlasModule, storage)
+        if ok then
+          Log.Debug("Indexed AtlasLoot module %s: %d loot entries", moduleName, added)
+        else
+          Log.Error("AtlasLoot index failed for %s: %s", moduleName, tostring(added))
+        end
       end
       done()
     end)
-    if state == "missing" then
-      Log.Debug("AtlasLoot module %s is not available", moduleName)
-      done()
-    end
   end
   return atlas.state
 end

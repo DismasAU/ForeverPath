@@ -28,30 +28,26 @@ function AtlasLoot.Storage(moduleName)
   return type(storage) == "table" and storage or nil
 end
 
--- Loads a module and calls onLoaded(storage) once its data is there (now
--- when it already is). Returns "ready" (onLoaded ran), "loading" (it runs
--- later) or "missing" (not installed, not loadable, or the loader failed:
--- onLoaded never runs, so callers never wait on it).
-function AtlasLoot.Load(moduleName, onLoaded)
-  if not AtlasLoot.IsInstalled() then return "missing" end
+-- Loads a module and calls onDone(storage) exactly once: with the module's
+-- data, or with nil when it is not installed, not loadable, the loader
+-- failed, or a background load finished without data. Returns "ready"
+-- (onDone ran with data), "loading" (onDone runs later) or "missing"
+-- (onDone ran with nil).
+function AtlasLoot.Load(moduleName, onDone)
   local storage = AtlasLoot.Storage(moduleName)
-  if storage then
-    onLoaded(storage)
-    return "ready"
+  if storage or not AtlasLoot.IsInstalled() then
+    onDone(storage)
+    return storage and "ready" or "missing"
   end
   local loader = _G.AtlasLoot.Loader
   local result = type(loader) == "table" and Util.SafeCall(loader.LoadModule, loader, moduleName, function()
-    local loaded = AtlasLoot.Storage(moduleName)
-    if loaded then onLoaded(loaded) end
+    onDone(AtlasLoot.Storage(moduleName))
   end, true) or nil
   if result == true or result == "InCombat" then return "loading" end
   -- The loader answered at once: the module is either there now or not at all.
   storage = AtlasLoot.Storage(moduleName)
-  if storage then
-    onLoaded(storage)
-    return "ready"
-  end
-  return "missing"
+  onDone(storage)
+  return storage and "ready" or "missing"
 end
 
 -- Iterator over a module's content tables: for key, content in AtlasLoot.Contents(storage).

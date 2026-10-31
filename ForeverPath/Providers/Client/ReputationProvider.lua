@@ -386,18 +386,31 @@ function ReputationProvider.EnsureAtlas()
   local atlas = ReputationProvider.atlas
   if atlas.state ~= "idle" or not ns.AtlasLoot.IsInstalled() then return atlas.state end
   atlas.state = "loading"
-  local state = ns.AtlasLoot.Load(ReputationProvider.MODULE, function(storage)
+  ns.AtlasLoot.Load(ReputationProvider.MODULE, function(storage)
+    if not storage then
+      atlas.state = "missing"
+      return
+    end
     local ok, added = Log.Capture(ReputationProvider.IndexAtlas, storage)
     if ok then
       Log.Debug("Indexed AtlasLoot factions: %s", tostring(added))
+      atlas.state = "ready"
     else
       Log.Error("AtlasLoot faction index failed: %s", tostring(added))
+      atlas.state = "failed"
     end
-    atlas.state = "ready"
     Events.Fire("FP_REPUTATION_UPDATED", "atlasloot")
   end)
-  if state == "missing" then atlas.state = "missing" end
   return atlas.state
+end
+
+-- Where the faction reward tables stand: "missing" (no AtlasLoot or no
+-- Factions module), "idle" (not asked for yet), "loading", "ready" or
+-- "failed" (the tables could not be read; see /fp errors).
+function ReputationProvider.RewardsState()
+  local state = ReputationProvider.atlas.state
+  if state == "idle" and not ns.AtlasLoot.IsInstalled() then return "missing" end
+  return state
 end
 
 -- Rewards per standing for a faction: { { standing, label, items = { itemID } } } (ascending).

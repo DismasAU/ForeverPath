@@ -22,6 +22,25 @@ describe("Bootstrap and slash commands", function()
     assert_eq(ns.Compat.client.interface, 16001)
   end)
 
+  it("still loads when one module's Init raises", function()
+    ns.QuestieBridge.Init = function() error("bridge exploded") end
+    local ready = false
+    ns.Events.On("FP_READY", function() ready = true end)
+    H.login(ns)
+    assert_true(ns.loaded, "the rest of the addon loads")
+    assert_true(ready)
+    assert_not_nil(ns.goals, "modules after the failing one still start")
+    assert_match(ns.Log.errors[1].message, "bridge exploded")
+  end)
+
+  it("names every module in the Init order", function()
+    for _, path in ipairs(ns.Bootstrap.INIT_ORDER) do
+      local module = ns
+      for part in path:gmatch("[^.]+") do module = module[part] end
+      assert_eq(type(module.Init), "function", path .. ".Init")
+    end
+  end)
+
   it("ignores other addons' ADDON_LOADED", function()
     Mock.FireEvent("ADDON_LOADED", "SomethingElse")
     assert_false(ns.loaded)

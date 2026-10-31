@@ -14,6 +14,19 @@ describe("TOC manifest", function()
     assert_match(main, "## SavedVariablesPerCharacter: ForeverPathCharDB")
   end)
 
+  it("lists every AtlasLoot module the adapters load as an optional dependency", function()
+    local main = H.readFile(addonDir .. "/ForeverPath.toc")
+    local deps = main:match("## OptionalDeps: ([^\r\n]*)")
+    local listed = {}
+    for name in deps:gmatch("[^,%s]+") do listed[name] = true end
+    local ns = H.fresh()
+    local modules = { ns.ReputationProvider.MODULE }
+    for _, name in ipairs(ns.SourceProvider.atlas.modules) do modules[#modules + 1] = name end
+    for _, name in ipairs(modules) do
+      assert_true(listed[name], name .. " is loaded on demand but not in OptionalDeps")
+    end
+  end)
+
   it("lists files that exist and compile under this Lua", function()
     local files = H.tocFiles(addonDir .. "/ForeverPath.toc")
     assert_gt(#files, 10)

@@ -9,7 +9,7 @@
 ## AddonCompartmentFunc: ForeverPath_OnAddonCompartmentClick
 ## X-Category: Professions
 ## X-License: GPL-3.0
-## OptionalDeps: Auctionator, AtlasLootClassic, AtlasLootClassic_DungeonsAndRaids, ForeverDungeonJournal, Attune, GearQuestForever, Questie
+## OptionalDeps: Auctionator, AtlasLootClassic, AtlasLootClassic_DungeonsAndRaids, AtlasLootClassic_Factions, ForeverDungeonJournal, Attune, GearQuestForever, Questie
 
 # Load order matters: Core -> Data -> Domain -> Providers -> App services -> UI -> App commands and bootstrap wiring.
 Core\Namespace.lua

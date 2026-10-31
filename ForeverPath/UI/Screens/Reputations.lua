@@ -15,6 +15,15 @@ local GROUP_ROW = 28
 local SIDE = 262
 local MAX_QUESTS = 5
 local MAX_REWARDS = 6
+-- The rewards panel's text when a standing has no known reward, by
+-- ReputationProvider.RewardsState().
+local REWARDS_EMPTY = {
+  ready = "No known reward at this standing.",
+  loading = "Loading AtlasLoot's faction tables...",
+  idle = "Loading AtlasLoot's faction tables...",
+  missing = "Faction rewards come from AtlasLoot's Factions module.",
+  failed = "AtlasLoot's faction tables could not be read (see /fp errors).",
+}
 
 local function createGroupRow(content)
   return Widgets.GroupHeaderRow(content, { height = GROUP_ROW })
@@ -270,7 +279,7 @@ local function Create(parent)
       local n = #tier.items
       s.rewardsText:SetText(string.format("%d item%s unlock%s at %s%s", n, n == 1 and "" or "s", n == 1 and "s" or "", progress.targetLabel, n > MAX_REWARDS and (" (" .. (n - MAX_REWARDS) .. " more)") or ""))
     else
-      s.rewardsText:SetText(RP.HasAtlasLoot() and (RP.atlas.state == "ready" and "No known reward at this standing." or "Loading AtlasLoot's faction tables...") or "Faction rewards come from AtlasLoot's Factions module.")
+      s.rewardsText:SetText(REWARDS_EMPTY[RP.RewardsState()] or REWARDS_EMPTY.loading)
     end
     if goal and ns.GoalModel.IsOpen(goal) and goal.target.standing == target then
       s.addGoal:SetLabel("Open goal")

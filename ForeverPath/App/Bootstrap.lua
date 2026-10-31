@@ -4,9 +4,43 @@ local _, ns = ...
 local Events = ns.Events
 local Log = ns.Log
 local Compat = ns.Compat
+local Util = ns.Util
 
 local Bootstrap = {}
 ns.Bootstrap = Bootstrap
+
+-- Init order: providers first, then the services that install hooks into
+-- them (TrainerProvider -> Recipes.SetTrainerLookup, GoalService ->
+-- CharacterProvider.SetGoalSource, the UI -> Util.SetMoneyRenderer at load).
+Bootstrap.INIT_ORDER = {
+  "ItemProvider", "ProfessionProvider", "InventoryProvider", "CharacterProvider",
+  "VendorProvider", "TrainerProvider", "AuctionPriceProvider", "SourceProvider",
+  "AttuneProvider", "ClassicDB", "LootLearner", "QuestieBridge", "QuestFactsProvider",
+  "QuestProvider", "EquipmentProvider", "ReputationProvider",
+  "GoalService", "GoalCompletion",
+  "UI.MainFrame", "UI.Tracker", "UI.MinimapButton", "UI.Toast",
+}
+
+local function moduleAt(path)
+  local module = ns
+  for part in path:gmatch("[^.]+") do
+    module = type(module) == "table" and module[part] or nil
+  end
+  return module
+end
+
+-- Runs every Init in order. One that raises is logged and skipped, so the
+-- rest of the addon still loads.
+function Bootstrap.InitModules()
+  for _, path in ipairs(Bootstrap.INIT_ORDER) do
+    local module = moduleAt(path)
+    if type(module) == "table" and type(module.Init) == "function" then
+      Log.Try(module.Init)
+    else
+      Log.Error("Module %s is missing; it was not started.", path)
+    end
+  end
+end
 
 function Bootstrap.OnAddonLoaded(addonName)
   if addonName ~= ns.ADDON_NAME or ns.loaded then
@@ -14,38 +48,12 @@ function Bootstrap.OnAddonLoaded(addonName)
   end
   ns.Database.Load()
 
-  if Compat.GetAddOnMetadata then
-    local ok, version = pcall(Compat.GetAddOnMetadata, ns.ADDON_NAME, "Version")
-    if ok and type(version) == "string" and version ~= "" then
-      ns.VERSION = version
-    end
+  local version = Util.SafeCall(Compat.GetAddOnMetadata, ns.ADDON_NAME, "Version")
+  if type(version) == "string" and version ~= "" then
+    ns.VERSION = version
   end
 
-  -- Providers first, then the services that install hooks into them
-  -- (TrainerProvider -> Recipes.SetTrainerLookup, GoalService ->
-  -- CharacterProvider.SetGoalSource, the UI -> Util.SetMoneyRenderer at load).
-  ns.ItemProvider.Init()
-  ns.ProfessionProvider.Init()
-  ns.InventoryProvider.Init()
-  ns.CharacterProvider.Init()
-  ns.VendorProvider.Init()
-  ns.TrainerProvider.Init()
-  ns.AuctionPriceProvider.Init()
-  ns.SourceProvider.Init()
-  ns.AttuneProvider.Init()
-  ns.ClassicDB.Init()
-  ns.LootLearner.Init()
-  ns.QuestieBridge.Init()
-  ns.QuestFactsProvider.Init()
-  ns.QuestProvider.Init()
-  ns.EquipmentProvider.Init()
-  ns.ReputationProvider.Init()
-  ns.GoalService.Init()
-  ns.GoalCompletion.Init()
-  ns.UI.MainFrame.Init()
-  ns.UI.Tracker.Init()
-  ns.UI.MinimapButton.Init()
-  ns.UI.Toast.Init()
+  Bootstrap.InitModules()
 
   ns.loaded = true
   Log.Debug("ForeverPath %s loaded on %s build %s (interface %s)", tostring(ns.VERSION),

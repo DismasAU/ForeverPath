@@ -151,6 +151,38 @@ describe("SourceProvider", function()
     _G.AtlasLoot.Loader = nil
     SP.AtlasSources(14149)
     assert_eq(SP.atlas.state, "ready")
+    -- A background load that finishes without data.
+    ns = H.fresh()
+    H.login(ns)
+    SP = ns.SourceProvider
+    Mock.InstallAtlasLoot({}, { lazy = true })
+    local finish
+    _G.AtlasLoot.Loader.LoadModule = function(_, _, onLoad) finish = onLoad; return true end
+    SP.AtlasSources(14149)
+    assert_eq(SP.atlas.state, "loading")
+    finish()
+    assert_eq(SP.atlas.state, "ready", "the empty load still ends the index")
+  end)
+
+  it("reports a faction reward index that ends without data or fails", function()
+    local RP = ns.ReputationProvider
+    assert_eq(RP.RewardsState(), "missing", "no AtlasLoot")
+    Mock.InstallAtlasLoot({}, { lazy = true })
+    local finish
+    _G.AtlasLoot.Loader.LoadModule = function(_, _, onLoad) finish = onLoad; return true end
+    assert_eq(RP.RewardsState(), "idle")
+    RP.Rewards(529)
+    assert_eq(RP.RewardsState(), "loading")
+    finish()
+    assert_eq(RP.RewardsState(), "missing", "the empty load ends as missing, not loading")
+    -- An index that raises reads as failed, not ready.
+    ns = H.fresh()
+    H.login(ns)
+    RP = ns.ReputationProvider
+    Mock.InstallAtlasLoot({ AtlasLootClassic_Factions = { Dawn = { items = {} } } }, { lazy = true })
+    RP.IndexAtlas = function() error("faction tables changed shape") end
+    RP.Rewards(529)
+    assert_eq(RP.RewardsState(), "failed")
   end)
 
   it("works without AtlasLoot and feeds the planner's default route", function()
