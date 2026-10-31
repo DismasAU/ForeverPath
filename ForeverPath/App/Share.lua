@@ -70,6 +70,8 @@ end
 
 local function validTable(t) return t == nil or type(t) == "table" end
 
+local cleanEntry
+
 -- What each kind may hold, so an import is reduced to the shapes the
 -- providers write themselves. A spec is a leaf type ("string", "number" -
 -- coerced with tonumber - or "boolean"), a record { field = spec }, a map
@@ -95,8 +97,19 @@ Share.SCHEMAS = {
   trainerNPCs = { keys = ".", each = { zone = "string", subzone = "string", recipes = "number", seenAt = "number" } },
 }
 
--- Longest imported string kept (names, zones, labels).
+-- Longest imported string kept (names, zones, labels), and the range an
+-- imported number must fall in (counts, prices, coordinates, timestamps are
+-- never negative); anything else is dropped rather than summed into the
+-- learners' own data.
 Share.MAX_STRING = 120
+Share.MAX_NUMBER = 2147483647
+
+-- Bumped whenever sanitizing gets stricter; stored imports made under an
+-- older version are cleaned again on load (Share.Init).
+Share.SANITIZER = 2
+
+-- The shape AuthorToken makes: 16 hex digits.
+local AUTHOR_PATTERN = "^" .. string.rep("%x", 16) .. "$"
 
 -- An imported string as plain text: WoW chat codes (colours, links,
 -- textures, atlases) are removed so a crafted export cannot show fake links
@@ -108,7 +121,11 @@ function Share.CleanString(text)
 end
 
 local function sanitize(value, spec)
-  if spec == "number" then return tonumber(value) end
+  if spec == "number" then
+    local n = tonumber(value)
+    if not n or n ~= n or n < 0 or n > Share.MAX_NUMBER then return nil end
+    return n
+  end
   if spec == "string" then return Share.CleanString(value) end
   if type(spec) == "string" then return type(value) == spec and value or nil end
   if type(value) ~= "table" then return nil end
@@ -128,14 +145,29 @@ local function sanitize(value, spec)
   return out
 end
 
+-- An import entry from a payload (or a stored entry): label, time, addon
+-- version and every kind reduced to Share.SCHEMAS.
+cleanEntry = function(source)
+  local label = Share.CleanString(source.label)
+  local entry = { label = (label and label ~= "") and label or "someone", at = sanitize(source.at, "number"),
+    addon = Share.CleanString(source.addon), sanitizer = Share.SANITIZER }
+  for _, kind in ipairs(Share.KINDS) do
+    entry[kind] = validTable(source[kind]) and sanitize(source[kind] or {}, Share.SCHEMAS[kind]) or {}
+  end
+  return entry
+end
+
 -- Imports a string. Returns ok, message.
 function Share.Import(text)
   local d = db()
   if not d then return false, "ForeverPath is still loading." end
   local payload, err = ns.Codec.Unpack(text)
   if not payload then return false, err end
-  if type(payload) ~= "table" or payload.v ~= Share.VERSION or type(payload.author) ~= "string" then
+  if type(payload) ~= "table" or payload.v ~= Share.VERSION then
     return false, "not a ForeverPath export of this version"
+  end
+  if type(payload.author) ~= "string" or not payload.author:match(AUTHOR_PATTERN) then
+    return false, "damaged export (author)"
   end
   for _, kind in ipairs(Share.KINDS) do
     if not validTable(payload[kind]) then return false, "damaged export (" .. kind .. ")" end
@@ -144,14 +176,36 @@ function Share.Import(text)
     return false, "that export came from this account; your own data is already used"
   end
   d.imported = d.imported or {}
-  local replaced = d.imported[payload.author] ~= nil
-  local label = Share.CleanString(payload.label)
-  local entry = { label = (label and label ~= "") and label or "someone", at = tonumber(payload.at), importedAt = Util.Now(), addon = Share.CleanString(payload.addon) }
-  for _, kind in ipairs(Share.KINDS) do entry[kind] = sanitize(payload[kind] or {}, Share.SCHEMAS[kind]) end
+  local previous = d.imported[payload.author]
+  local entry = cleanEntry(payload)
+  entry.importedAt = Util.Now()
   d.imported[payload.author] = entry
-  Share.Changed()
-  local counts = Share.Counts(entry)
-  return true, string.format("%s %s's data: %s.", replaced and "Updated" or "Imported", entry.label, Share.CountsLabel(counts))
+  Events.Fire("FP_SHARED_DATA_CHANGED")
+  local counts = Share.CountsLabel(Share.Counts(entry))
+  if previous and previous.label ~= entry.label then
+    return true, string.format("Updated %s's data (it replaces the import labelled %s): %s.", entry.label, tostring(previous.label), counts)
+  end
+  return true, string.format("%s %s's data: %s.", previous and "Updated" or "Imported", entry.label, counts)
+end
+
+-- Cleans every stored import made under an older sanitizer, so a tighter
+-- rule also reaches data imported before it existed. Runs at load, before
+-- the learners read the imports.
+function Share.Init()
+  local d = db()
+  local cleaned = 0
+  for author, entry in pairs(d and d.imported or {}) do
+    if type(author) ~= "string" or not author:match(AUTHOR_PATTERN) or type(entry) ~= "table" then
+      d.imported[author] = nil
+      cleaned = cleaned + 1
+    elseif (tonumber(entry.sanitizer) or 1) < Share.SANITIZER then
+      local fresh = cleanEntry(entry)
+      fresh.importedAt = tonumber(entry.importedAt)
+      d.imported[author] = fresh
+      cleaned = cleaned + 1
+    end
+  end
+  if cleaned > 0 then Log.Debug("Re-checked %d stored import(s)", cleaned) end
 end
 
 -- { { author, label, at, importedAt, counts } } newest first.
@@ -168,14 +222,9 @@ function Share.Remove(author)
   local d = db()
   if not d or not d.imported or not d.imported[author] then return false end
   d.imported[author] = nil
-  Share.Changed()
-  return true
-end
-
--- Modules holding derived data (the loot index, decoded recipes) drop it on
--- FP_SHARED_DATA_CHANGED.
-function Share.Changed()
+  -- Modules holding derived data (the loot index, decoded recipes) drop it.
   Events.Fire("FP_SHARED_DATA_CHANGED")
+  return true
 end
 
 function Share.StatusLine()

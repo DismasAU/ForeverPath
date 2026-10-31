@@ -186,7 +186,7 @@ describe("Sharing learned data", function()
     ok, message = ns.Share.Import(ns.Codec.Pack({ v = 99, author = "x" }))
     assert_false(ok)
     assert_match(message, "not a ForeverPath export of this version")
-    ok, message = ns.Share.Import(ns.Codec.Pack({ v = 1, author = "x", lootSeen = "nope" }))
+    ok, message = ns.Share.Import(ns.Codec.Pack({ v = 1, author = "00000000000000aa", lootSeen = "nope" }))
     assert_false(ok)
     assert_match(message, "damaged export %(lootSeen%)")
   end)
@@ -194,7 +194,7 @@ describe("Sharing learned data", function()
   it("stores only the fields and types each kind is known to hold", function()
     local ns = H.fresh()
     H.login(ns)
-    local text = ns.Codec.Pack({ v = 1, author = "stranger", label = "Someone",
+    local text = ns.Codec.Pack({ v = 1, author = "0123456789abcdef", label = "Someone",
       lootSeen = { ["c:525"] = { name = "Mangy Wolf", looted = "3", items = { [LINEN] = { times = 2, quantity = "4", junk = true }, bad = { times = 1 } } },
         ["nonsense"] = { name = "x" } },
       questFacts = { [STORM] = { giver = { name = "Prate", x = "0.5", y = {} }, items = { { name = "Feather", count = 2 }, "loose" } } },
@@ -204,7 +204,7 @@ describe("Sharing learned data", function()
     })
     local ok, message = ns.Share.Import(text)
     assert_true(ok, message)
-    local entry = ns.db.imported.stranger
+    local entry = ns.db.imported["0123456789abcdef"]
     local wolf = entry.lootSeen["c:525"]
     assert_eq(wolf.looted, 3)
     assert_deep_eq(wolf.items, { [LINEN] = { times = 2, quantity = 4 } })
@@ -220,17 +220,46 @@ describe("Sharing learned data", function()
   it("imports strings as plain text: no chat codes, capped length", function()
     local ns = H.fresh()
     H.login(ns)
-    local text = ns.Codec.Pack({ v = 1, author = "prankster", label = "|cffff0000Blizzard|r", addon = { "not", "a", "string" },
+    local text = ns.Codec.Pack({ v = 1, author = "fedcba9876543210", label = "|cffff0000Blizzard|r", addon = { "not", "a", "string" },
       trainerNPCs = { ["|Hitem:19019|h[Thunderfury]|h"] = { zone = "|TInterface\Icons\x:0|tGoldshire" .. string.rep("x", 300), recipes = 1 } },
     })
     assert_true((ns.Share.Import(text)))
-    local entry = ns.db.imported.prankster
+    local entry = ns.db.imported["fedcba9876543210"]
     assert_eq(entry.label, "Blizzard")
     assert_nil(entry.addon, "the header's addon field is type-checked")
     local name, npc = next(entry.trainerNPCs)
     assert_eq(name, "[Thunderfury]", "a link becomes its text")
     assert_eq(npc.zone:sub(1, 9), "Goldshire")
     assert_eq(#npc.zone, ns.Share.MAX_STRING)
+  end)
+
+  it("rejects malformed authors and numbers out of range, and cleans stored imports", function()
+    local ns = H.fresh()
+    H.login(ns)
+    local ok, message = ns.Share.Import(ns.Codec.Pack({ v = 1, author = "someone-else's-token", label = "x" }))
+    assert_false(ok)
+    assert_match(message, "author")
+    assert_nil((ns.Codec.Deserialize("n1e999;")), "infinity is refused like the writer refuses it")
+    ok = ns.Share.Import(ns.Codec.Pack({ v = 1, author = "0123456789abcdef", label = "Someone",
+      lootSeen = { ["c:525"] = { name = "Mangy Wolf", looted = -50, items = { [LINEN] = { times = 1e12, quantity = 2 } } } },
+      vendors = { [THREAD] = { Tharynn = { price = -1, stack = 1 } } } }))
+    assert_true(ok)
+    local entry = ns.db.imported["0123456789abcdef"]
+    assert_nil(entry.lootSeen["c:525"].looted, "a negative count is dropped")
+    assert_deep_eq(entry.lootSeen["c:525"].items[LINEN], { quantity = 2 }, "a huge count is dropped")
+    assert_deep_eq(entry.vendors[THREAD], { Tharynn = { stack = 1 } })
+    -- An import stored by an older version is cleaned again on load.
+    local old = H.fresh()
+    _G.ForeverPathDB = { schemaVersion = 2, settings = {}, imported = {
+      ["aaaaaaaaaaaaaaaa"] = { label = "|cffff0000Old|r", trainerNPCs = { Georgio = { zone = "|TInterface\x:0|tGoldshire", recipes = -3 } } },
+      ["not-a-token"] = { label = "Gone" },
+    } }
+    H.login(old)
+    local stored = old.db.imported["aaaaaaaaaaaaaaaa"]
+    assert_eq(stored.label, "Old")
+    assert_deep_eq(stored.trainerNPCs.Georgio, { zone = "Goldshire" })
+    assert_eq(stored.sanitizer, old.Share.SANITIZER)
+    assert_nil(old.db.imported["not-a-token"])
   end)
 
   it("rebuilds imported trainer records from typed fields only", function()

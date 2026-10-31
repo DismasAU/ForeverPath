@@ -13,7 +13,7 @@ ns.Bootstrap = Bootstrap
 -- them (TrainerProvider -> Recipes.SetTrainerLookup, GoalService ->
 -- CharacterProvider.SetGoalSource, the UI -> Util.SetMoneyRenderer at load).
 Bootstrap.INIT_ORDER = {
-  "ItemProvider", "ProfessionProvider", "InventoryProvider", "CharacterProvider",
+  "Share", "ItemProvider", "ProfessionProvider", "InventoryProvider", "CharacterProvider",
   "VendorProvider", "TrainerProvider", "AuctionPriceProvider", "SourceProvider",
   "AttuneProvider", "ClassicDB", "LootLearner", "QuestieBridge", "QuestFactsProvider",
   "QuestProvider", "EquipmentProvider", "ReputationProvider",

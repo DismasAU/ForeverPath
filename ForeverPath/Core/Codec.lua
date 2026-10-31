@@ -75,7 +75,8 @@ function Codec.Deserialize(text)
     local stop = text:find(";", pos, true)
     if not stop then error("unterminated number") end
     local n = tonumber(text:sub(pos, stop - 1))
-    if not n then error("bad number") end
+    -- As strict as the writer: no NaN or infinity ("1e999").
+    if not n or n ~= n or math.abs(n) == math.huge then error("bad number") end
     pos = stop + 1
     if prefix == "i" and n ~= math.floor(n) then error("bad integer") end
     return n
