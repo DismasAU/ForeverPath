@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.25.1 (2026-11-06) - secret values
+
+### Fixed
+- "attempt to compare local 'target' (a secret string value)" when looting.
+  The Forever client now hides some unit data from addons (a target's GUID
+  and name in combat); addon code that compares such a "secret" value
+  raises an error. Everything ForeverPath reads about a unit other than the
+  player now goes through `Compat.Readable`, which skips secrets: loot is
+  still recorded, and a hidden target's name comes from the classic data
+  instead. NPC names at quest givers, trainers and vendors and the spell IDs
+  of your casts are guarded the same way.
+
 ## 0.25.0 (2026-10-31) - fixes and an internal clean-up
 
 ### Fixed

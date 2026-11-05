@@ -130,6 +130,16 @@ function Compat.Detect()
   Compat.hasBackdropTemplate = type(_G.BackdropTemplateMixin) == "table"
 end
 
+-- The value, or nil when it is a secret: the client hides some unit data
+-- from addons (a target's GUID or name in combat, for one). Addon code may
+-- hold a secret but raises an error on comparing or testing it, so anything
+-- read about a unit other than the player goes through here first.
+function Compat.Readable(value)
+  local isSecret = _G.issecretvalue
+  if type(isSecret) == "function" and isSecret(value) then return nil end
+  return value
+end
+
 -- The player's position on the current zone map: uiMapID, x, y (0-1), or nil.
 function Compat.PlayerPosition()
   local map = _G.C_Map

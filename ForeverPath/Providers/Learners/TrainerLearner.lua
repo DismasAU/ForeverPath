@@ -38,7 +38,7 @@ local function callGlobal(name, ...)
 end
 
 local function currentNPC()
-  local name = callGlobal("UnitName", "npc")
+  local name = ns.Compat.Readable(callGlobal("UnitName", "npc"))
   if type(name) ~= "string" or name == "" then return nil end
   return name
 end

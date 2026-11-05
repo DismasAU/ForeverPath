@@ -389,6 +389,11 @@ This release changed how every module starts and is named, so a broad pass matte
 - [ ] Include alts' bags on, bank off (Crafting screen checkbox and settings): an item held by an alt is counted once across two goals that need it.
 - [ ] `/fp remove <goal>` twice: the second prints why it could not, not "Removed".
 
+### 34. 0.25.1 Secret values
+
+- [ ] Kill and loot mobs in combat (pull a second one first, then loot): no "secret string value" error, and `/fp sources <item>` lists the creature afterwards.
+- [ ] Any other "secret" error: report the file and line from `/fp errors`.
+
 ### Reporting
 Include: client build (`/dump GetBuildInfo()`), `/fp status` output, the step
 that failed, chat output with `/fp debug` enabled, and `/fp errors`.

@@ -29,8 +29,8 @@ local function itemIDFromLink(link)
 end
 
 local function currentNPC()
-  local name = Util.SafeCall(UnitName, "npc")
-  if not name or name == "" then return nil end
+  local name = ns.Compat.Readable(Util.SafeCall(UnitName, "npc"))
+  if type(name) ~= "string" or name == "" then return nil end
   return name
 end
 

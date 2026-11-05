@@ -235,8 +235,8 @@ local function place(name)
 end
 
 local function npcName()
-  local name = call(_G.UnitName, "questnpc")
-  if type(name) ~= "string" or name == "" then name = call(_G.UnitName, "npc") end
+  local name = ns.Compat.Readable(call(_G.UnitName, "questnpc"))
+  if type(name) ~= "string" or name == "" then name = ns.Compat.Readable(call(_G.UnitName, "npc")) end
   if type(name) == "string" and name ~= "" then return name end
   return nil
 end

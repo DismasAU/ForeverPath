@@ -26,6 +26,24 @@ describe("LootLearner", function()
     assert_nil(LL.ParseGUID(nil))
   end)
 
+  it("skips the client's secret values instead of comparing them", function()
+    -- In game a secret is its own value that only reads like the GUID.
+    local hiddenGUID = setmetatable({}, { __tostring = function() return "secret" end })
+    Mock.targetGUID, Mock.targetName = hiddenGUID, "Mangy Wolf"
+    Mock.secrets[hiddenGUID], Mock.secrets["Mangy Wolf"] = true, true
+    Mock.OpenLoot({ { itemID = LINEN, quantity = 2, sources = { Mock.CreatureGUID(525, 1), 2 } } })
+    Mock.CloseLoot()
+    local entry = ns.db.lootSeen["c:525"]
+    assert_eq(entry.items[LINEN].quantity, 2, "the loot is still recorded")
+    assert_nil(entry.name, "a secret target is not read for the name")
+    -- A secret loot source is skipped, not parsed.
+    local secretSource = Mock.CreatureGUID(600, 1)
+    Mock.secrets[secretSource] = true
+    Mock.OpenLoot({ { itemID = LEATHER, quantity = 1, sources = { secretSource, 1 } } })
+    Mock.CloseLoot()
+    assert_nil(ns.db.lootSeen["c:600"])
+  end)
+
   it("records corpses, items, skinning, objects and fishing, once per loot", function()
     assert_true(LL.IsAvailable())
     assert_match(LL.StatusLine(), "^Loot learner: 0 items seen from 0 ")

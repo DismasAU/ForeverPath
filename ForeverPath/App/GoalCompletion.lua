@@ -215,7 +215,7 @@ function GoalCompletion.Init()
   -- Enchant goals count the player's own successful casts of the spell.
   Events.RegisterWoW("UNIT_SPELLCAST_SUCCEEDED", function(unit, _, spellID)
     if unit == "player" then
-      GoalCompletion.RecordCast(spellID)
+      GoalCompletion.RecordCast(ns.Compat.Readable(spellID))
     end
   end)
   -- Attunement steps and quest goals move on quests and levels.

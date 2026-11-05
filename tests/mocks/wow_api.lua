@@ -763,6 +763,9 @@ function Mock.install()
   end
   _G.IsFishingLoot = function() return Mock.loot ~= nil and Mock.loot.fishing == true end
   _G.UnitGUID = function(unit) return unit == "target" and Mock.targetGUID or nil end
+  -- Secret values: the client hides some unit data from addons. Mock.secrets
+  -- is the set of values it reports as secret.
+  _G.issecretvalue = function(value) return value ~= nil and Mock.secrets[value] == true end
   -- The quest-giver window: GetQuestID names the quest on offer / being turned in.
   _G.GetQuestID = function() return Mock.questNPC and Mock.questNPC.questID or 0 end
   -- Map position and user waypoints (retail-engine C_Map / C_SuperTrack).
@@ -1126,6 +1129,7 @@ end
 
 function Mock.reset()
   Mock.now = 1792147990
+  Mock.secrets = {}
   Mock.output = {}
   Mock.frames = {}
   Mock.timers = {}

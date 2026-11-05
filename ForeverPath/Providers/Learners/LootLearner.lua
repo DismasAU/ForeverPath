@@ -53,9 +53,9 @@ end
 
 local function sourceName(kind, id, guid)
   if kind == "creature" then
-    local target = call(_G.UnitGUID, "target")
-    if target == guid then
-      local name = call(_G.UnitName, "target")
+    local target = Compat.Readable(call(_G.UnitGUID, "target"))
+    if target and target == guid then
+      local name = Compat.Readable(call(_G.UnitName, "target"))
       if type(name) == "string" and name ~= "" then return name end
     end
     local npc = ns.ClassicDBBridge.Npc(id)
@@ -90,14 +90,14 @@ function LootLearner.ReadLoot()
   local touched = {}
   local slots = tonumber(call(_G.GetNumLootItems)) or 0
   for slot = 1, slots do
-    local itemID = itemIDFromLink(call(_G.GetLootSlotLink, slot))
+    local itemID = itemIDFromLink(Compat.Readable(call(_G.GetLootSlotLink, slot)))
     if itemID then
       local sources = { call(_G.GetLootSourceInfo, slot) }
       if fishing then
-        sources = { "fishing:" .. tostring(zone or mapID or "?"), select(3, call(_G.GetLootSlotInfo, slot)) or 1 }
+        sources = { "fishing:" .. tostring(zone or mapID or "?"), Compat.Readable((select(3, call(_G.GetLootSlotInfo, slot)))) or 1 }
       end
       for i = 1, #sources, 2 do
-        local guid, quantity = sources[i], tonumber(sources[i + 1]) or 1
+        local guid, quantity = Compat.Readable(sources[i]), tonumber(Compat.Readable(sources[i + 1])) or 1
         local kind, id = LootLearner.ParseGUID(guid)
         local key
         if fishing then
