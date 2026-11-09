@@ -178,12 +178,41 @@ describe("CharacterProvider", function()
     H.login(ns)
     ns.db.characters["Miravelle-Stormhold"] = { key = "Miravelle-Stormhold", name = "Miravelle", realm = "Stormhold", level = 52, class = "Shaman", gold = 50000, lastSeen = Mock.now - 60, bags = { items = {} }, professions = {}, knownRecipes = {} }
     ns.db.characters["Bob-Stormhold"] = { key = "Bob-Stormhold", name = "Bob", realm = "Stormhold", level = 10, class = "Warrior", gold = 700, lastSeen = Mock.now - 60, bags = { items = {} }, professions = {}, knownRecipes = {} }
+    ns.db.characters["Ezio-Stormhold PvP"] = { key = "Ezio-Stormhold PvP", name = "Ezio", realm = "Stormhold PvP", level = 31, class = "Rogue", gold = 90000, lastSeen = Mock.now - 60, bags = { items = {} }, professions = {}, knownRecipes = {} }
     local gold = ns.CharacterProvider.AccountGold()
     assert_eq(gold.current, 2143600)
     assert_eq(gold.altsTotal, 50700)
     assert_eq(gold.account, 2143600 + 50700)
     assert_eq(gold.alts[1].name, "Miravelle", "richest alt first")
-    assert_eq(#gold.alts, 2)
+    assert_eq(#gold.alts, 2, "a character on another realm is not reachable gold")
+  end)
+
+  it("counts only this realm's characters as alts; other realms are for display", function()
+    H.login(ns)
+    local function alt(name, realm, linen)
+      ns.db.characters[name .. "-" .. realm] = { key = name .. "-" .. realm, name = name, realm = realm, level = 30, class = "Rogue", gold = 100,
+        lastSeen = Mock.now - 60, bags = { items = { [2589] = linen } }, professions = {}, knownRecipes = {} }
+    end
+    alt("Miravelle", "Stormhold", 5)
+    alt("Ezio", "Stormhold PvP", 7)
+    alt("Cardinal", "Stormhold PvP", 1)
+    local CP = ns.CharacterProvider
+    assert_eq(#CP.List(), 2, "this character and Miravelle")
+    assert_eq(CP.AltTotal(2589), 5, "Ezio's linen is on another realm")
+    local others = CP.OtherRealms()
+    assert_eq(#others, 1)
+    assert_eq(others[1].realm, "Stormhold PvP")
+    assert_eq(others[1].count, 2)
+    local there = CP.List({ realm = "Stormhold PvP" })
+    assert_eq(#there, 2)
+    assert_false(there[1].isCurrent)
+    -- A realm the client reports as connected trades like this one.
+    _G.GetAutoCompleteRealms = function() return { "Stormhold", "StormholdPvP" } end
+    assert_eq(CP.AltTotal(2589), 13)
+    assert_eq(#CP.OtherRealms(), 0)
+    _G.GetAutoCompleteRealms = nil
+    Mock.RunSlash("characters")
+    assert_match(table.concat(Mock.output, " | "), "Other realms, never counted here: Stormhold PvP %(2%)")
   end)
 
 end)

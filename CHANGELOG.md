@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.25.2 (2026-11-09) - characters by realm
+
+### Changed
+- Only characters on this realm (and any realm the client reports as
+  connected to it) count as alts. Characters on other realms, such as a PvP
+  realm next to your PvE one, no longer add their bags, banks, gold, crafts
+  or mail to this character's goals, since nothing can be traded between
+  them.
+- The Characters screen lists this realm's characters. A realm dropdown in
+  its top row (shown when you have characters elsewhere) switches to another
+  realm's characters for reference; those cards are never counted.
+- `/fp characters` lists other realms on a separate line.
+
 ## 0.25.1 (2026-11-06) - secret values
 
 ### Fixed

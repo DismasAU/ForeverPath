@@ -6,6 +6,11 @@
 -- characters read those snapshots to answer "which alt already has this" and
 -- "which alt can craft this". Snapshots are refreshed on login, on logout and
 -- (debounced) whenever bags, goals or recipes change.
+--
+-- Only characters on this character's realm (or a realm the client says is
+-- connected to it) are alts: nothing can be traded or mailed across realms,
+-- and Forever's realms differ in ruleset (PvE / PvP). Every query below
+-- works on those; other realms are listed only on request, for display.
 local _, ns = ...
 
 local Util = ns.Util
@@ -77,6 +82,48 @@ end
 function CharacterProvider.Store()
   if not ns.Database.IsLoaded() then return nil end
   return ns.db.characters
+end
+
+-- A realm name compared loosely: no spaces, hyphens or apostrophes, lower
+-- case (connected-realm lists spell "Realm 1 PvE" as "Realm1PvE").
+local function realmKey(realm)
+  return (string.gsub(tostring(realm or ""), "[%s%-']", "")):lower()
+end
+
+-- A snapshot's realm (older keys carry it after the name).
+local function realmOf(record)
+  if type(record.realm) == "string" then return record.realm end
+  return string.match(tostring(record.key or ""), "^[^%-]+%-(.*)$") or ""
+end
+
+-- The realms whose characters can trade with this one, as a set of
+-- realmKeys: this realm plus any connected realms.
+function CharacterProvider.TradeRealms()
+  local set = { [realmKey(CharacterProvider.Identity().realm)] = true }
+  local connected = call(_G.GetAutoCompleteRealms)
+  if type(connected) == "table" then
+    for _, realm in ipairs(connected) do set[realmKey(realm)] = true end
+  end
+  return set
+end
+
+-- Realms with snapshots that cannot trade with this one, for display:
+-- { { realm, count } } by name.
+function CharacterProvider.OtherRealms()
+  local store = CharacterProvider.Store()
+  local trade, counts, names = CharacterProvider.TradeRealms(), {}, {}
+  for _, record in pairs(store or {}) do
+    local realm = realmOf(record)
+    local key = realmKey(realm)
+    if not trade[key] then
+      if not counts[key] then names[#names + 1] = key end
+      counts[key] = { realm = realm, count = (counts[key] and counts[key].count or 0) + 1 }
+    end
+  end
+  table.sort(names)
+  local out = {}
+  for i, key in ipairs(names) do out[i] = counts[key] end
+  return out
 end
 
 -- Writes this character's snapshot. Returns the record or nil, reason.
@@ -193,15 +240,22 @@ function CharacterProvider.SnapshotLevel(record, now)
   return CharacterProvider.Levels.CACHED
 end
 
--- All known characters, current first, then most recently seen. Each entry is
--- the stored record plus isCurrent / level (not persisted).
-function CharacterProvider.List()
+-- This realm's characters (connected realms included), current first, then
+-- most recently seen. opts.realm lists another realm's characters instead,
+-- for display only. Each entry is the stored record plus isCurrent / level /
+-- realm (not persisted).
+function CharacterProvider.List(opts)
   local store = CharacterProvider.Store()
   local list = {}
   if not store then return list end
   local current = CharacterProvider.CurrentKey()
+  local trade = CharacterProvider.TradeRealms()
+  local wanted = opts and opts.realm and realmKey(opts.realm)
   for _, record in pairs(store) do
-    list[#list + 1] = record
+    local key = realmKey(realmOf(record))
+    if (wanted and key == wanted) or (not wanted and trade[key]) then
+      list[#list + 1] = record
+    end
   end
   table.sort(list, function(a, b)
     if (a.key == current) ~= (b.key == current) then return a.key == current end
@@ -210,7 +264,7 @@ function CharacterProvider.List()
   end)
   local out = {}
   for i, record in ipairs(list) do
-    out[i] = { record = record, key = record.key, isCurrent = record.key == current, level = CharacterProvider.SnapshotLevel(record) }
+    out[i] = { record = record, key = record.key, isCurrent = record.key == current, level = CharacterProvider.SnapshotLevel(record), realm = realmOf(record) }
   end
   return out
 end

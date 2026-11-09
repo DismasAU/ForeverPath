@@ -1,7 +1,8 @@
 -- Screen 07: account-wide characters. Cards per character (live / snapshot /
 -- cached), a banner naming the alt that already holds the most of what your
 -- active goals need, and the scope switch that lets the planner count alts'
--- bags as owned.
+-- bags as owned. Only this realm's characters are alts; the realm dropdown
+-- shows another realm's for reference, never counted.
 local _, ns = ...
 
 local Theme = ns.UI.Theme
@@ -232,7 +233,9 @@ local function createCard(content, index, screen)
     end
     for i = shown + 1, MATERIALS do self.materials[i]:Hide() end
     if shown == 0 then
-      self.materialsEmpty:SetText(entry.isCurrent and "Your own bags are counted in every goal." or (next(needs) and "Nothing your goals need." or "No active goals need materials."))
+      local text = entry.isCurrent and "Your own bags are counted in every goal." or (next(needs) and "Nothing your goals need." or "No active goals need materials.")
+      if self.otherRealm then text = "Another realm: never counted towards this character's goals." end
+      self.materialsEmpty:SetText(text)
       self.materialsEmpty:Show()
     else
       self.materialsEmpty:Hide()
@@ -269,7 +272,7 @@ local function createCard(content, index, screen)
         line:SetText(crafts[i])
         Widgets.SetTextColor(line, C.text)
       elseif i == 1 then
-        line:SetText(next(needs) and "Nothing your goals need" or "No active goals")
+        line:SetText(self.otherRealm and "Another realm" or (next(needs) and "Nothing your goals need" or "No active goals"))
         Widgets.SetTextColor(line, C.text3)
       else
         line:SetText("")
@@ -343,6 +346,22 @@ local function Create(parent)
   end
   screen.scopeRow = scopeRow
 
+  -- Realm: this realm's characters, or another realm's for reference.
+  local realmPick = Widgets.Dropdown(scopeRow, "", 160, function(button)
+    local items = { { text = ns.CharacterProvider.Identity().realm, value = "", selected = not screen.realm } }
+    for _, other in ipairs(Characters.OtherRealms()) do
+      items[#items + 1] = { text = other.realm, value = other.realm, selected = screen.realm == other.realm,
+        meta = string.format("%d character%s", other.count, other.count == 1 and "" or "s") }
+    end
+    Widgets.Menu(button, items, function(value)
+      screen.realm = value ~= "" and value or nil
+      screen:Refresh()
+    end, math.max(button:GetWidth() or 0, 300))
+  end)
+  realmPick:SetPoint("RIGHT", previous, "LEFT", -18, 0)
+  Widgets.SetTooltip(realmPick, "Realm", { "Only characters on this realm count as alts: nothing can be traded or mailed between realms.", "Pick another realm to look at its characters; they never count towards this character's goals." })
+  screen.realmPick = realmPick
+
   -- Cards
   local scroll = Widgets.ScrollArea(screen)
   scroll:SetPoint("TOPLEFT", scopeRow, "BOTTOMLEFT", 0, -8)
@@ -377,8 +396,22 @@ local function Create(parent)
     scope:Select(includeAlts and "account" or "character")
     scopeHint:SetText(includeAlts and "Alts' snapshots count as owned in every goal" or "Alts are shown for information only")
 
+    local others = Characters.OtherRealms()
+    local stillThere = false
+    for _, other in ipairs(others) do stillThere = stillThere or other.realm == self.realm end
+    if not stillThere then self.realm = nil end
+    if #others > 0 then
+      realmPick:SetLabel(self.realm or Characters.Identity().realm)
+      realmPick:SetWidth(math.max(160, (realmPick.label:GetStringWidth() or 0) + 34))
+      realmPick:Show()
+    else
+      realmPick:Hide()
+    end
+    if self.realm then scopeHint:SetText("Another realm: shown for reference, never counted") end
+
     local needs, needOrder = ns.GoalService.Needs()
-    local entries = Characters.List()
+    local entries = Characters.List({ realm = self.realm })
+    if self.realm then needs, needOrder = {}, {} end
     self.cardCount = #entries
     -- Every card shows the same number of profession rows so sections line up.
     local rows = 1
@@ -389,14 +422,15 @@ local function Create(parent)
     for index, entry in ipairs(entries) do
       local card = self.pool:Get(index)
       card:Arrange(rows)
+      card.otherRealm = self.realm ~= nil
       card:Render(entry, needs, needOrder)
     end
     self.pool:HideFrom(#entries + 1)
     self:LayoutCards(#entries)
-    if #entries <= 1 then self.empty:Show() else self.empty:Hide() end
+    if #entries <= 1 and not self.realm then self.empty:Show() else self.empty:Hide() end
 
     -- Banner: the alt that covers the most of what is missing.
-    local best = not self.bannerDismissed and Characters.BestCoverage(needs) or nil
+    local best = not self.bannerDismissed and not self.realm and Characters.BestCoverage(needs) or nil
     if best then
       bannerTitle:SetText(string.format("%s%s|r already has %d of the required materials.", Theme.Hex.info, best.name, best.covered))
       local parts, extra = {}, 0

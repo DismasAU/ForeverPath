@@ -58,6 +58,26 @@ describe("UI shell and screens (mock widgets)", function()
     assert_eq(MainFrame.frame.alertText:GetText(), "no such goal", "a success leaves the alert alone")
   end)
 
+  it("lists only this realm's characters and shows other realms on request", function()
+    local ns = H.fresh()
+    H.login(ns)
+    ns.db.characters["Ezio-Stormhold PvP"] = { key = "Ezio-Stormhold PvP", name = "Ezio", realm = "Stormhold PvP", level = 31, class = "Rogue", classFile = "ROGUE",
+      gold = 100, lastSeen = Mock.now - 60, bags = { items = {} }, professions = {}, knownRecipes = {} }
+    local MainFrame = ns.UI.MainFrame
+    MainFrame.Show()
+    MainFrame.ShowScreen("characters")
+    local screen = MainFrame.screens.characters
+    assert_eq(screen.cardCount, 1, "Ezio is on another realm")
+    assert_true(screen.realmPick:IsShown())
+    assert_eq(screen.realmPick.label:GetText(), "Stormhold")
+    screen.realm = "Stormhold PvP"
+    screen:Refresh()
+    assert_eq(screen.cardCount, 1)
+    assert_eq(H.ui.row(screen, 1).key, "Ezio-Stormhold PvP")
+    assert_eq(screen.realmPick.label:GetText(), "Stormhold PvP")
+    assert_match(screen.scopeHint:GetText(), "never counted")
+  end)
+
   it("switches screens from the sidebar and remembers the last one", function()
     frame.navButtons.goals:Click()
     assert_eq(MainFrame.currentScreen, "goals")

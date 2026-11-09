@@ -394,6 +394,13 @@ This release changed how every module starts and is named, so a broad pass matte
 - [ ] Kill and loot mobs in combat (pull a second one first, then loot): no "secret string value" error, and `/fp sources <item>` lists the creature afterwards.
 - [ ] Any other "secret" error: report the file and line from `/fp errors`.
 
+### 35. 0.25.2 Characters by realm
+
+- [ ] On a character with alts on another realm: the Characters screen lists only this realm's characters.
+- [ ] The realm dropdown shows the full realm name without cut-off; picking the other realm shows its characters marked "Another realm", and picking this realm again goes back.
+- [ ] Shopping list, "an alt has these" banner and crafter suggestions no longer mention characters from the other realm.
+- [ ] `/fp characters` lists the other realm on its own line.
+
 ### Reporting
 Include: client build (`/dump GetBuildInfo()`), `/fp status` output, the step
 that failed, chat output with `/fp debug` enabled, and `/fp errors`.

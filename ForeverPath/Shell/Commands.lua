@@ -319,6 +319,9 @@ function handlers.characters()
       #profs > 0 and table.concat(profs, ", ") or "no professions", Util.Count(r.bags and r.bags.items or {}), r.bank and " + bank" or "",
       entry.isCurrent and "live" or (entry.level .. " " .. Util.FormatAgo(r.lastSeen))))
   end
+  local others = {}
+  for _, other in ipairs(ns.CharacterProvider.OtherRealms()) do others[#others + 1] = string.format("%s (%d)", other.realm, other.count) end
+  if #others > 0 then Log.Print("Other realms, never counted here: %s.", table.concat(others, ", ")) end
   Log.Print("Alts' bags are %s as owned (/fp alts to toggle).", ns.GoalService.IncludesAlts() and "counted" or "not counted")
 end
 
