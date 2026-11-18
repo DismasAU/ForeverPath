@@ -408,6 +408,11 @@ This release changed how every module starts and is named, so a broad pass matte
 - [ ] The tracker catches up within a couple of seconds of looting, or right after combat ends.
 - [ ] With the main window open, screens still update straight away.
 
+### 37. 1.0.1 Empty equipment slots
+
+- [ ] With an empty equipment slot (shirt or tabard), loot and move bag items: no "bad argument #1 to 'tonumber'" error in chat.
+- [ ] Swap a piece of gear: the Equipment screen updates.
+
 ### Reporting
 Include: client build (`/dump GetBuildInfo()`), `/fp status` output, the step
 that failed, chat output with `/fp debug` enabled, and `/fp errors`.

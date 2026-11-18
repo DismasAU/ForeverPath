@@ -49,6 +49,24 @@ describe("EquipmentProvider", function()
     wardrobe()
   end)
 
+  it("notices gear changes when the client returns nothing for an empty slot", function()
+    local real = _G.GetInventoryItemID
+    -- The Forever client returns no value at all (not nil) for an empty slot.
+    _G.GetInventoryItemID = function(unit, slotID)
+      local itemID = real(unit, slotID)
+      if itemID == nil then return end
+      return itemID
+    end
+    EP.WornChanged()
+    assert_false(EP.WornChanged(), "nothing changed")
+    local errors = #ns.Log.errors
+    Mock.FireEvent("UNIT_INVENTORY_CHANGED", "player")
+    assert_eq(#ns.Log.errors, errors, "no error from an empty slot")
+    Mock.equipment[1] = nil
+    assert_true(EP.WornChanged(), "taking off the helmet is a change")
+    _G.GetInventoryItemID = real
+  end)
+
   it("reads what is worn, item levels, stats, slots and the average", function()
     assert_true(EP.IsAvailable())
     assert_false(ns.GearQuestBridge.IsAvailable())

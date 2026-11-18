@@ -283,7 +283,7 @@ local wornIDs = {}
 function EquipmentProvider.WornChanged()
   local differs = false
   for i, slot in ipairs(EquipmentProvider.SLOTS) do
-    local itemID = tonumber(call(_G.GetInventoryItemID, "player", slot.id)) or 0
+    local itemID = tonumber((call(_G.GetInventoryItemID, "player", slot.id))) or 0 -- an empty slot returns nothing at all
     if wornIDs[i] ~= itemID then
       wornIDs[i] = itemID
       differs = true

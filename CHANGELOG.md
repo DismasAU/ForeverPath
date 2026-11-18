@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1 (2026-11-18) - empty equipment slots
+
+### Fixed
+- "EquipmentProvider.lua:286: bad argument #1 to 'tonumber'" in chat on bag
+  changes while an equipment slot was empty. The client returns no value at
+  all for an empty slot, which the 1.0.0 gear-change check did not expect.
+
 ## 1.0.0 (2026-11-18) - first stable release
 
 ForeverPath leaves test builds behind: goals for crafting, items, recipes,

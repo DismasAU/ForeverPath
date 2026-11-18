@@ -94,7 +94,7 @@ function LootLearner.ReadLoot()
   if LootLearner.countedSize > LootLearner.MAX_COUNTED then
     LootLearner.counted, LootLearner.countedSize = {}, 0
   end
-  local slots = tonumber(call(_G.GetNumLootItems)) or 0
+  local slots = tonumber((call(_G.GetNumLootItems))) or 0
   for slot = 1, slots do
     local itemID = itemIDFromLink(Compat.Readable(call(_G.GetLootSlotLink, slot)))
     if itemID then
