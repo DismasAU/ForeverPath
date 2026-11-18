@@ -36,17 +36,21 @@ function CharacterProvider.SetGoalSource(fn)
   goalSource = fn
 end
 
+-- Name, realm, class and race never change in a session: they are read once
+-- the client reports them (planning asks for them hundreds of times a pass).
+local staticIdentity
+
 function CharacterProvider.Identity()
-  local info = { name = "Adventurer", realm = "", level = 0, class = "", classFile = nil, race = "", gold = nil }
-  info.name = call(UnitName, "player") or info.name
-  info.level = ns.Compat.PlayerLevel()
-  local classFile, _, className = ns.Compat.PlayerClass()
-  info.class = className or ""
-  info.classFile = classFile
-  info.race = call(UnitRace, "player") or ""
-  info.realm = call(GetRealmName) or ""
-  info.gold = call(GetMoney)
-  return info
+  local fixed = staticIdentity
+  if not fixed then
+    fixed = { name = call(UnitName, "player"), realm = call(GetRealmName) or "", race = call(UnitRace, "player") or "" }
+    local classFile, _, className = ns.Compat.PlayerClass()
+    fixed.class, fixed.classFile = className or "", classFile
+    fixed.key = CharacterProvider.Key(fixed.name, fixed.realm)
+    if fixed.name and fixed.realm ~= "" and classFile then staticIdentity = fixed end
+  end
+  return { name = fixed.name or "Adventurer", realm = fixed.realm, class = fixed.class, classFile = fixed.classFile, race = fixed.race,
+    level = ns.Compat.PlayerLevel(), gold = call(GetMoney) }
 end
 
 -- Gold you can reach: this character live, plus every alt's snapshot.
@@ -75,6 +79,7 @@ function CharacterProvider.Key(name, realm)
 end
 
 function CharacterProvider.CurrentKey()
+  if staticIdentity then return staticIdentity.key end
   local id = CharacterProvider.Identity()
   return CharacterProvider.Key(id.name, id.realm)
 end
@@ -164,6 +169,7 @@ function CharacterProvider.Snapshot()
     knownRecipes = knownRecipes, goals = goals,
   }
   store[key] = record
+  CharacterProvider.Invalidate()
   Log.Debug("Snapshot saved for %s (%d bag items, %d professions, %d goals)", key, Util.Count(bags.items), #professions, #goals)
   Events.Fire("FP_CHARACTERS_UPDATED", key)
   return record
@@ -222,14 +228,15 @@ function CharacterProvider.Remove(key)
     return false, "cannot forget the current character"
   end
   store[key] = nil
+  CharacterProvider.Invalidate()
   Events.Fire("FP_CHARACTERS_UPDATED", key)
   return true
 end
 
 -- How current a character's snapshot is (a Levels value): "live" for the
 -- current character, "snapshot" under 24 h, "cached" beyond.
-function CharacterProvider.SnapshotLevel(record, now)
-  if record.key == CharacterProvider.CurrentKey() then
+function CharacterProvider.SnapshotLevel(record, now, current)
+  if record.key == (current or CharacterProvider.CurrentKey()) then
     return CharacterProvider.Levels.LIVE
   end
   now = now or Util.Now()
@@ -244,13 +251,36 @@ end
 -- most recently seen. opts.realm lists another realm's characters instead,
 -- for display only. Each entry is the stored record plus isCurrent / level /
 -- realm (not persisted).
+--
+-- This realm's list is cached: planning asks for it for every item in every
+-- goal. The cache is rebuilt when a record is added, replaced or removed,
+-- and every minute so the snapshot levels age. Treat it as read-only.
+local listCache = { list = nil, records = {}, count = 0, builtAt = 0 }
+CharacterProvider.LIST_TTL = 60
+
+-- Drops the cached list (snapshots and Remove call this; so can importers).
+function CharacterProvider.Invalidate()
+  listCache.list = nil
+end
+
+local function cacheValid(store)
+  if not listCache.list or Util.Now() - listCache.builtAt >= CharacterProvider.LIST_TTL then return false end
+  local n = 0
+  for key, record in pairs(store) do
+    if listCache.records[key] ~= record then return false end
+    n = n + 1
+  end
+  return n == listCache.count
+end
+
 function CharacterProvider.List(opts)
   local store = CharacterProvider.Store()
+  if not store then return {} end
+  local wanted = opts and opts.realm and realmKey(opts.realm)
+  if not wanted and cacheValid(store) then return listCache.list end
   local list = {}
-  if not store then return list end
   local current = CharacterProvider.CurrentKey()
   local trade = CharacterProvider.TradeRealms()
-  local wanted = opts and opts.realm and realmKey(opts.realm)
   for _, record in pairs(store) do
     local key = realmKey(realmOf(record))
     if (wanted and key == wanted) or (not wanted and trade[key]) then
@@ -264,7 +294,12 @@ function CharacterProvider.List(opts)
   end)
   local out = {}
   for i, record in ipairs(list) do
-    out[i] = { record = record, key = record.key, isCurrent = record.key == current, level = CharacterProvider.SnapshotLevel(record), realm = realmOf(record) }
+    out[i] = { record = record, key = record.key, isCurrent = record.key == current, level = CharacterProvider.SnapshotLevel(record, nil, current), realm = realmOf(record) }
+  end
+  if not wanted then
+    local records, count = {}, 0
+    for key, record in pairs(store) do records[key] = record count = count + 1 end
+    listCache.list, listCache.records, listCache.count, listCache.builtAt = out, records, count, Util.Now()
   end
   return out
 end
@@ -439,8 +474,12 @@ function CharacterProvider.BestCoverage(needs)
 end
 
 
+-- Other characters read the snapshot and logout writes the final one, so
+-- changes are batched (copying the bags is not free while looting).
+CharacterProvider.SNAPSHOT_DELAY = 30
+
 local function scheduleSnapshot()
-  Events.Debounce("character-snapshot", 3, CharacterProvider.Snapshot)
+  Events.Debounce("character-snapshot", CharacterProvider.SNAPSHOT_DELAY, CharacterProvider.Snapshot)
 end
 
 function CharacterProvider.Init()

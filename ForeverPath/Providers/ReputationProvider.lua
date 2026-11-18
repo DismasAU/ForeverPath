@@ -286,10 +286,12 @@ end
 -- Ways to earn: quests (journal reward texts) and rewards (AtlasLoot factions)
 ---------------------------------------------------------------------------
 -- { [factionName] = { { questID, amount, entry } } } from the journal's reward summaries.
+-- Built once per quest index (the reward texts do not change with the log).
 function ReputationProvider.QuestRewards()
-  if ReputationProvider.questRewards then return ReputationProvider.questRewards end
+  local index = ns.QuestProvider.Index()
+  if ReputationProvider.questRewards and ReputationProvider.questRewardsIndex == index then return ReputationProvider.questRewards end
   local out = {}
-  for _, entry in pairs(ns.QuestProvider.Index()) do
+  for _, entry in pairs(index) do
     local text = entry.rewardSummary or entry.rewardText or ""
     for faction, amount in tostring(text):gmatch("([%a' ]+) %+(%d+)") do
       faction = Util.Trim(faction)
@@ -306,7 +308,7 @@ function ReputationProvider.QuestRewards()
       return a.questID < b.questID
     end)
   end
-  ReputationProvider.questRewards = out
+  ReputationProvider.questRewards, ReputationProvider.questRewardsIndex = out, index
   return out
 end
 
@@ -480,6 +482,5 @@ function ReputationProvider.Init()
     return
   end
   Events.RegisterWoW("UPDATE_FACTION", function() changed("faction") end)
-  Events.On("FP_QUESTS_UPDATED", function() ReputationProvider.questRewards = nil end)
   Events.On("FP_READY", function() ReputationProvider.cache = nil ReputationProvider.questRewards = nil end)
 end

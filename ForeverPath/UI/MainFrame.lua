@@ -388,7 +388,7 @@ function MainFrame.Create()
   frame:SetScript("OnSizeChanged", function()
     Events.Debounce("window-save", 0.5, MainFrame.SavePosition)
   end)
-  frame:SetScript("OnShow", function() MainFrame.RequestRefresh() end)
+  frame:SetScript("OnShow", function() MainFrame.Refresh() ns.UI.Tracker.Refresh() end)
   frame:SetScript("OnHide", function()
     MainFrame.SavePosition()
     Widgets.CloseMenu()
@@ -583,15 +583,36 @@ function MainFrame.Refresh()
   end
 end
 
-function MainFrame.RequestRefresh()
-  Events.Debounce("ui-refresh", 0.05, function()
-    if MainFrame.IsShown() then
-      MainFrame.Refresh()
-    elseif ns.UI.Tracker.IsShown() then
-      ns.GoalService.EvaluateViews()
+-- Data messages arrive in bursts (one loot fires bag, quest-log, equipment
+-- and reputation updates within a second), and every refresh re-plans all
+-- open goals. With the window open the screen follows quickly; with only
+-- the tracker showing, a burst is merged into one re-plan, and in combat the
+-- re-plan waits until combat ends.
+MainFrame.REFRESH_DELAY = 0.1
+MainFrame.TRACKER_REFRESH_DELAY = 1.5
+
+local function refreshNow()
+  if MainFrame.IsShown() then
+    MainFrame.Refresh()
+  elseif ns.UI.Tracker.IsShown() then
+    if ns.Compat.InCombatLockdown() then
+      if not MainFrame.afterCombat then
+        MainFrame.afterCombat = true
+        Events.RunOutOfCombat(function()
+          MainFrame.afterCombat = nil
+          MainFrame.RequestRefresh()
+        end)
+      end
+      return
     end
-    ns.UI.Tracker.Refresh()
-  end)
+    ns.GoalService.EvaluateViews()
+  end
+  ns.UI.Tracker.Refresh()
+end
+
+function MainFrame.RequestRefresh()
+  local delay = MainFrame.IsShown() and MainFrame.REFRESH_DELAY or MainFrame.TRACKER_REFRESH_DELAY
+  Events.Debounce("ui-refresh", delay, refreshNow)
 end
 
 ---------------------------------------------------------------------------

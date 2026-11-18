@@ -26,6 +26,29 @@ describe("LootLearner", function()
     assert_nil(LL.ParseGUID(nil))
   end)
 
+  it("keeps the drop index current per loot instead of rebuilding it", function()
+    ns.db.imported = { Friend = { lootSeen = { ["c:525"] = { kind = "creature", name = "Mangy Wolf", looted = 4, items = { [LINEN] = { times = 1, quantity = 1 } }, skinned = {} } } } }
+    Mock.OpenLoot({ { itemID = LINEN, quantity = 1, sources = { Mock.CreatureGUID(525, 1), 1 } } })
+    Mock.CloseLoot()
+    assert_eq(#LL.ItemHints(LINEN), 1, "the index is built on first use")
+    local index = LL.index
+    Mock.OpenLoot({ { itemID = LINEN, quantity = 2, sources = { Mock.CreatureGUID(525, 2), 2 } }, { itemID = LEATHER, quantity = 1, sources = { Mock.CreatureGUID(525, 2), 1 } } })
+    Mock.CloseLoot()
+    Mock.OpenLoot({ { itemID = LINEN, quantity = 3, sources = { Mock.CreatureGUID(600, 1), 3 } } })
+    Mock.CloseLoot()
+    assert_true(LL.index == index, "updated in place, not thrown away")
+    local function hints(itemID)
+      local out = {}
+      for _, h in ipairs(LL.ItemHints(itemID)) do out[#out + 1] = h.detail .. "|" .. h.chance end
+      return out
+    end
+    local incremental = { linen = hints(LINEN), leather = hints(LEATHER) }
+    LL.Invalidate()
+    assert_deep_eq(incremental, { linen = hints(LINEN), leather = hints(LEATHER) }, "same answer as a full rebuild")
+    assert_eq(#incremental.linen, 2)
+    assert_match(incremental.linen[2], "in 6 loots on Forever %(with shared data%)", "own and imported loots of the wolf combined")
+  end)
+
   it("skips the client's secret values instead of comparing them", function()
     -- In game a secret is its own value that only reads like the GUID.
     local hiddenGUID = setmetatable({}, { __tostring = function() return "secret" end })

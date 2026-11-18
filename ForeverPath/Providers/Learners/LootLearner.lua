@@ -20,10 +20,13 @@ local Util = ns.Util
 local Log = ns.Log
 local Events = ns.Events
 
-local LootLearner = { counted = {}, index = nil }
+local LootLearner = { counted = {}, countedSize = 0, index = nil, combined = nil }
 ns.LootLearner = LootLearner
 
 LootLearner.MAX_HINTS = 3
+-- The loot windows remembered this session (so a window read twice counts
+-- once); past this many the memo starts over, so a long session stays flat.
+LootLearner.MAX_COUNTED = 4000
 
 local call = Util.SafeCall
 
@@ -88,6 +91,9 @@ function LootLearner.ReadLoot()
   local mapID, x, y, zone = place()
   local recorded = 0
   local touched = {}
+  if LootLearner.countedSize > LootLearner.MAX_COUNTED then
+    LootLearner.counted, LootLearner.countedSize = {}, 0
+  end
   local slots = tonumber(call(_G.GetNumLootItems)) or 0
   for slot = 1, slots do
     local itemID = itemIDFromLink(Compat.Readable(call(_G.GetLootSlotLink, slot)))
@@ -110,6 +116,7 @@ function LootLearner.ReadLoot()
         local seenKey = key and (tostring(guid) .. "#" .. itemID)
         if key and not LootLearner.counted[seenKey] then
           LootLearner.counted[seenKey] = true
+          LootLearner.countedSize = LootLearner.countedSize + 1
           local entry = store[key]
           if not entry then
             entry = { kind = kind, items = {}, skinned = {}, looted = 0 }
@@ -123,20 +130,21 @@ function LootLearner.ReadLoot()
           if not first or first == LootLearner.session then
             if not first then
               LootLearner.counted[tostring(guid)] = LootLearner.session
+              LootLearner.countedSize = LootLearner.countedSize + 1
               entry.looted = entry.looted + 1
             end
             bump(entry.items, itemID, quantity)
           else
             bump(entry.skinned, itemID, quantity)
           end
-          touched[guid] = true
+          touched[key] = true
           recorded = recorded + 1
         end
       end
     end
   end
   if recorded > 0 then
-    LootLearner.index = nil
+    LootLearner.UpdateIndex(touched)
     Events.Debounce("loot-learned", 0.5, function() Events.Fire("FP_LOOT_LEARNED") end)
   end
   return recorded
@@ -150,63 +158,119 @@ end
 
 -- Own observations plus every imported copy (App/Share.lua), summed per
 -- source: key -> entry in the stored shape, with `shared` = imports used.
-function LootLearner.Combined()
-  local combined = {}
-  local function merge(key, entry, shared)
-    if type(entry) ~= "table" then return end
-    local c = combined[key]
-    if not c then
-      c = { kind = entry.kind, name = entry.name, zone = entry.zone, mapID = entry.mapID, x = entry.x, y = entry.y, looted = 0, items = {}, skinned = {}, shared = 0 }
-      combined[key] = c
-    end
-    c.name = c.name or entry.name
-    c.zone, c.mapID, c.x, c.y = c.zone or entry.zone, c.mapID or entry.mapID, c.x or entry.x, c.y or entry.y
-    c.looted = c.looted + (tonumber(entry.looted) or 0)
-    if shared then c.shared = c.shared + 1 end
-    for _, field in ipairs({ "items", "skinned" }) do
-      for itemID, seen in pairs(type(entry[field]) == "table" and entry[field] or {}) do
-        itemID = tonumber(itemID)
-        if itemID and type(seen) == "table" then
-          local target = c[field][itemID]
-          if not target then target = { times = 0, quantity = 0 } c[field][itemID] = target end
-          target.times = target.times + (tonumber(seen.times) or 0)
-          target.quantity = target.quantity + (tonumber(seen.quantity) or 0)
-        end
-      end
+local function mergeField(target, source)
+  if type(source) ~= "table" then return end
+  for itemID, seen in pairs(source) do
+    itemID = tonumber(itemID)
+    if itemID and type(seen) == "table" then
+      local row = target[itemID]
+      if not row then row = { times = 0, quantity = 0 } target[itemID] = row end
+      row.times = row.times + (tonumber(seen.times) or 0)
+      row.quantity = row.quantity + (tonumber(seen.quantity) or 0)
     end
   end
-  for key, entry in pairs(LootLearner.Store() or {}) do merge(key, entry, false) end
+end
+
+local function merge(combined, key, entry, shared)
+  if type(entry) ~= "table" then return end
+  local c = combined[key]
+  if not c then
+    c = { kind = entry.kind, name = entry.name, zone = entry.zone, mapID = entry.mapID, x = entry.x, y = entry.y, looted = 0, items = {}, skinned = {}, shared = 0 }
+    combined[key] = c
+  end
+  c.name = c.name or entry.name
+  c.zone, c.mapID, c.x, c.y = c.zone or entry.zone, c.mapID or entry.mapID, c.x or entry.x, c.y or entry.y
+  c.looted = c.looted + (tonumber(entry.looted) or 0)
+  if shared then c.shared = c.shared + 1 end
+  mergeField(c.items, entry.items)
+  mergeField(c.skinned, entry.skinned)
+end
+
+local function sourceKey(key)
+  return type(key) == "string" and key:match("^[cof]:") ~= nil
+end
+
+function LootLearner.Combined()
+  local combined = {}
+  for key, entry in pairs(LootLearner.Store() or {}) do merge(combined, key, entry, false) end
   ns.Database.EachImported("lootSeen", function(_, store)
     for key, entry in pairs(store) do
-      if type(key) == "string" and key:match("^[cof]:") then merge(key, entry, true) end
+      if sourceKey(key) then merge(combined, key, entry, true) end
     end
   end)
   return combined
 end
 
--- itemID -> { { key, entry, times, quantity, skinned } }, built on demand.
+-- One source's combined entry (own plus imported), or nil.
+local function combinedFor(key)
+  local one = {}
+  merge(one, key, (LootLearner.Store() or {})[key], false)
+  if sourceKey(key) then
+    ns.Database.EachImported("lootSeen", function(_, store) merge(one, key, store[key], true) end)
+  end
+  return one[key]
+end
+
+-- Best loot rate first, then by key.
+local function byRate(a, b)
+  local ra = a.times / math.max(1, a.entry.looted or 1)
+  local rb = b.times / math.max(1, b.entry.looted or 1)
+  if ra ~= rb then return ra > rb end
+  return a.key < b.key
+end
+
+local function addRows(index, key, entry, affected)
+  for field, skinned in pairs({ items = false, skinned = true }) do
+    for itemID, seen in pairs(entry[field] or {}) do
+      local list = index[itemID]
+      if not list then list = {} index[itemID] = list end
+      list[#list + 1] = { key = key, entry = entry, times = seen.times, quantity = seen.quantity, skinned = skinned or nil }
+      if affected then affected[itemID] = true end
+    end
+  end
+end
+
+-- itemID -> { { key, entry, times, quantity, skinned } }, built on first use.
 local function buildIndex()
-  local index = {}
-  for key, entry in pairs(LootLearner.Combined()) do
-    for itemID, seen in pairs(entry.items or {}) do
-      index[itemID] = index[itemID] or {}
-      table.insert(index[itemID], { key = key, entry = entry, times = seen.times, quantity = seen.quantity })
-    end
-    for itemID, seen in pairs(entry.skinned or {}) do
-      index[itemID] = index[itemID] or {}
-      table.insert(index[itemID], { key = key, entry = entry, times = seen.times, quantity = seen.quantity, skinned = true })
-    end
-  end
-  for _, list in pairs(index) do
-    table.sort(list, function(a, b)
-      local ra = a.times / math.max(1, a.entry.looted or 1)
-      local rb = b.times / math.max(1, b.entry.looted or 1)
-      if ra ~= rb then return ra > rb end
-      return a.key < b.key
-    end)
-  end
-  LootLearner.index = index
+  local index, combined = {}, LootLearner.Combined()
+  for key, entry in pairs(combined) do addRows(index, key, entry) end
+  for _, list in pairs(index) do table.sort(list, byRate) end
+  LootLearner.index, LootLearner.combined = index, combined
   return index
+end
+
+-- Brings the index up to date for the sources just looted (a set of keys),
+-- instead of rebuilding it from every source ever looted.
+function LootLearner.UpdateIndex(keys)
+  local index, combined = LootLearner.index, LootLearner.combined
+  if not index or not combined then return end
+  local affected = {}
+  for key in pairs(keys) do
+    local old = combined[key]
+    if old then
+      for _, field in ipairs({ "items", "skinned" }) do
+        for itemID in pairs(old[field]) do
+          local list = index[itemID] or {}
+          for i = #list, 1, -1 do
+            if list[i].key == key then table.remove(list, i) end
+          end
+          affected[itemID] = true
+        end
+      end
+    end
+    local entry = combinedFor(key)
+    combined[key] = entry
+    if entry then addRows(index, key, entry, affected) end
+  end
+  for itemID in pairs(affected) do
+    local list = index[itemID]
+    if list and #list == 0 then index[itemID] = nil elseif list then table.sort(list, byRate) end
+  end
+end
+
+-- Drops the index; the next lookup rebuilds it (imports change everything).
+function LootLearner.Invalidate()
+  LootLearner.index, LootLearner.combined = nil, nil
 end
 
 -- Resolver hints for what this account has looted (learned = true).
@@ -267,6 +331,6 @@ function LootLearner.Init()
   Events.RegisterWoW("LOOT_OPENED", function() LootLearner.ReadLoot() end)
   Events.RegisterWoW("LOOT_CLOSED", function() LootLearner.CloseLoot() end)
   -- Imported loot counts are summed into the index.
-  Events.On("FP_SHARED_DATA_CHANGED", function() LootLearner.index = nil end)
+  Events.On("FP_SHARED_DATA_CHANGED", LootLearner.Invalidate)
   Log.Debug("%s", LootLearner.StatusLine())
 end

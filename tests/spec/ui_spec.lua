@@ -291,6 +291,39 @@ describe("UI shell and screens (mock widgets)", function()
     assert_match(frame.footerDone:GetText(), "1 completed")
   end)
 
+  it("merges a loot's burst of updates into one re-plan, and waits for combat to end", function()
+    ns.GoalService.AddItemGoal(4238, 1, "CRAFT_ITEM")
+    MainFrame.Hide()
+    Mock.RunTimers()
+    assert_true(ns.UI.Tracker.IsShown())
+    local plans, equipment = 0, 0
+    local evaluate = ns.GoalService.EvaluateViews
+    ns.GoalService.EvaluateViews = function(...) plans = plans + 1 return evaluate(...) end
+    ns.Events.On("FP_EQUIPMENT_UPDATED", function() equipment = equipment + 1 end)
+    local function loot()
+      Mock.FireEvent("UNIT_INVENTORY_CHANGED", "player")
+      Mock.FireEvent("BAG_UPDATE_DELAYED")
+      Mock.FireEvent("QUEST_LOG_UPDATE")
+      Mock.Advance(0.3)
+      Mock.FireEvent("QUEST_LOG_UPDATE")
+      Mock.FireEvent("UPDATE_FACTION")
+      Mock.Advance(5)
+    end
+    loot()
+    assert_eq(plans, 1, "bag, quest-log and reputation updates share one re-plan")
+    loot()
+    assert_eq(equipment, 0, "a bag change is not a gear change")
+    plans = 0
+    Mock.combat = true
+    loot()
+    assert_eq(plans, 0, "no re-plan for the tracker in combat")
+    Mock.combat = false
+    Mock.FireEvent("PLAYER_REGEN_ENABLED")
+    Mock.Advance(5)
+    assert_eq(plans, 1, "one re-plan once combat ends")
+    ns.GoalService.EvaluateViews = evaluate
+  end)
+
   it("drives the compact tracker from tracked goals", function()
     local tracker = ns.UI.Tracker
     assert_false(tracker.IsShown())

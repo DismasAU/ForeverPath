@@ -187,6 +187,23 @@ describe("CharacterProvider", function()
     assert_eq(#gold.alts, 2, "a character on another realm is not reachable gold")
   end)
 
+  it("reuses the character list until a snapshot is added, replaced or removed", function()
+    H.login(ns)
+    local CP = ns.CharacterProvider
+    local first = CP.List()
+    assert_true(CP.List() == first, "the same list while nothing changed")
+    ns.db.characters["Miravelle-Stormhold"] = { key = "Miravelle-Stormhold", name = "Miravelle", realm = "Stormhold", level = 40, lastSeen = Mock.now - 60, bags = { items = { [2589] = 3 } }, professions = {}, knownRecipes = {} }
+    assert_eq(#CP.List(), 2, "a new snapshot is seen")
+    assert_eq(CP.AltTotal(2589), 3)
+    ns.db.characters["Miravelle-Stormhold"] = { key = "Miravelle-Stormhold", name = "Miravelle", realm = "Stormhold", level = 40, lastSeen = Mock.now - 60, bags = { items = { [2589] = 8 } }, professions = {}, knownRecipes = {} }
+    assert_eq(CP.AltTotal(2589), 8, "a replaced snapshot is seen")
+    assert_true(CP.Remove("Miravelle-Stormhold"))
+    assert_eq(#CP.List(), 1)
+    local cached = CP.List()
+    Mock.now = Mock.now + CP.LIST_TTL
+    assert_false(CP.List() == cached, "rebuilt after a minute so snapshot ages move on")
+  end)
+
   it("counts only this realm's characters as alts; other realms are for display", function()
     H.login(ns)
     local function alt(name, realm, linen)
@@ -208,6 +225,7 @@ describe("CharacterProvider", function()
     assert_false(there[1].isCurrent)
     -- A realm the client reports as connected trades like this one.
     _G.GetAutoCompleteRealms = function() return { "Stormhold", "StormholdPvP" } end
+    CP.Invalidate() -- the list is cached; connected realms never change in a real session
     assert_eq(CP.AltTotal(2589), 13)
     assert_eq(#CP.OtherRealms(), 0)
     _G.GetAutoCompleteRealms = nil

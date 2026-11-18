@@ -277,6 +277,21 @@ function EquipmentProvider.StatusLine()
     ns.GearQuestBridge.IsAvailable() and ("from GearQuest Forever" .. (label and (" (" .. label .. ")") or "")) or "unavailable (GearQuest Forever not installed)")
 end
 
+-- Whether the worn item IDs differ from the last call (allocation-free; the
+-- client fires UNIT_INVENTORY_CHANGED for bag changes too).
+local wornIDs = {}
+function EquipmentProvider.WornChanged()
+  local differs = false
+  for i, slot in ipairs(EquipmentProvider.SLOTS) do
+    local itemID = tonumber(call(_G.GetInventoryItemID, "player", slot.id)) or 0
+    if wornIDs[i] ~= itemID then
+      wornIDs[i] = itemID
+      differs = true
+    end
+  end
+  return differs
+end
+
 local function changed(reason)
   ns.GearQuestBridge.ResetCache()
   Events.Debounce("equipment-updated", 0.5, function()
@@ -292,6 +307,7 @@ function EquipmentProvider.Init()
   end
   Events.RegisterWoW("PLAYER_EQUIPMENT_CHANGED", function() changed("equipment") end)
   Events.RegisterWoW("UNIT_INVENTORY_CHANGED", function(unit)
-    if unit == "player" then changed("inventory") end
+    if unit == "player" and EquipmentProvider.WornChanged() then changed("inventory") end
   end)
+  EquipmentProvider.WornChanged() -- the baseline
 end

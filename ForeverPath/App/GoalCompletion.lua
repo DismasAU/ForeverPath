@@ -219,12 +219,16 @@ function GoalCompletion.Init()
     end
   end)
   -- Attunement steps and quest goals move on quests and levels.
+  -- Quest-log changes reach the screens as FP_QUESTS_UPDATED; only a level-up
+  -- is announced here as well.
   for _, event in ipairs({ "QUEST_TURNED_IN", "QUEST_LOG_UPDATE", "PLAYER_LEVEL_UP", "QUEST_ACCEPTED" }) do
     Events.RegisterWoW(event, function()
       Events.Debounce("attunement-check", 1, function()
         GoalCompletion.CompleteFinished("quest")
-        Events.Fire("FP_PLAYER_CHANGED", "quest")
       end)
+      if event == "PLAYER_LEVEL_UP" then
+        Events.Debounce("level-changed", 1, function() Events.Fire("FP_PLAYER_CHANGED", "level") end)
+      end
     end)
   end
   Events.RegisterWoW("PLAYER_ENTERING_WORLD", function()
