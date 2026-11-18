@@ -322,33 +322,6 @@ function Mock.SetReputation(factionID, value)
   Mock.FireEvent("UPDATE_FACTION")
 end
 
--- Equips an item (slotID = inventory slot) and fires the equipment events.
-function Mock.Equip(slotID, itemID)
-  Mock.equipment[slotID] = itemID
-  Mock.FireEvent("PLAYER_EQUIPMENT_CHANGED", slotID, itemID ~= nil)
-  Mock.FireEvent("UNIT_INVENTORY_CHANGED", "player")
-end
-
--- A minimal GearQuest Forever: data = { entries = { { itemId, slot, minLevel, maxLevel, curatedRank, pipelineScore, classes, specs, factions, sourceType, instructions, zone, npc, questName } },
--- facts = { [itemID] = { name, quality, ilvl, reqLevel, sourceType, instructions, zone, npc, questName } }, scoredStats = { [itemID] = { armor=, str= } }, spec = "arms", specLabel = "Arms" }
-function Mock.InstallGearQuest(data)
-  data = data or {}
-  local GQ = { Data = { entries = data.entries or {}, warriorItemFacts = data.facts or {}, scoredStats = data.scoredStats or {} }, Spec = {} }
-  GQ.Data.loadCalls = 0
-  function GQ.Data:EnsureClassLoaded(classFile)
-    self.loadCalls = self.loadCalls + 1
-    return data.loadFails ~= true
-  end
-  function GQ.Data:GetItemDisplayName(itemID)
-    local facts = self.warriorItemFacts[itemID]
-    return facts and facts.name or nil
-  end
-  function GQ.Spec:GetDisplaySpec(classFile) return data.spec or "arms" end
-  function GQ.Spec:GetSpecLabel(specId, classFile) return data.specLabel or specId end
-  _G.GearQuest = GQ
-  return GQ
-end
-
 -- Merchant window: items = { { itemID, price, stack, numAvailable, extended } }
 function Mock.OpenMerchant(name, items)
   Mock.merchant = { name = name, items = {} }
@@ -973,14 +946,6 @@ function Mock.install()
       if not item then return nil end
       return id, item.itemType or "Trade Goods", item.itemSubType or "Parts", item.equipLoc or "", item.icon, item.classID or 7, item.subclassID or 1
     end,
-    GetItemStats = function(itemInfo)
-      local id = itemIDFrom(itemInfo)
-      local item = id and Mock.items[id]
-      if not item or not item.stats then return nil end
-      local out = {}
-      for k, v in pairs(item.stats) do out[k] = v end
-      return out
-    end,
     GetDetailedItemLevelInfo = function(itemInfo)
       local id = itemIDFrom(itemInfo)
       local item = id and Mock.items[id]
@@ -1169,7 +1134,6 @@ function Mock.reset()
   Mock.superTracked = nil
   Mock.equipment = {}
   Mock.factions = {}
-  _G.GearQuest = nil
   _G.Attune_Data = nil
   _G.AttuneLang = nil
   _G.Attune_DB = nil

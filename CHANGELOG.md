@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.2 (2026-11-18) - Equipment screen removed
+
+### Removed
+- The Equipment screen and `/fp equipment`, along with worn-gear tracking.
+- The GearQuest Forever integration: its upgrade picks, the gear sources it
+  added to obtain goals and its item names in search. Gear goals still get
+  sources from the dungeon journal, AtlasLoot, quests, vendors, learned
+  drops and classic data.
+
+Less work per goal re-plan and no gear or bag listeners for the screen.
+
 ## 1.0.1 (2026-11-18) - empty equipment slots
 
 ### Fixed

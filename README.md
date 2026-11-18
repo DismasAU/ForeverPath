@@ -8,7 +8,7 @@ in your bags and bank, and what is still missing.
 
 It plans crafting goals, items to obtain (boss drops, quest rewards, vendor
 stock), recipes to learn, profession skill targets, enchants to cast, quests,
-reputations and raid attunements, plus equipment upgrades, across every
+reputations and raid attunements, across every
 character on the account: a recursive dependency tree with route choices per
 node, a shopping list with Auction House and vendor prices, a
 buy-versus-craft comparison, trainer, vendor, loot and quest recorders, and a
@@ -41,7 +41,7 @@ recipe catalogue generated from the client's own database (see
 | 0.10.5 optional dependencies declared, MIT licence file | Housekeeping |
 | 0.11.0 learn-recipe goals (the pattern to get or the trainer to visit, blockers, auto-complete on learning) and reach-skill goals (which recipes to craft how many times from your skill to the target, their materials, auto-complete on the skill-up) | Implemented, offline-tested against the catalogue, **not yet verified in game** |
 | 0.12.0 quest goals and the Quests screen (dungeon quests from ForeverDungeonJournal with their chains, attunement quests from Attune, your quest log; by zone / by goal / completed; objectives, rewards, which goals a quest feeds; auto-complete on turn-in) | Implemented, offline-tested, **not yet verified in game** |
-| 0.13.0 Equipment screen (every slot, item levels and stats from the client, GearQuest Forever's best pick per slot for your class, spec, faction and level, stat comparison, targets as goals; GearQuest's gear sources feed obtain goals) | Implemented, offline-tested, **not yet verified in game** |
+| 0.13.0 Equipment screen (every slot, item levels and stats from the client, GearQuest Forever's best pick per slot for your class, spec, faction and level, stat comparison, targets as goals; GearQuest's gear sources feed obtain goals); **removed in 1.0.2** | Implemented, offline-tested, **not yet verified in game** |
 | 0.14.0 reputation goals and the Reputations screen (standings from the client, quests that give reputation from ForeverDungeonJournal, rewards per standing from AtlasLoot Factions, reputation vendors on item goals, auto-complete on the standing) | Implemented, offline-tested, **not yet verified in game** |
 | 0.15.0 enchant goals (enchants and tinkers in the catalogue, Shift-click from the Enchanting window, formula or trainer plus reagents per cast, auto-complete as you cast; Enchanting skill goals plan enchants) | Implemented, offline-tested, **not yet verified in game** |
 | 0.15.1 quests that give reputation feed the Quests screen for reputation goals | Implemented, offline-tested, **not yet verified in game** |
@@ -109,7 +109,6 @@ and says so in the UI.
 | ForeverDungeonJournal | Forever-specific boss loot, dungeon quests with their prerequisite chains, quest givers and rewards (quest goals, the Quests screen), quests that give reputation | Drop sources only from AtlasLoot; the Quests screen lists only your log; no quest sources for reputation goals |
 | Attune | Attunement goals and the Attunements screen; attunement quests (givers, rewards) on the Quests screen | The Attunements screen explains that Attune is missing |
 | Questie (Forever port) | Quest givers, turn-ins and positions, required items and quest chains from its maintained database, ahead of the classic data | Classic data (ForeverPath_ClassicDB) and what ForeverPath learns |
-| GearQuest Forever (+ its class module) | Per-slot upgrade hunts on the Equipment screen (best pick, other options, sources) and gear sources for obtain goals | The Equipment screen shows what is worn and your gear goals, without picks |
 
 ## Using ForeverPath
 
@@ -128,7 +127,7 @@ and says so in the UI.
    of the Fang"), a **reputation** ("Argent Dawn Exalted") and an attunement.
    After two characters a popup suggests matches for the selected kind
    (items you have seen, that the catalogue names, that drop in a dungeon
-   ForeverDungeonJournal covers or that GearQuest Forever lists; recipes,
+   ForeverDungeonJournal covers; recipes,
    enchants, professions, quests, factions including ones you have not met
    yet, attunements); click one to add it. Item matches can be anywhere in
    the name: "storm" finds "Storm Gauntlets", "Mace of the Storms" and
@@ -147,9 +146,6 @@ and says so in the UI.
      their chains, attunement quests, your log) by zone or by the goal
      their rewards feed, with objectives, rewards and a button to make one
      a goal.
-   - **Equipment** shows every slot with what you wear, GearQuest Forever's
-     best pick for it (your class, spec, faction and level), a stat
-     comparison and the other options; one click makes a pick a goal.
    - **Reputations** lists your factions with their standing, the quests
      that raise each one and the rewards each standing unlocks; pick a
      target standing and make it a goal.
@@ -157,7 +153,7 @@ and says so in the UI.
    and shows the next step; drag it anywhere, collapse it with "-", open the
    goal with "+". `/fp tracker` hides or shows it.
 5. **Shift-click any item row** (shopping list, requirements, tree,
-   dashboard, tracker, equipment) to put its link where the game puts
+   dashboard, tracker) to put its link where the game puts
    Shift-clicked links: the chat box, or the Auction House search when the
    Auction House is open (Auctionator's shopping search included).
 6. **Bank items** count as owned once you have opened your bank on that
@@ -178,7 +174,6 @@ and says so in the UI.
 | `/fp train [profession]` | What your professions can train now (trainer, zone, total cost) and what opens up in the next 25 points |
 | `/fp skill <profession> [rank]` | Add a reach-skill goal (default: the next cap): which recipes to craft, how often, and their materials |
 | `/fp quest <name or id>` / `/fp quests` | Add a quest goal (dungeon and attunement quests, or anything in your log): the chain that leads to it, the giver, the turn-in, the items it asks for; list the quests that feed your goals |
-| `/fp equipment` | Every slot: what is worn, GearQuest Forever's best pick, and the goal that targets it |
 | `/fp rep <faction> [standing]` / `/fp reps` | Add a reputation goal (default: the next standing); list your factions and reputation goals |
 | `/fp sources <item>` / `/fp vendors` | Where an item comes from; how much vendor and loot-table data is available |
 | `/fp recipe <item>` / `/fp catalogue` | How an item is made (every catalogue recipe and combine, with skill, plans and reagents); catalogue build and counts |

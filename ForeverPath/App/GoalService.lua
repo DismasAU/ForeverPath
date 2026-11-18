@@ -1,7 +1,7 @@
 -- Application service shared by the UI and slash commands, in four parts:
 -- goal input (text, links and ids into goals; Add*/Set* over the GoalStore
 -- bound to the character database), type-ahead (Suggest), attribution
--- (which quests and equipment slots serve which goals, through
+-- (which quests serve which goals, through
 -- Domain/GoalAttribution) and cross-goal summaries (evaluated views, the
 -- shopping list, the overview, needs).
 local _, ns = ...
@@ -773,7 +773,7 @@ function GoalService.ShoppingList()
 end
 
 ---------------------------------------------------------------------------
--- Goal attribution: which quests and equipment slots serve which goals
+-- Goal attribution: which quests serve which goals
 ---------------------------------------------------------------------------
 -- Which quests feed open goals (Domain/GoalAttribution.QuestFeeds).
 -- goals default to the open goals, views to the last evaluation.
@@ -805,27 +805,6 @@ function GoalService.QuestBoard(tab, feedOnly)
     nameOf = GoalService.Name, state = QP.State, questName = QP.Name, get = QP.Get,
     stateLabel = function(state, entry) return QP.StateLabel(state, entry, playerLevel) end,
   })
-end
-
--- EquipmentProvider.Analyze with the open item goals placed on the slots
--- their items fit (Domain/GoalAttribution.PlaceOnSlots): each slot entry
--- gains goal, goalView, goalItemID, and the result trackedGoals (item goals
--- that are gear) and upgradesPlanned. source filters GearQuest candidates.
-function GoalService.Equipment(source, goals, views)
-  goals = goals or GoalService.List({ open = true })
-  views = views or GoalService.views
-  local EP = ns.EquipmentProvider
-  local analysis = EP.Analyze({ source = source })
-  local goalSlots, tracked = ns.GoalAttribution.PlaceOnSlots(goals, EP.SlotKeysFor)
-  analysis.trackedGoals, analysis.upgradesPlanned = tracked, 0
-  for _, entry in ipairs(analysis.slots) do
-    local goal = goalSlots[entry.slot.key]
-    if goal then
-      entry.goal, entry.goalView, entry.goalItemID = goal, views[goal.id], goal.target.itemID
-      analysis.upgradesPlanned = analysis.upgradesPlanned + 1
-    end
-  end
-  return analysis
 end
 
 ---------------------------------------------------------------------------

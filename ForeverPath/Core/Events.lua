@@ -11,7 +11,6 @@
 --   FP_SOURCES_UPDATED       vendor or AtlasLoot sources changed (kind, npc)
 --   FP_TRAINERS_UPDATED      a trainer window was recorded (npc)
 --   FP_SHARED_DATA_CHANGED   another player's data was imported or removed
---   FP_EQUIPMENT_UPDATED     worn gear or GearQuest picks changed
 --   FP_REPUTATION_UPDATED    faction standings changed
 --   FP_CHARACTERS_UPDATED    an alt snapshot was saved
 --   FP_PLAYER_CHANGED        the player's level or profession skills changed
@@ -33,7 +32,7 @@ ns.Events = Events
 Events.MESSAGES = {
   "FP_GOALS_CHANGED", "FP_RECIPES_UPDATED", "FP_INVENTORY_UPDATED", "FP_ITEM_LOADED", "FP_QUESTS_UPDATED",
   "FP_QUEST_FACTS_UPDATED", "FP_LOOT_LEARNED", "FP_SOURCES_UPDATED", "FP_TRAINERS_UPDATED", "FP_SHARED_DATA_CHANGED",
-  "FP_EQUIPMENT_UPDATED", "FP_REPUTATION_UPDATED", "FP_CHARACTERS_UPDATED", "FP_PLAYER_CHANGED", "FP_SETTINGS_CHANGED",
+  "FP_REPUTATION_UPDATED", "FP_CHARACTERS_UPDATED", "FP_PLAYER_CHANGED", "FP_SETTINGS_CHANGED",
   "FP_GOAL_COMPLETED", "FP_READY",
 }
 

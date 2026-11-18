@@ -64,11 +64,9 @@ Database.DEFAULTS = {
       screen = "dashboard",        -- last screen shown
       materialSort = "missing",    -- Crafting materials table
       goalSort = "priority",       -- My Goals list
-      equipmentSource = "any",     -- Equipment source filter
-      equipmentFilter = "all",     -- Equipment: all slots or upgrades only
       questsFeedOnly = false,      -- Quests: only quests that feed a goal
       -- Selections, unset until the player picks one: questsTab, quest,
-      -- faction, attunement, equipmentSlot.
+      -- faction, attunement.
     },
     shopping = {
       bought = {},     -- itemID -> true (ticked off)

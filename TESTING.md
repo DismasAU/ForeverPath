@@ -413,6 +413,13 @@ This release changed how every module starts and is named, so a broad pass matte
 - [ ] With an empty equipment slot (shirt or tabard), loot and move bag items: no "bad argument #1 to 'tonumber'" error in chat.
 - [ ] Swap a piece of gear: the Equipment screen updates.
 
+### 38. 1.0.2 Equipment removed
+
+- [ ] The sidebar has no Equipment entry; if the window was last left on Equipment it opens on the Dashboard.
+- [ ] `/fp equipment` is unknown and `/fp help` does not list it.
+- [ ] An item goal for a piece of gear still lists sources (journal, AtlasLoot, quests, vendors).
+- [ ] FPS while questing and looting compared with the addon disabled.
+
 ### Reporting
 Include: client build (`/dump GetBuildInfo()`), `/fp status` output, the step
 that failed, chat output with `/fp debug` enabled, and `/fp errors`.

@@ -16,7 +16,7 @@ Bootstrap.INIT_ORDER = {
   "Share", "ItemProvider", "ProfessionProvider", "InventoryProvider", "CharacterProvider",
   "VendorLearner", "TrainerLearner", "AuctionatorBridge", "SourceProvider",
   "AttuneBridge", "ClassicDBBridge", "LootLearner", "QuestieBridge", "QuestFactsLearner",
-  "QuestProvider", "EquipmentProvider", "ReputationProvider",
+  "QuestProvider", "ReputationProvider",
   "GoalService", "GoalCompletion",
   "UI.MainFrame", "UI.Tracker", "UI.MinimapButton", "UI.Toast",
 }

@@ -244,19 +244,6 @@ function Compat.HookInsertLink(callback)
   return true
 end
 
--- An item's stats as { [ITEM_MOD_* token] = value }: C_Item.GetItemStats, else
--- the legacy GetItemStats(link, outTable); nil when neither answers.
-function Compat.GetItemStats(linkOrID)
-  local cItem = type(C_Item) == "table" and C_Item or {}
-  local stats = Util.SafeCall(cItem.GetItemStats, linkOrID)
-  if type(stats) == "table" then return stats end
-  if type(_G.GetItemStats) ~= "function" then return nil end
-  local legacy = {}
-  local result = Util.SafeCall(_G.GetItemStats, linkOrID, legacy)
-  if type(result) == "table" then return result end
-  return next(legacy) and legacy or nil
-end
-
 -- The logged-in character, read at call time. Each returns nil (0 for the
 -- level) while the client API is missing or the unit is not ready.
 

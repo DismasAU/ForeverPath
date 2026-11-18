@@ -37,7 +37,7 @@ ForeverPath/
     CraftWise.lua            buy / craft / hybrid comparison over a full tree, route plan, presets
   Providers/                 wrap the WoW API and other addons behind small interfaces; the
                              aggregators at this level combine the subfolders' providers
-    SourceProvider.lua       item sources in a fixed order (vendors, learned loot, journal, AtlasLoot, quests, GearQuest, reputation, classic data, class heuristics)
+    SourceProvider.lua       item sources in a fixed order (vendors, learned loot, journal, AtlasLoot, quests, reputation, classic data, class heuristics)
     PriceProvider.lua        pricing boundary: cheapest of registered sources, freshness, status
     QuestProvider.lua        quest log, objectives and completed flags plus the quest knowledge of the journal, Attune, Questie, classic data and the learners
     ReputationProvider.lua   standings (C_Reputation or legacy), thresholds, reputation quests (QuestProvider, classic data) and AtlasLoot faction rewards
@@ -46,11 +46,9 @@ ForeverPath/
       InventoryProvider.lua  bag index, bank snapshot, counts (plus alts' totals), owned count
       ProfessionProvider.lua C_TradeSkillUI scanning, recipe cache, learned flags, /fp scan
       CharacterProvider.lua  account-wide character snapshots, alt stock / crafters / coverage
-      EquipmentProvider.lua  worn gear per slot, item stats, upgrade picks per slot (through GearQuestBridge.lua)
     Integrations/            other addons' data, read at runtime; one adapter per addon, each with IsAvailable()
       AtlasLootBridge.lua          AtlasLoot Classic: detection, on-demand module loads (always call back), loot table walks
       DungeonJournalBridge.lua     ForeverDungeonJournal: its namespace and item names
-      GearQuestBridge.lua          GearQuest Forever: spec, upgrade entries, item facts, source hints
       AttuneBridge.lua     attunement chains from the Attune addon, progress from quest flags / log / level / bags / survey; questlines
       AuctionatorBridge.lua Auctionator v1 API adapter (lowest buyout, age, 7-day mean, listings)
       QuestieBridge.lua      Questie's quest database read at runtime (QuestieLoader modules), ranked between Forever data and classic data
@@ -64,7 +62,7 @@ ForeverPath/
     PlannerDeps.lua          the Planner's composition root: installs Planner.SetDefaultDeps over the providers
     Share.lua                /fp export / import of learned data, sanitised against per-kind schemas
     GoalService.lua          application service, four roles: goal input and Add*/Set* over the GoalStore,
-                             type-ahead (Suggest), attribution (quest feeds, quest board, equipment slots through
+                             type-ahead (Suggest), attribution (quest feeds and quest board through
                              Domain/GoalAttribution) and cross-goal summaries (views, shopping list, overview, needs)
     GoalCompletion.lua       auto-completes goals (bag counts, casts, skill, quests, reputation) and celebrates
   UI/
@@ -77,7 +75,6 @@ ForeverPath/
     Screens/Shopping.lua     screen 05: goal chips, summary, filter tabs, bought ticks, send to chat
     Screens/Attunements.lua  screen 06: picker, header, step timeline, current step
     Screens/Quests.lua       quests by zone / goal / completed, details, chain, rewards
-    Screens/Equipment.lua    slots, GearQuest picks, stat comparison, targets as goals
     Screens/Reputations.lua  factions by group, standing, target, quests, rewards
     Views/CraftingTree.lua   screen 03: the Dependency Tree tab of Crafting (tree panel + selected node)
     Views/CraftWiseView.lua  screen 04: the CraftWise tab of Crafting: strategy cards, breakdown table, "Use this plan"
@@ -143,8 +140,7 @@ compartment click handler the TOC requires.
    one), `StatusInfo` the same state as a table for the UI, `ItemHints(itemID)`
    resolver hints. "Status" alone means a goal's lifecycle (`goal.status`);
    whether the Planner could plan a goal is `view.readiness`, what the
-   inventory covers of a tree node is `node.coverage`, an equipment slot's
-   upgrade state is `entry.upgrade`, and the window's message line is
+   inventory covers of a tree node is `node.coverage`, and the window's message line is
    `MainFrame.SetAlert`. A function that changes state is named for the
    change (`GoalCompletion.CompleteFinished`, `GoalService.ApplyRoutePreset`),
    never like a query. Module suffixes follow the folder: `Providers/Client`
@@ -210,9 +206,8 @@ stored as a timestamped snapshot in `ForeverPathCharDB.bankCache`.
 | `FP_LOOT_LEARNED` | - | LootLearner after a loot window |
 | `FP_TRAINERS_UPDATED` | npc | TrainerLearner after a trainer window |
 | `FP_SHARED_DATA_CHANGED` | - | Share after an import or removal (LootLearner and decoded recipes drop their caches) |
-| `FP_EQUIPMENT_UPDATED` | reason | EquipmentProvider |
 | `FP_REPUTATION_UPDATED` | reason | ReputationProvider |
-| `FP_PLAYER_CHANGED` | "skill" or "quest" | GoalCompletion after its skill-up and quest/level checks |
+| `FP_PLAYER_CHANGED` | "skill" or "level" | GoalCompletion after a skill-up or a level-up |
 | `FP_SETTINGS_CHANGED` | setting name | Database.SetSetting when a planning setting changes (includeAlts, toasts, sounds) |
 | `FP_GOAL_COMPLETED` | goal, toast `{ title, name, detail, sub, icon, quality, goalID }` | GoalCompletion when it completes a goal (Toast shows it) |
 | (listener) MainFrame | | `RequestRefresh` (the window and the tracker) on every message in `Events.MESSAGES` except `FP_CHARACTERS_UPDATED` (Characters screen only) and `FP_GOAL_COMPLETED` (Toast) |
@@ -376,24 +371,9 @@ progress, quests, rewards, targetLabel }`, `nextStep` (the first open quest
 that gives reputation) and a `StepPlan`; `GoalCompletion` finishes the goal
 on `UPDATE_FACTION`.
 
-**Equipment.** `Providers/Client/EquipmentProvider.lua` is a read-only view, not a
-goal type: `SLOTS` (display order, inventory slot ids, GearQuest slot names,
-equip locations), `Equipped()` (ids and links per slot, names and icons
-through ItemProvider, item levels), `Stats(linkOrID)` (client item stats
-normalised to short keys, GearQuest's `scoredStats` as a fallback),
-`SlotKeysFor(itemID)` (from the equip location), `Candidates(slotKey, {
-source })` (GearQuest's `Data.entries` after `EnsureClassLoaded`, filtered
-by class, `Spec:GetDisplaySpec`, faction and the level band, best rank per
-item, with the facts from the `<class>ItemFacts` tables), `ItemHints(itemID)`
-(resolver source hints from those facts, merged into
-`SourceProvider.Sources` after the journal and AtlasLoot; the GearQuest
-reads live in `Providers/Integrations/GearQuestBridge.lua`) and `Analyze({ source
-})` (per slot: equipped, candidates, best, status bis / upgrade / empty /
-none). `GoalService.Equipment(source)` places the open item goals on the
-slots their items fit (`GoalAttribution.PlaceOnSlots`) and is what the
-Equipment screen renders; a target becomes a CRAFT_ITEM or OBTAIN_ITEM goal
-through `GoalService.AddItemGoal`.
-`FP_EQUIPMENT_UPDATED` follows the equipment events.
+**Equipment.** The Equipment screen, `EquipmentProvider` and the GearQuest
+Forever bridge were removed in 1.0.2 (they cost frame time for little use).
+Gear is still a goal like any other item: CRAFT_ITEM or OBTAIN_ITEM.
 
 **Quest planning.** `Providers/QuestProvider.lua` builds a static index
 (`Index()`, lazily, dropped on `FP_READY`) from ForeverDungeonJournal
@@ -542,7 +522,7 @@ factionID)` adds `ClassicDBBridge.ReputationQuests`.
 
 Source order for an item (`SourceProvider.Sources`): recorded vendors,
 the loot learner's observations, ForeverDungeonJournal, AtlasLoot, journal
-quest rewards, GearQuest, reputation vendors, classic data, the item-class
+quest rewards, reputation vendors, classic data, the item-class
 heuristic, and "New in Forever" when nothing else knows an item the client
 lists but classic-db does not (`ClassicDBBridge.IsNewInForever`: the client item
 index against classic-db's item id ranges).

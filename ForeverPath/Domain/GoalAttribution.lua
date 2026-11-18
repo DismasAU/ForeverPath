@@ -1,4 +1,4 @@
--- Which quests and equipment slots serve which goals. Pure builders over
+-- Which quests serve which goals. Pure builders over
 -- data the caller gathers (GoalService passes the open goals, their views
 -- and provider lookups), like Overview and ShoppingList.
 local _, ns = ...
@@ -120,27 +120,4 @@ function GoalAttribution.QuestBoard(tab, feedOnly, data)
     total = total + #g.rows
   end
   return { groups = groups, feeds = feeds, feedCount = Util.Count(feeds), total = total, questGoals = questGoals }
-end
-
--- Places item goals on the equipment slots their items fit, first come
--- first served (goals in priority order). slotKeysFor(itemID) -> slot keys.
--- Returns goalSlots = { [slotKey] = goal } and tracked (item goals that are
--- gear, placed or not).
-function GoalAttribution.PlaceOnSlots(goals, slotKeysFor)
-  local goalSlots, tracked = {}, 0
-  for _, goal in ipairs(goals) do
-    if GoalModel.Types[goal.type].targetKind == "item" then
-      local keys = slotKeysFor(goal.target.itemID)
-      if #keys > 0 then
-        tracked = tracked + 1
-        for _, key in ipairs(keys) do
-          if not goalSlots[key] then
-            goalSlots[key] = goal
-            break
-          end
-        end
-      end
-    end
-  end
-  return goalSlots, tracked
 end

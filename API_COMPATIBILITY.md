@@ -150,7 +150,8 @@ like the dungeon module and read from `ItemDB.Storage`.
 
 ## 0.13.0
 
-The Equipment screen reads (all behind `pcall`):
+Removed in 1.0.2 with the Equipment screen and the GearQuest Forever bridge;
+kept as a record. The Equipment screen read (all behind `pcall`):
 
 | Function | Used for | Evidence |
 |---|---|---|

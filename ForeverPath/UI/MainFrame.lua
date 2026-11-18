@@ -28,7 +28,6 @@ MainFrame.Nav = {
   { key = "characters", label = "Characters" },
   { key = "attunements", label = "Attunements" },
   { key = "quests", label = "Quests" },
-  { key = "equipment", label = "Equipment" },
   { key = "reputations", label = "Reputations" },
 }
 
@@ -583,8 +582,8 @@ function MainFrame.Refresh()
   end
 end
 
--- Data messages arrive in bursts (one loot fires bag, quest-log, equipment
--- and reputation updates within a second), and every refresh re-plans all
+-- Data messages arrive in bursts (one loot fires bag, quest-log and
+-- reputation updates within a second), and every refresh re-plans all
 -- open goals. With the window open the screen follows quickly; with only
 -- the tracker showing, a burst is merged into one re-plan, and in combat the
 -- re-plan waits until combat ends.

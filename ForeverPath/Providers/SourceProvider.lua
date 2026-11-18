@@ -1,7 +1,7 @@
 -- Where an item comes from, aggregated from what is available on this client
 -- without any external service: recorded vendors and loot (the learners),
 -- ForeverDungeonJournal and AtlasLoot (read at runtime, never copied), the
--- quest catalogue, GearQuest Forever, reputation vendors, CMaNGOS classic-db
+-- quest catalogue, reputation vendors, CMaNGOS classic-db
 -- (ns.ClassicDBBridge) and the item class heuristic (Data/ItemClasses.lua).
 -- Everything is returned as resolver hints: { kind, label, detail, ... }, in
 -- the order the comment on SourceProvider.Sources gives - that order is the
@@ -323,12 +323,11 @@ end
 --   3. boss drops: DungeonJournal, then AtlasLoot bosses the journal lacks
 --   4. journal quest rewards
 --   5. quest catalogue drops (items a curated quest asks for)
---   6. GearQuest Forever, minus vendors/quests already listed
---   7. reputation vendors (unavailable below the standing)
---   8. classic-db: drops, gathering, vendors (skipped when one is recorded)
---   9. the class heuristic - only for items no recipe makes, or that a
+--   6. reputation vendors (unavailable below the standing)
+--   7. classic-db: drops, gathering, vendors (skipped when one is recorded)
+--   8. the class heuristic - only for items no recipe makes, or that a
 --      recipe merely refines from a lower tier
---  10. nothing found and the item is new in Forever: an unavailable
+--   9. nothing found and the item is new in Forever: an unavailable
 --      "New in Forever" hint that says why
 function SourceProvider.Sources(itemID)
   local out = {}
@@ -353,15 +352,6 @@ function SourceProvider.Sources(itemID)
   for _, hint in ipairs(quests) do out[#out + 1] = hint end
   -- The quest catalogue says where the items a curated quest asks for drop.
   for _, hint in ipairs(Log.Try(ns.QuestFactsLearner.ItemHints, itemID, ns.QuestProvider.Name) or {}) do out[#out + 1] = hint end
-  -- GearQuest Forever knows where leveling gear comes from (vendor and npc,
-  -- quest and zone, boss or world drop); it fills in what nothing above did.
-  for _, hint in ipairs(Log.Try(ns.GearQuestBridge.ItemHints, itemID) or {}) do
-    local duplicate = false
-    for _, existing in ipairs(out) do
-      if existing.kind == hint.kind and (existing.kind == Routes.VENDOR and existing.name == hint.name or existing.kind == Routes.QUEST and existing.quest == hint.quest) then duplicate = true end
-    end
-    if not duplicate then out[#out + 1] = hint end
-  end
   -- Reputation vendors (AtlasLoot's faction tables): a vendor option that
   -- is unavailable until the standing is reached.
   for _, hint in ipairs(Log.Try(ns.ReputationProvider.ItemHints, itemID) or {}) do out[#out + 1] = hint end

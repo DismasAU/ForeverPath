@@ -2,14 +2,14 @@
 ## Title: ForeverPath
 ## Notes: Goal-driven progression planner for World of Warcraft: Forever. Plan crafting and item goals and see what you still need and where it comes from.
 ## Author: Jacob
-## Version: 1.0.1
+## Version: 1.0.2
 ## IconTexture: Interface\AddOns\ForeverPath\Media\ForeverPath-Mark.png
 ## SavedVariables: ForeverPathDB
 ## SavedVariablesPerCharacter: ForeverPathCharDB
 ## AddonCompartmentFunc: ForeverPath_OnAddonCompartmentClick
 ## X-Category: Professions
 ## X-License: GPL-3.0
-## OptionalDeps: Auctionator, AtlasLootClassic, AtlasLootClassic_DungeonsAndRaids, AtlasLootClassic_Factions, ForeverDungeonJournal, Attune, GearQuestForever, Questie
+## OptionalDeps: Auctionator, AtlasLootClassic, AtlasLootClassic_DungeonsAndRaids, AtlasLootClassic_Factions, ForeverDungeonJournal, Attune, Questie
 
 # Load order matters: Core -> Data -> Domain -> Providers -> App services -> UI -> Shell (commands and bootstrap wiring).
 Core\Namespace.lua
@@ -48,7 +48,6 @@ Providers\Learners\VendorLearner.lua
 Providers\Learners\TrainerLearner.lua
 Providers\Integrations\AtlasLootBridge.lua
 Providers\Integrations\DungeonJournalBridge.lua
-Providers\Integrations\GearQuestBridge.lua
 Providers\SourceProvider.lua
 Providers\Integrations\AttuneBridge.lua
 Providers\Integrations\ClassicDBBridge.lua
@@ -56,7 +55,6 @@ Providers\Learners\LootLearner.lua
 Providers\Integrations\QuestieBridge.lua
 Providers\Learners\QuestFactsLearner.lua
 Providers\QuestProvider.lua
-Providers\Client\EquipmentProvider.lua
 Providers\ReputationProvider.lua
 Providers\PriceProvider.lua
 Providers\Integrations\AuctionatorBridge.lua
@@ -75,7 +73,6 @@ UI\Screens\Characters.lua
 UI\Screens\Shopping.lua
 UI\Screens\Attunements.lua
 UI\Screens\Quests.lua
-UI\Screens\Equipment.lua
 UI\Screens\Reputations.lua
 UI\ShareFrame.lua
 UI\MainFrame.lua

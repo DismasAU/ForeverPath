@@ -113,16 +113,6 @@ describe("Compat", function()
     assert_match(reason, "no map waypoints")
   end)
 
-  it("reads item stats from the legacy out-table API", function()
-    _G.C_Item.GetItemStats = nil
-    _G.GetItemStats = function(_, out) out.ITEM_MOD_STAMINA_SHORT = 7 end
-    assert_deep_eq(Compat.GetItemStats(2996), { ITEM_MOD_STAMINA_SHORT = 7 })
-    _G.GetItemStats = function() end
-    assert_nil(Compat.GetItemStats(2996), "an empty answer is no stats")
-    _G.GetItemStats = nil
-    assert_nil(Compat.GetItemStats(2996))
-  end)
-
   it("reads the character at call time and answers nil while the unit is not ready", function()
     Mock.character.faction = "Horde"
     Mock.character.classFile = "shaman"

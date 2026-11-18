@@ -17,7 +17,6 @@ Commands.help = {
   { "/fp skill <profession> [rank]", "Add a reach-skill goal (default: the next cap): which recipes to craft, how often, and their materials." },
   { "/fp quest <name or id>", "Add a quest goal (dungeon quests, attunement quests, or anything in your log): chain, pick-up, objectives, rewards." },
   { "/fp quests", "List the quests ForeverPath knows that feed your goals, with their state." },
-  { "/fp equipment", "Every slot: what is worn, GearQuest Forever's best pick for it, and the goal that targets it." },
   { "/fp rep <faction> [standing]", "Add a reputation goal (default: the next standing): progress, quests that give reputation, rewards per standing." },
   { "/fp reps", "List your factions with their standing, and your reputation goals." },
   { "/fp goals", "List open goals." },
@@ -75,7 +74,7 @@ end
 
 -- Every data module /fp status reports on; each has StatusLine().
 local STATUS_MODULES = { "Recipes", "VendorLearner", "TrainerLearner", "QuestProvider", "QuestFactsLearner", "ClassicDBBridge", "LootLearner",
-  "Share", "QuestieBridge", "AttuneBridge", "EquipmentProvider", "ReputationProvider", "SourceProvider", "PriceProvider" }
+  "Share", "QuestieBridge", "AttuneBridge", "ReputationProvider", "SourceProvider", "PriceProvider" }
 
 function handlers.status()
   Log.Print("Version %s", tostring(ns.VERSION))
@@ -196,21 +195,6 @@ function handlers.reps()
     local goal = ns.GoalService.FindReputationGoal(record.factionID)
     Log.Output(string.format("  %s: %s (%d / %d)%s", record.name, record.standingLabel, record.into or 0, record.span or 0,
       goal and (" [goal: " .. ns.GoalModel.StandingLabels[goal.target.standing] .. "]") or ""))
-  end
-end
-
-function handlers.equipment()
-  local EP = ns.EquipmentProvider
-  Log.Print("%s", EP.StatusLine())
-  ns.GoalService.EvaluateViews()
-  local analysis = ns.GoalService.Equipment()
-  for _, entry in ipairs(analysis.slots) do
-    local worn = entry.equipped
-    local parts = { worn.itemID and (ns.ItemProvider.GetName(worn.itemID) .. (worn.ilvl and (" (" .. worn.ilvl .. ")") or "")) or "empty" }
-    if entry.goal then parts[#parts + 1] = "goal: " .. ns.GoalService.Name(entry.goal) end
-    if entry.upgrade == "bis" then parts[#parts + 1] = "best in slot"
-    elseif entry.best then parts[#parts + 1] = string.format("pick: %s (%s%s)", entry.best.name, entry.best.sourceLabel, entry.best.ilvl and (", ilvl " .. entry.best.ilvl) or "") end
-    Log.Output(string.format("  %s: %s", entry.slot.label, table.concat(parts, " - ")))
   end
 end
 

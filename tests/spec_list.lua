@@ -28,7 +28,6 @@ return {
   "goal_completion_spec",
   "goal_types_spec",
   "quest_goals_spec",
-  "equipment_spec",
   "reputation_spec",
   "enchant_goals_spec",
   "questline_spec",

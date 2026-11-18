@@ -12,17 +12,6 @@ describe("GoalAttribution", function()
     return { id = id, type = goalType or "OBTAIN_ITEM", target = { itemID = itemID, quantity = 1 } }
   end
 
-  it("places item goals on the first free slot their item fits, in priority order", function()
-    local ring1, ring2, ring3 = itemGoal("a", 1), itemGoal("b", 2), itemGoal("c", 3)
-    local helm, cloth = itemGoal("d", 4), itemGoal("e", 5)
-    local slotsOf = { [1] = { "Finger1", "Finger2" }, [2] = { "Finger1", "Finger2" }, [3] = { "Finger1", "Finger2" }, [4] = { "Head" }, [5] = {} }
-    local slots, tracked = GA.PlaceOnSlots({ ring1, ring2, ring3, helm, cloth }, function(itemID) return slotsOf[itemID] end)
-    assert_eq(slots.Finger1, ring1)
-    assert_eq(slots.Finger2, ring2)
-    assert_eq(slots.Head, helm)
-    assert_eq(tracked, 4, "the third ring is gear without a free slot; cloth is not gear")
-  end)
-
   it("maps quests to the goals they feed and groups the board by goal", function()
     local QUEST = 100
     local goal = itemGoal("g", 7)

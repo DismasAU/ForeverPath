@@ -35,7 +35,7 @@ describe("UI shell and screens (mock widgets)", function()
     assert_eq(frame.versionText:GetText(), "ForeverPath 0.1.0-test")
     assert_not_nil(frame.navButtons.dashboard)
     assert_not_nil(frame.navButtons.characters)
-    for _, key in ipairs({ "dashboard", "goals", "crafting", "equipment", "quests", "reputations", "attunements", "characters" }) do
+    for _, key in ipairs({ "dashboard", "goals", "crafting", "quests", "reputations", "attunements", "characters" }) do
       assert_not_nil(MainFrame.screens[key], "screen " .. key)
     end
     assert_eq(MainFrame.currentScreen, "dashboard")
@@ -296,10 +296,9 @@ describe("UI shell and screens (mock widgets)", function()
     MainFrame.Hide()
     Mock.RunTimers()
     assert_true(ns.UI.Tracker.IsShown())
-    local plans, equipment = 0, 0
+    local plans = 0
     local evaluate = ns.GoalService.EvaluateViews
     ns.GoalService.EvaluateViews = function(...) plans = plans + 1 return evaluate(...) end
-    ns.Events.On("FP_EQUIPMENT_UPDATED", function() equipment = equipment + 1 end)
     local function loot()
       Mock.FireEvent("UNIT_INVENTORY_CHANGED", "player")
       Mock.FireEvent("BAG_UPDATE_DELAYED")
@@ -311,8 +310,6 @@ describe("UI shell and screens (mock widgets)", function()
     end
     loot()
     assert_eq(plans, 1, "bag, quest-log and reputation updates share one re-plan")
-    loot()
-    assert_eq(equipment, 0, "a bag change is not a gear change")
     plans = 0
     Mock.combat = true
     loot()
