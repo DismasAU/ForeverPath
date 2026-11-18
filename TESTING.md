@@ -401,6 +401,13 @@ This release changed how every module starts and is named, so a broad pass matte
 - [ ] Shopping list, "an alt has these" banner and crafter suggestions no longer mention characters from the other realm.
 - [ ] `/fp characters` lists the other realm on its own line.
 
+### 36. 1.0.0 Performance
+
+- [ ] Quest and loot for 15 minutes with the tracker showing: no FPS drops or stutter compared with the addon disabled.
+- [ ] `/run UpdateAddOnMemoryUsage() print(GetAddOnMemoryUsage("ForeverPath"))` a few times over a session: it climbs slowly, not on every loot.
+- [ ] The tracker catches up within a couple of seconds of looting, or right after combat ends.
+- [ ] With the main window open, screens still update straight away.
+
 ### Reporting
 Include: client build (`/dump GetBuildInfo()`), `/fp status` output, the step
 that failed, chat output with `/fp debug` enabled, and `/fp errors`.

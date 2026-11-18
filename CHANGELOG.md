@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.0.0 (2026-11-18) - first stable release
+
+ForeverPath leaves test builds behind: goals for crafting, items, recipes,
+skills, quests, reputations, attunements and enchants, planned down to raw
+materials across this realm's characters.
+
+### Fixed
+- FPS drops and stutter while questing and looting.
+  - Each loot updates the learned-drops index for the looted creature only,
+    instead of rebuilding it from everything ever looted (with a few weeks
+    of data that rebuild took about 25 ms and 9 MB of memory per loot).
+  - The bag, quest-log, gear and reputation updates one loot causes now
+    share a single re-plan of your goals instead of four. With only the
+    tracker showing, it waits until combat ends.
+  - Character lookups during planning are cached, so a re-plan takes about
+    a third of the time and memory.
+  - Bag changes are no longer treated as gear changes, the character
+    snapshot is saved every 30 seconds (and at logout) rather than every
+    few seconds while looting, and reputation quest rewards are worked out
+    once.
+
+### Changed
+- With the main window closed, the tracker updates about 1.5 seconds after
+  a change, or when combat ends.
+
 ## 0.25.2 (2026-11-09) - characters by realm
 
 ### Changed
